@@ -1,44 +1,44 @@
-# frontend-tesis
+# FlorisBoard educator dashboard
 
-This template should help get you started developing with Vue 3 in Vite.
+Vue frontend for the FlorisBoard educator workspace. The application uses a feature-first
+architecture, PrimeVue for the interface, Pinia for shared feature state, and Vue Router for
+public and protected routes.
 
-## Recommended IDE Setup
-
-[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
-
-## Recommended Browser Setup
-
-- Chromium-based browsers (Chrome, Edge, Brave, etc.):
-  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
-  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
-- Firefox:
-  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
-  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
-
-## Customize configuration
-
-See [Vite Configuration Reference](https://vite.dev/config/).
-
-## Project Setup
+## Local setup
 
 ```sh
 npm install
-```
-
-### Compile and Hot-Reload for Development
-
-```sh
 npm run dev
 ```
 
-### Compile and Minify for Production
+Create a local `.env` file only when the API URL differs from the default:
+
+```sh
+VITE_API_BASE_URL=http://localhost:8080/api/v1
+```
+
+The educator dashboard uses the teacher login endpoint and aggregates the linked students, error
+distribution, and top words from the backend. If the acceptance-rate endpoint is unavailable, the
+interface keeps the remaining live metrics visible and marks that KPI as temporarily unavailable.
+
+## Validation
 
 ```sh
 npm run build
+npx oxlint .
+npx eslint .
 ```
 
-### Lint with [ESLint](https://eslint.org/)
+## Source structure
 
-```sh
-npm run lint
+```text
+src/
+  app/          # Router, layouts, and global providers
+  assets/       # Shared visual styles and static assets
+  features/     # Business modules with their own UI and logic
+  shared/       # Cross-feature components, services, and constants
 ```
+
+Each feature owns its views, components, composables, services, store, and utilities when those
+layers are needed. HTTP configuration lives in `src/shared/services/api.js` so backend integration
+and authentication behavior remain centralized.
