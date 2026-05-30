@@ -36,7 +36,7 @@ function mapStudentSummary(link, summary) {
   const errors = summary?.errores_por_tipo ?? []
   const totalErrors = errors.reduce((total, item) => total + item.count, 0)
   const primarySignal = [...errors].sort((first, second) => second.count - first.count)[0]
-  const name = link?.studentRealName ?? summary?.name ?? 'Student'
+  const name = link?.studentRealName ?? summary?.name ?? 'Estudiante'
 
   return {
     id: link?.studentId ?? summary?.id_estudiante,
@@ -52,7 +52,7 @@ function mapStudentSummary(link, summary) {
     unansweredSuggestions: acceptance?.sin_respuesta ?? 0,
     totalSubmissions: acceptance?.total_envios ?? 0,
     totalErrors,
-    primarySignal: primarySignal ? getErrorTypeLabel(primarySignal.type) : 'No signals',
+    primarySignal: primarySignal ? getErrorTypeLabel(primarySignal.type) : 'Sin señales',
     status: getStudentStatus(totalErrors),
     errorDistribution: mapErrorDistribution(errors),
     topWords: mapTopWords(summary?.top_palabras),

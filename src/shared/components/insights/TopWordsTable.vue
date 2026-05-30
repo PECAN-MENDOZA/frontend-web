@@ -13,9 +13,9 @@ defineProps({
 
 function getTypeSeverity(type) {
   return {
-    Spelling: 'danger',
-    Phonological: 'info',
-    Semantic: 'warn',
+    Ortográfico: 'danger',
+    Fonológico: 'info',
+    Semántico: 'warn',
   }[type]
 }
 </script>
@@ -24,8 +24,8 @@ function getTypeSeverity(type) {
   <section class="panel words-panel">
     <div class="panel__header">
       <div>
-        <p class="overline">Recurring words</p>
-        <h2>Patterns worth revisiting</h2>
+        <p class="overline">Palabras recurrentes</p>
+        <h2>Patrones para reforzar</h2>
       </div>
       <span class="panel__meta">Top 10</span>
     </div>
@@ -36,13 +36,13 @@ function getTypeSeverity(type) {
           <strong>{{ data.word }}</strong>
         </template>
       </Column>
-      <Column header="Type">
+      <Column header="Tipo">
         <template #body="{ data }">
           <Tag :value="data.type" :severity="getTypeSeverity(data.type)" />
         </template>
       </Column>
-      <Column field="frequency" header="Repeats" />
-      <Column header="Confidence">
+      <Column field="frequency" header="Repeticiones" />
+      <Column header="Confianza">
         <template #body="{ data }">
           <div class="confidence-cell">
             <ProgressBar :value="data.confidencePercent" :show-value="false" />

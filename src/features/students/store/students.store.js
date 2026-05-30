@@ -16,7 +16,7 @@ export const useStudentsStore = defineStore('students', () => {
     try {
       students.value = await getStudents(month)
     } catch {
-      errorMessage.value = 'We could not load your students. Please try again.'
+      errorMessage.value = 'No pudimos cargar tus estudiantes. Inténtalo nuevamente.'
     } finally {
       isLoading.value = false
     }
@@ -30,7 +30,7 @@ export const useStudentsStore = defineStore('students', () => {
       selectedStudent.value = await getStudentDetail(studentId, month)
     } catch {
       selectedStudent.value = null
-      errorMessage.value = 'We could not load this student profile. Please try again.'
+      errorMessage.value = 'No pudimos cargar el perfil del estudiante. Inténtalo nuevamente.'
     } finally {
       isDetailLoading.value = false
     }

@@ -2,9 +2,9 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useStudentsStore } from '@/features/students/store/students.store'
 
 export const STUDENT_MONTH_OPTIONS = [
-  { label: 'May 2026', value: '2026-05' },
-  { label: 'April 2026', value: '2026-04' },
-  { label: 'March 2026', value: '2026-03' },
+  { label: 'Mayo 2026', value: '2026-05' },
+  { label: 'Abril 2026', value: '2026-04' },
+  { label: 'Marzo 2026', value: '2026-03' },
 ]
 
 export function useStudents() {
@@ -26,7 +26,7 @@ export function useStudents() {
   })
 
   const reviewCount = computed(
-    () => studentsStore.students.filter((student) => student.status === 'Review').length,
+    () => studentsStore.students.filter((student) => student.status === 'Revisar').length,
   )
   const averageAcceptance = computed(() => {
     const rates = studentsStore.students

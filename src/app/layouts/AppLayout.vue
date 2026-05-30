@@ -12,9 +12,8 @@ const authStore = useAuthStore()
 const isNavigationOpen = ref(false)
 
 const navigationItems = [
-  { label: 'Overview', icon: 'pi pi-chart-bar', to: '/dashboard' },
-  { label: 'Students', icon: 'pi pi-users', to: '/students' },
-  { label: 'Reports', icon: 'pi pi-file-chart', disabled: true },
+  { label: 'Resumen', icon: 'pi pi-chart-bar', to: '/dashboard' },
+  { label: 'Estudiantes', icon: 'pi pi-users', to: '/students' },
 ]
 
 function closeNavigation() {
@@ -47,24 +46,22 @@ onUnmounted(() => window.removeEventListener('auth:unauthorized', handleUnauthor
       <div class="sidebar__brand">
         <div class="brand-mark">F</div>
         <div>
-          <span class="sidebar__eyebrow">Teaching console</span>
+          <span class="sidebar__eyebrow">Panel docente</span>
           <strong>{{ APP_NAME }}</strong>
         </div>
       </div>
 
-      <nav class="sidebar__navigation" aria-label="Main navigation">
-        <span class="sidebar__section-label">Workspace</span>
+      <nav class="sidebar__navigation" aria-label="Navegación principal">
+        <span class="sidebar__section-label">Espacio de trabajo</span>
         <RouterLink
           v-for="item in navigationItems"
           :key="item.label"
-          :to="item.disabled ? '' : item.to"
+          :to="item.to"
           class="sidebar__link"
-          :class="{ 'sidebar__link--disabled': item.disabled }"
           @click="closeNavigation"
         >
           <i :class="item.icon"></i>
           <span>{{ item.label }}</span>
-          <small v-if="item.disabled">Soon</small>
         </RouterLink>
       </nav>
 
@@ -72,8 +69,8 @@ onUnmounted(() => window.removeEventListener('auth:unauthorized', handleUnauthor
         <div class="sidebar__status">
           <i class="pi pi-shield"></i>
           <div>
-            <span>Protected session</span>
-            <small>Data access audited</small>
+            <span>Sesión protegida</span>
+            <small>Acceso a datos auditado</small>
           </div>
         </div>
       </div>
@@ -87,18 +84,18 @@ onUnmounted(() => window.removeEventListener('auth:unauthorized', handleUnauthor
             icon="pi pi-bars"
             text
             rounded
-            aria-label="Open navigation"
+            aria-label="Abrir navegación"
             @click="isNavigationOpen = true"
           />
           <div>
-            <span class="topbar__eyebrow">Educator dashboard</span>
-            <p>Student learning signals</p>
+            <span class="topbar__eyebrow">Panel docente</span>
+            <p>Señales de aprendizaje</p>
           </div>
         </div>
 
         <div class="topbar__actions">
-          <Tag value="Live insights" severity="success" rounded />
-          <Button icon="pi pi-bell" text rounded aria-label="Notifications" />
+          <Tag value="Datos actualizados" severity="success" rounded />
+          <Button icon="pi pi-bell" text rounded aria-label="Notificaciones" />
           <div class="topbar__profile">
             <Avatar :label="authStore.userInitials" shape="circle" />
             <div>
@@ -106,7 +103,7 @@ onUnmounted(() => window.removeEventListener('auth:unauthorized', handleUnauthor
               <span>{{ authStore.user?.roleLabel }}</span>
             </div>
           </div>
-          <Button icon="pi pi-sign-out" text rounded aria-label="Sign out" @click="signOut" />
+          <Button icon="pi pi-sign-out" text rounded aria-label="Cerrar sesión" @click="signOut" />
         </div>
       </header>
 

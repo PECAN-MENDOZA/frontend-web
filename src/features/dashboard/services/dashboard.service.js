@@ -14,7 +14,7 @@ export async function getDashboardSummary(month) {
   const detectedErrors = errorDistribution.reduce((total, item) => total + item.count, 0)
 
   return {
-    updatedAt: new Intl.DateTimeFormat('en', {
+    updatedAt: new Intl.DateTimeFormat('es-PE', {
       hour: '2-digit',
       minute: '2-digit',
     }).format(new Date()),
@@ -23,12 +23,12 @@ export async function getDashboardSummary(month) {
     metrics: {
       activeStudents: {
         value: studentLinks.length,
-        change: 'Linked to your classroom',
+        change: 'Vinculados a tu aula',
       },
       acceptanceRate: acceptanceMetric,
       detectedErrors: {
         value: detectedErrors,
-        change: 'Across the selected month',
+        change: 'Durante el mes seleccionado',
       },
     },
     errorDistribution,
@@ -65,14 +65,14 @@ function getClassAcceptanceMetric(studentKpis) {
   if (!responses.length || !totalSubmissions) {
     return {
       value: '--',
-      change: 'Unavailable from API',
+      change: 'No disponible desde la API',
       isAvailable: false,
     }
   }
 
   return {
     value: `${((totalAccepted * 100) / totalSubmissions).toFixed(1)}%`,
-    change: `${totalAccepted} of ${totalSubmissions} accepted`,
+    change: `${totalAccepted} de ${totalSubmissions} aceptadas`,
     isAvailable: true,
   }
 }
@@ -145,7 +145,7 @@ function mapStudent({ student, acceptance, distribution }) {
     initials: getInitials(student.studentRealName),
     acceptanceRate: acceptance?.tasa_aceptacion_pct ?? null,
     totalCorrections: totalErrors,
-    primarySignal: primarySignal ? getErrorTypeLabel(primarySignal.type) : 'No signals',
+    primarySignal: primarySignal ? getErrorTypeLabel(primarySignal.type) : 'Sin señales',
     status: getStudentStatus(totalErrors),
   }
 }

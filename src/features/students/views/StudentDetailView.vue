@@ -6,6 +6,7 @@ import Button from 'primevue/button'
 import Message from 'primevue/message'
 import Select from 'primevue/select'
 import Skeleton from 'primevue/skeleton'
+import { useReportDownload } from '@/features/reports/composables/useReportDownload'
 import { useStudentDetail } from '@/features/students/composables/useStudentDetail'
 import { formatPercentage } from '@/features/dashboard/utils/formatters'
 import ErrorDistribution from '@/shared/components/insights/ErrorDistribution.vue'
@@ -15,12 +16,20 @@ import TopWordsTable from '@/shared/components/insights/TopWordsTable.vue'
 const router = useRouter()
 const { studentsStore, selectedMonth, monthOptions, refreshStudent } = useStudentDetail()
 const student = computed(() => studentsStore.selectedStudent)
+const studentId = computed(() => student.value?.id)
+const {
+  buttonLabel: reportButtonLabel,
+  errorMessage: reportErrorMessage,
+  isLoading: isReportLoading,
+  isReportAvailable,
+  downloadReport,
+} = useReportDownload(studentId, selectedMonth)
 </script>
 
 <template>
   <div class="student-detail-page">
     <Button
-      label="Back to students"
+      label="Volver a estudiantes"
       icon="pi pi-arrow-left"
       severity="secondary"
       text
@@ -29,6 +38,10 @@ const student = computed(() => studentsStore.selectedStudent)
 
     <Message v-if="studentsStore.errorMessage" severity="error">
       {{ studentsStore.errorMessage }}
+    </Message>
+
+    <Message v-if="reportErrorMessage" severity="warn" :closable="false">
+      {{ reportErrorMessage }}
     </Message>
 
     <template v-if="studentsStore.isDetailLoading && !student">
@@ -43,7 +56,7 @@ const student = computed(() => studentsStore.selectedStudent)
         <div class="student-profile__identity">
           <Avatar :label="student.initials" size="xlarge" shape="circle" />
           <div>
-            <p class="overline">Student profile</p>
+            <p class="overline">Perfil del estudiante</p>
             <h1>{{ student.name }}</h1>
             <span>{{ student.alias }}</span>
           </div>
@@ -54,38 +67,45 @@ const student = computed(() => studentsStore.selectedStudent)
             :options="monthOptions"
             option-label="label"
             option-value="value"
-            aria-label="Select report month"
+            aria-label="Seleccionar mes del reporte"
           />
           <Button
-            label="Refresh"
+            label="Actualizar"
             icon="pi pi-refresh"
             severity="secondary"
             outlined
             :loading="studentsStore.isDetailLoading"
             @click="refreshStudent"
           />
+          <Button
+            :label="reportButtonLabel"
+            icon="pi pi-download"
+            :loading="isReportLoading"
+            :disabled="!isReportAvailable || isReportLoading"
+            @click="downloadReport"
+          />
         </div>
       </section>
 
-      <section class="metrics-grid" aria-label="Student learning metrics">
+      <section class="metrics-grid" aria-label="Métricas de aprendizaje del estudiante">
         <MetricCard
-          label="Suggestion acceptance"
+          label="Aceptación de sugerencias"
           :value="formatPercentage(student.acceptanceRate)"
-          :change="`${student.acceptedSuggestions} of ${student.totalSubmissions} accepted`"
+          :change="`${student.acceptedSuggestions} de ${student.totalSubmissions} aceptadas`"
           icon="pi pi-check-circle"
           tone="ocean"
         />
         <MetricCard
-          label="Detected signals"
+          label="Señales detectadas"
           :value="student.totalErrors"
-          change="Across the selected month"
+          change="Durante el mes seleccionado"
           icon="pi pi-compass"
           tone="coral"
         />
         <MetricCard
-          label="Primary signal"
+          label="Señal principal"
           :value="student.primarySignal"
-          change="Most frequent support area"
+          change="Área de refuerzo más frecuente"
           icon="pi pi-chart-bar"
           tone="amber"
         />
@@ -95,20 +115,20 @@ const student = computed(() => studentsStore.selectedStudent)
         <ErrorDistribution :items="student.errorDistribution" />
 
         <section class="panel student-context">
-          <p class="overline">Educator context</p>
-          <h2>Notes for the next conversation</h2>
-          <p>{{ student.notes || 'No educator notes have been added yet.' }}</p>
+          <p class="overline">Contexto docente</p>
+          <h2>Notas para la próxima conversación</h2>
+          <p>{{ student.notes || 'Aún no se agregaron notas docentes.' }}</p>
           <dl>
             <div>
-              <dt>Accepted</dt>
+              <dt>Aceptadas</dt>
               <dd>{{ student.acceptedSuggestions }}</dd>
             </div>
             <div>
-              <dt>Rejected</dt>
+              <dt>Rechazadas</dt>
               <dd>{{ student.rejectedSuggestions }}</dd>
             </div>
             <div>
-              <dt>Unanswered</dt>
+              <dt>Sin respuesta</dt>
               <dd>{{ student.unansweredSuggestions }}</dd>
             </div>
           </dl>

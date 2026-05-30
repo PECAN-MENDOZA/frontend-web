@@ -25,7 +25,7 @@ defineEmits(['select'])
     :rows-per-page-options="[8, 15]"
     table-style="min-width: 58rem"
   >
-    <Column header="Student">
+    <Column header="Estudiante">
       <template #body="{ data }">
         <div class="student-cell">
           <Avatar :label="data.initials" shape="circle" />
@@ -36,27 +36,27 @@ defineEmits(['select'])
         </div>
       </template>
     </Column>
-    <Column header="Acceptance">
+    <Column header="Aceptación">
       <template #body="{ data }">
         <Tag :value="formatPercentage(data.acceptanceRate)" :severity="getRateSeverity(data.acceptanceRate)" />
       </template>
     </Column>
-    <Column field="totalSubmissions" header="Submissions" />
-    <Column field="totalErrors" header="Signals" />
-    <Column header="Primary signal">
+    <Column field="totalSubmissions" header="Envíos" />
+    <Column field="totalErrors" header="Señales" />
+    <Column header="Señal principal">
       <template #body="{ data }">
         <span class="signal-label">{{ data.primarySignal }}</span>
       </template>
     </Column>
-    <Column header="Status">
+    <Column header="Estado">
       <template #body="{ data }">
         <Tag :value="data.status" :severity="getStatusSeverity(data.status)" rounded />
       </template>
     </Column>
-    <Column header="Profile">
+    <Column header="Perfil">
       <template #body="{ data }">
         <Button
-          label="Open"
+          label="Ver"
           icon="pi pi-arrow-right"
           icon-pos="right"
           text

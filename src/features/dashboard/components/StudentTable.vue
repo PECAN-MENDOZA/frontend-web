@@ -17,14 +17,14 @@ defineProps({
   <section class="panel table-panel">
     <div class="panel__header">
       <div>
-        <p class="overline">Student pulse</p>
-        <h2>Classroom overview</h2>
+        <p class="overline">Pulso del aula</p>
+        <h2>Resumen del aula</h2>
       </div>
-      <button class="text-action" type="button">View all students <i class="pi pi-arrow-right"></i></button>
+      <button class="text-action" type="button">Ver todos los estudiantes <i class="pi pi-arrow-right"></i></button>
     </div>
 
     <DataTable :value="students" class="student-table" table-style="min-width: 48rem">
-      <Column header="Student">
+      <Column header="Estudiante">
         <template #body="{ data }">
           <div class="student-cell">
             <Avatar :label="data.initials" shape="circle" />
@@ -35,18 +35,18 @@ defineProps({
           </div>
         </template>
       </Column>
-      <Column header="Acceptance">
+      <Column header="Aceptación">
         <template #body="{ data }">
           <Tag :value="formatPercentage(data.acceptanceRate)" :severity="getRateSeverity(data.acceptanceRate)" />
         </template>
       </Column>
-      <Column field="totalCorrections" header="Corrections" />
-      <Column header="Primary signal">
+      <Column field="totalCorrections" header="Correcciones" />
+      <Column header="Señal principal">
         <template #body="{ data }">
           <span class="signal-label">{{ data.primarySignal }}</span>
         </template>
       </Column>
-      <Column header="Status">
+      <Column header="Estado">
         <template #body="{ data }">
           <Tag :value="data.status" :severity="getStatusSeverity(data.status)" rounded />
         </template>

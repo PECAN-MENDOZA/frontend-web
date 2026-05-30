@@ -1,5 +1,5 @@
 export function formatPercentage(value) {
-  return value == null ? 'Unavailable' : `${Number(value).toFixed(1)}%`
+  return value == null ? 'No disponible' : `${Number(value).toFixed(1)}%`
 }
 
 export function getRateSeverity(rate) {
@@ -11,9 +11,9 @@ export function getRateSeverity(rate) {
 
 export function getStatusSeverity(status) {
   const severities = {
-    Steady: 'success',
-    Review: 'warn',
-    Watch: 'danger',
+    Estable: 'success',
+    Revisar: 'warn',
+    Observar: 'danger',
   }
 
   return severities[status] ?? 'secondary'

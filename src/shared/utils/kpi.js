@@ -1,11 +1,11 @@
 export const ERROR_TYPE_METADATA = {
-  ortografico: { label: 'Spelling', tone: 'coral' },
-  fonologico: { label: 'Phonological', tone: 'ocean' },
-  semantico: { label: 'Semantic', tone: 'amber' },
+  ortografico: { label: 'Ortográfico', tone: 'coral' },
+  fonologico: { label: 'Fonológico', tone: 'ocean' },
+  semantico: { label: 'Semántico', tone: 'amber' },
 }
 
 export function getErrorTypeLabel(type) {
-  return ERROR_TYPE_METADATA[type]?.label ?? 'Other'
+  return ERROR_TYPE_METADATA[type]?.label ?? 'Otro'
 }
 
 export function getInitials(name) {
@@ -17,9 +17,9 @@ export function getInitials(name) {
 }
 
 export function getStudentStatus(totalErrors) {
-  if (totalErrors >= 15) return 'Review'
-  if (totalErrors >= 8) return 'Watch'
-  return 'Steady'
+  if (totalErrors >= 15) return 'Revisar'
+  if (totalErrors >= 8) return 'Observar'
+  return 'Estable'
 }
 
 export function mapErrorDistribution(items = []) {

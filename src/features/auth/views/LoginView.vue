@@ -19,18 +19,21 @@ const { authStore, credentials, submitSignIn } = useAuth()
       </div>
 
       <div class="login-page__story-content">
-        <p class="overline">Teacher workspace</p>
-        <h1>See the learning pattern behind every word.</h1>
+        <p class="overline">Espacio docente</p>
+        <h1>Descubre el patrón de aprendizaje detrás de cada palabra.</h1>
         <p>
-          Transform daily writing signals into focused, compassionate guidance for every student.
+          Transforma las señales de escritura diarias en una guía cercana y enfocada para cada
+          estudiante.
         </p>
       </div>
 
       <div class="login-page__signal-card">
         <span class="login-page__signal-icon"><i class="pi pi-sparkles"></i></span>
         <div>
-          <strong>Small signals. Clear next steps.</strong>
-          <p>Track acceptance, error patterns, and recurring words in one calm workspace.</p>
+          <strong>Pequeñas señales. Próximos pasos claros.</strong>
+          <p>
+            Revisa la aceptación, los patrones de error y las palabras recurrentes en un solo espacio.
+          </p>
         </div>
       </div>
     </div>
@@ -38,8 +41,8 @@ const { authStore, credentials, submitSignIn } = useAuth()
     <div class="login-page__panel">
       <form class="login-card" @submit.prevent="submitSignIn">
         <div>
-          <p class="overline">Welcome back</p>
-          <h2>Sign in to your classroom</h2>
+          <p class="overline">Te damos la bienvenida</p>
+          <h2>Ingresa a tu aula</h2>
           <p class="login-card__subtitle">{{ APP_TAGLINE }}</p>
         </div>
 
@@ -48,24 +51,24 @@ const { authStore, credentials, submitSignIn } = useAuth()
         </Message>
 
         <div class="form-field">
-          <label for="email">Institutional email</label>
+          <label for="email">Correo institucional</label>
           <InputText
             id="email"
             v-model="credentials.email"
             type="email"
             autocomplete="email"
-            placeholder="teacher@school.edu"
+            placeholder="docente@colegio.edu.pe"
             fluid
           />
         </div>
 
         <div class="form-field">
-          <label for="password">Password</label>
+          <label for="password">Contraseña</label>
           <Password
             input-id="password"
             v-model="credentials.password"
             autocomplete="current-password"
-            placeholder="Enter your password"
+            placeholder="Ingresa tu contraseña"
             :feedback="false"
             toggle-mask
             fluid
@@ -75,14 +78,14 @@ const { authStore, credentials, submitSignIn } = useAuth()
         <div class="login-card__options">
           <label class="checkbox-label">
             <input type="checkbox" checked />
-            <span>Keep me signed in</span>
+            <span>Mantener mi sesión iniciada</span>
           </label>
-          <button type="button">Forgot password?</button>
+          <button type="button">¿Olvidaste tu contraseña?</button>
         </div>
 
         <Button
           type="submit"
-          label="Enter dashboard"
+          label="Ingresar al panel"
           icon="pi pi-arrow-right"
           icon-pos="right"
           :loading="authStore.isLoading"
@@ -93,7 +96,7 @@ const { authStore, credentials, submitSignIn } = useAuth()
 
         <p class="login-card__hint">
           <i class="pi pi-lock"></i>
-          Protected access for authorized educators only.
+          Acceso protegido solo para docentes autorizados.
         </p>
       </form>
     </div>

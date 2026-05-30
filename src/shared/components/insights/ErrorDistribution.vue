@@ -32,17 +32,17 @@ const chartStyle = computed(() => {
   <section class="panel distribution-panel">
     <div class="panel__header">
       <div>
-        <p class="overline">Error profile</p>
-        <h2>Where support is needed</h2>
+        <p class="overline">Perfil de errores</p>
+        <h2>Áreas que necesitan refuerzo</h2>
       </div>
-      <span class="panel__meta">{{ totalErrors(items) }} signals</span>
+      <span class="panel__meta">{{ totalErrors(items) }} señales</span>
     </div>
 
-    <div class="distribution-chart" aria-label="Distribution of detected errors">
+    <div class="distribution-chart" aria-label="Distribución de errores detectados">
       <div class="distribution-chart__ring" :style="chartStyle">
         <div class="distribution-chart__center">
           <strong>{{ totalErrors(items) }}</strong>
-          <span>detected</span>
+          <span>detectados</span>
         </div>
       </div>
 
@@ -62,7 +62,7 @@ const chartStyle = computed(() => {
               :style="{ width: `${item.percentage}%` }"
             ></span>
           </div>
-          <small>{{ item.count }} occurrences</small>
+          <small>{{ item.count }} ocurrencias</small>
         </div>
       </div>
     </div>

@@ -12,21 +12,35 @@ function getHeaders(customHeaders = {}) {
 }
 
 export async function request(path, options = {}) {
+  const { responseType, skipUnauthorizedEvent, ...fetchOptions } = options
   const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...options,
+    ...fetchOptions,
     headers: getHeaders(options.headers),
   })
 
-  if (response.status === 401 && !options.skipUnauthorizedEvent) {
+  if (response.status === 401 && !skipUnauthorizedEvent) {
     window.dispatchEvent(new CustomEvent('auth:unauthorized'))
   }
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'Unexpected request error.' }))
-    throw new Error(error.message ?? 'Unexpected request error.')
+    const error = await response
+      .json()
+      .catch(() => ({ message: 'Ocurrió un error inesperado en la solicitud.' }))
+    throw new Error(error.message ?? 'Ocurrió un error inesperado en la solicitud.')
+  }
+
+  if (responseType === 'blob') {
+    return {
+      blob: await response.blob(),
+      filename: getFilename(response.headers.get('Content-Disposition')),
+    }
   }
 
   return response.status === 204 ? null : response.json()
+}
+
+function getFilename(contentDisposition) {
+  return contentDisposition?.match(/filename="?([^";]+)"?/i)?.[1] ?? null
 }
 
 export const api = {
@@ -35,6 +49,9 @@ export const api = {
   },
   post(path, body, options) {
     return request(path, { ...options, method: 'POST', body: JSON.stringify(body) })
+  },
+  download(path, options) {
+    return request(path, { ...options, method: 'GET', responseType: 'blob' })
   },
 }
 

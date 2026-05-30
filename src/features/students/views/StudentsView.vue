@@ -29,9 +29,9 @@ function openStudent(studentId) {
 <template>
   <div class="students-page">
     <PageHeader
-      eyebrow="Classroom directory"
-      title="Your students."
-      description="Move from classroom signals to individual context, without losing the larger learning picture."
+      eyebrow="Directorio del aula"
+      title="Tus estudiantes."
+      description="Pasa de las señales del aula al contexto individual sin perder la visión general del aprendizaje."
     >
       <template #actions>
         <Select
@@ -39,10 +39,10 @@ function openStudent(studentId) {
           :options="monthOptions"
           option-label="label"
           option-value="value"
-          aria-label="Select report month"
+          aria-label="Seleccionar mes del reporte"
         />
         <Button
-          label="Refresh"
+          label="Actualizar"
           icon="pi pi-refresh"
           severity="secondary"
           outlined
@@ -56,25 +56,25 @@ function openStudent(studentId) {
       {{ studentsStore.errorMessage }}
     </Message>
 
-    <section class="metrics-grid" aria-label="Student directory metrics">
+    <section class="metrics-grid" aria-label="Métricas del directorio de estudiantes">
       <MetricCard
-        label="Linked students"
+        label="Estudiantes vinculados"
         :value="studentsStore.students.length"
-        change="Active classroom profiles"
+        change="Perfiles activos del aula"
         icon="pi pi-users"
         tone="ocean"
       />
       <MetricCard
-        label="Average acceptance"
+        label="Aceptación promedio"
         :value="averageAcceptance"
-        change="Across linked students"
+        change="Entre estudiantes vinculados"
         icon="pi pi-check-circle"
         tone="coral"
       />
       <MetricCard
-        label="Needs review"
+        label="Requieren revisión"
         :value="reviewCount"
-        change="Profiles with 15+ signals"
+        change="Perfiles con 15+ señales"
         icon="pi pi-flag"
         tone="amber"
       />
@@ -83,12 +83,12 @@ function openStudent(studentId) {
     <section class="panel directory-panel">
       <div class="directory-panel__toolbar">
         <div>
-          <p class="overline">Student directory</p>
-          <h2>Classroom profiles</h2>
+          <p class="overline">Directorio de estudiantes</p>
+          <h2>Perfiles del aula</h2>
         </div>
         <label class="directory-search">
           <i class="pi pi-search"></i>
-          <InputText v-model="searchQuery" placeholder="Search name or alias" />
+          <InputText v-model="searchQuery" placeholder="Buscar por nombre o alias" />
         </label>
       </div>
 

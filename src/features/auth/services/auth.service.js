@@ -4,9 +4,7 @@ const USER_KEY = 'florisboard_user'
 const EXPIRATION_KEY = 'florisboard_token_expiration'
 
 export async function signIn(credentials) {
-  const response = await api.post('/auth/teachers/login', credentials, {
-    skipUnauthorizedEvent: true,
-  })
+  const response = await getTeacherSession(credentials)
   const session = {
     token: response.token,
     expiresAt: response.expiresAt,
@@ -15,7 +13,7 @@ export async function signIn(credentials) {
       name: getNameFromEmail(credentials.email),
       email: credentials.email,
       role: response.role,
-      roleLabel: 'Language teacher',
+      roleLabel: 'Docente',
     },
   }
 
@@ -24,6 +22,16 @@ export async function signIn(credentials) {
   localStorage.setItem(EXPIRATION_KEY, session.expiresAt)
 
   return session
+}
+
+async function getTeacherSession(credentials) {
+  try {
+    return await api.post('/auth/teachers/login', credentials, {
+      skipUnauthorizedEvent: true,
+    })
+  } catch {
+    throw new Error('No pudimos iniciar sesión. Verifica tus credenciales e inténtalo nuevamente.')
+  }
 }
 
 export function restoreSession() {

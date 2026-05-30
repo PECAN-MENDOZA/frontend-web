@@ -15,16 +15,16 @@ import TopWordsTable from '@/shared/components/insights/TopWordsTable.vue'
 const { dashboardStore, selectedMonth, monthOptions, refreshDashboard } = useDashboard()
 const authStore = useAuthStore()
 
-const teacherFirstName = computed(() => authStore.user?.name.split(' ')[0] ?? 'teacher')
+const teacherFirstName = computed(() => authStore.user?.name.split(' ')[0] ?? 'docente')
 const leadingError = computed(() => dashboardStore.errorDistribution[0])
 </script>
 
 <template>
   <div class="dashboard-page">
     <PageHeader
-      eyebrow="May learning review"
-      :title="`Good morning, ${teacherFirstName}.`"
-      description="A focused view of the signals that can shape your next classroom conversation."
+      eyebrow="Revisión de aprendizaje de mayo"
+      :title="`Buenos días, ${teacherFirstName}.`"
+      description="Una vista enfocada en las señales que pueden orientar tu próxima conversación en el aula."
     >
       <template #actions>
         <Select
@@ -32,10 +32,10 @@ const leadingError = computed(() => dashboardStore.errorDistribution[0])
           :options="monthOptions"
           option-label="label"
           option-value="value"
-          aria-label="Select report month"
+          aria-label="Seleccionar mes del reporte"
         />
         <Button
-          label="Refresh"
+          label="Actualizar"
           icon="pi pi-refresh"
           severity="secondary"
           outlined
@@ -54,8 +54,8 @@ const leadingError = computed(() => dashboardStore.errorDistribution[0])
       severity="warn"
       :closable="false"
     >
-      Acceptance rate is temporarily unavailable from the API. The remaining classroom signals are
-      live.
+      La tasa de aceptación no está disponible temporalmente desde la API. Las demás señales del aula
+      están actualizadas.
     </Message>
 
     <template v-if="dashboardStore.isLoading && !dashboardStore.dashboard">
@@ -69,23 +69,23 @@ const leadingError = computed(() => dashboardStore.errorDistribution[0])
     </template>
 
     <template v-else-if="dashboardStore.dashboard">
-      <section class="metrics-grid" aria-label="Classroom metrics">
+      <section class="metrics-grid" aria-label="Métricas del aula">
         <MetricCard
-          label="Active students"
+          label="Estudiantes activos"
           :value="dashboardStore.metrics.activeStudents.value"
           :change="dashboardStore.metrics.activeStudents.change"
           icon="pi pi-users"
           tone="ocean"
         />
         <MetricCard
-          label="Suggestion acceptance"
+          label="Aceptación de sugerencias"
           :value="dashboardStore.metrics.acceptanceRate.value"
           :change="dashboardStore.metrics.acceptanceRate.change"
           icon="pi pi-check-circle"
           tone="coral"
         />
         <MetricCard
-          label="Detected errors"
+          label="Errores detectados"
           :value="dashboardStore.metrics.detectedErrors.value"
           :change="dashboardStore.metrics.detectedErrors.change"
           icon="pi pi-compass"
@@ -100,15 +100,15 @@ const leadingError = computed(() => dashboardStore.errorDistribution[0])
           <div class="insight-panel__icon">
             <i class="pi pi-lightbulb"></i>
           </div>
-          <p class="overline">Teaching note</p>
-          <h2>{{ leadingError.type }} is the clearest opportunity this month.</h2>
+          <p class="overline">Nota docente</p>
+          <h2>{{ leadingError.type }} es la principal oportunidad de mejora este mes.</h2>
           <p>
-            {{ leadingError.percentage }}% of detected signals are
-            {{ leadingError.type.toLowerCase() }}-related. A short focused exercise could make the
-            next writing session easier.
+            {{ leadingError.percentage }}% de las señales detectadas corresponden a errores de tipo
+            {{ leadingError.type.toLowerCase() }}. Una actividad breve y enfocada puede facilitar la
+            siguiente sesión de escritura.
           </p>
-          <Button label="Open suggested activity" icon="pi pi-arrow-up-right" icon-pos="right" />
-          <span>Updated {{ dashboardStore.dashboard.updatedAt }}</span>
+          <Button label="Ver actividad sugerida" icon="pi pi-arrow-up-right" icon-pos="right" />
+          <span>Actualizado {{ dashboardStore.dashboard.updatedAt }}</span>
         </section>
       </div>
 

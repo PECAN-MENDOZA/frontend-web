@@ -5,9 +5,9 @@ export function useDashboard() {
   const dashboardStore = useDashboardStore()
   const selectedMonth = ref('2026-05')
   const monthOptions = [
-    { label: 'May 2026', value: '2026-05' },
-    { label: 'April 2026', value: '2026-04' },
-    { label: 'March 2026', value: '2026-03' },
+    { label: 'Mayo 2026', value: '2026-05' },
+    { label: 'Abril 2026', value: '2026-04' },
+    { label: 'Marzo 2026', value: '2026-03' },
   ]
 
   onMounted(() => {
