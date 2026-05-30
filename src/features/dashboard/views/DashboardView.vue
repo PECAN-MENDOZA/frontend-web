@@ -4,13 +4,13 @@ import Button from 'primevue/button'
 import Message from 'primevue/message'
 import Select from 'primevue/select'
 import Skeleton from 'primevue/skeleton'
-import ErrorDistribution from '@/features/dashboard/components/ErrorDistribution.vue'
-import MetricCard from '@/features/dashboard/components/MetricCard.vue'
 import StudentTable from '@/features/dashboard/components/StudentTable.vue'
-import TopWordsTable from '@/features/dashboard/components/TopWordsTable.vue'
 import { useDashboard } from '@/features/dashboard/composables/useDashboard'
 import { useAuthStore } from '@/features/auth/store/auth.store'
 import PageHeader from '@/shared/components/PageHeader.vue'
+import ErrorDistribution from '@/shared/components/insights/ErrorDistribution.vue'
+import MetricCard from '@/shared/components/insights/MetricCard.vue'
+import TopWordsTable from '@/shared/components/insights/TopWordsTable.vue'
 
 const { dashboardStore, selectedMonth, monthOptions, refreshDashboard } = useDashboard()
 const authStore = useAuthStore()

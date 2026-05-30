@@ -1,10 +1,10 @@
 import { api } from '@/shared/services/api'
-
-const ERROR_TYPE_METADATA = {
-  ortografico: { label: 'Spelling', tone: 'coral' },
-  fonologico: { label: 'Phonological', tone: 'ocean' },
-  semantico: { label: 'Semantic', tone: 'amber' },
-}
+import {
+  ERROR_TYPE_METADATA,
+  getErrorTypeLabel,
+  getInitials,
+  getStudentStatus,
+} from '@/shared/utils/kpi'
 
 export async function getDashboardSummary(month) {
   const studentLinks = await api.get('/teachers/students')
@@ -148,24 +148,6 @@ function mapStudent({ student, acceptance, distribution }) {
     primarySignal: primarySignal ? getErrorTypeLabel(primarySignal.type) : 'No signals',
     status: getStudentStatus(totalErrors),
   }
-}
-
-function getErrorTypeLabel(type) {
-  return ERROR_TYPE_METADATA[type]?.label ?? 'Other'
-}
-
-function getInitials(name) {
-  return name
-    .split(' ')
-    .map((part) => part[0])
-    .slice(0, 2)
-    .join('')
-}
-
-function getStudentStatus(totalErrors) {
-  if (totalErrors >= 15) return 'Review'
-  if (totalErrors >= 8) return 'Watch'
-  return 'Steady'
 }
 
 function sum(items, key) {

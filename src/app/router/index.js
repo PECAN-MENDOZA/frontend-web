@@ -30,6 +30,16 @@ const routes = [
         name: 'dashboard',
         component: () => import('@/features/dashboard/views/DashboardView.vue'),
       },
+      {
+        path: 'students',
+        name: 'students',
+        component: () => import('@/features/students/views/StudentsView.vue'),
+      },
+      {
+        path: 'students/:studentId',
+        name: 'student-detail',
+        component: () => import('@/features/students/views/StudentDetailView.vue'),
+      },
     ],
   },
   {

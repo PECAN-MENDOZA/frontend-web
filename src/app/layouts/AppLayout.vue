@@ -13,7 +13,7 @@ const isNavigationOpen = ref(false)
 
 const navigationItems = [
   { label: 'Overview', icon: 'pi pi-chart-bar', to: '/dashboard' },
-  { label: 'Students', icon: 'pi pi-users', disabled: true },
+  { label: 'Students', icon: 'pi pi-users', to: '/students' },
   { label: 'Reports', icon: 'pi pi-file-chart', disabled: true },
 ]
 
