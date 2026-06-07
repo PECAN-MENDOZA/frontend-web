@@ -1,15 +1,17 @@
 import { api } from '@/shared/services/api'
-import {
-  getErrorTypeLabel,
-  getInitials,
-  getStudentStatus,
-  mapErrorDistribution,
-  mapTopWords,
-} from '@/shared/utils/kpi'
+import { getInitials, getStudentStatus, mapFeedbackMix, mapTopWords, sumTopWordFrequency } from '@/shared/utils/kpi'
 
 export async function getStudents(month) {
   const links = await api.get('/teachers/students')
   return Promise.all(links.map((link) => getStudentListItem(link, month)))
+}
+
+export function createStudentAccount(student) {
+  return api.post('/teachers/students/accounts', student)
+}
+
+export function resetStudentPin(studentId) {
+  return api.post(`/teachers/students/${studentId}/reset-pin`)
 }
 
 export async function getStudentDetail(studentId, month) {
@@ -33,9 +35,10 @@ async function getStudentListItem(link, month) {
 
 function mapStudentSummary(link, summary) {
   const acceptance = summary?.tasa_aceptacion
-  const errors = summary?.errores_por_tipo ?? []
-  const totalErrors = errors.reduce((total, item) => total + item.count, 0)
-  const primarySignal = [...errors].sort((first, second) => second.count - first.count)[0]
+  const topWords = mapTopWords(summary?.top_palabras)
+  const recurringWords = sumTopWordFrequency(topWords)
+  const acceptanceRate = acceptance?.tasa_aceptacion_pct ?? null
+  const totalSubmissions = acceptance?.total_envios ?? 0
   const name = link?.studentRealName ?? summary?.name ?? 'Estudiante'
 
   return {
@@ -46,15 +49,15 @@ function mapStudentSummary(link, summary) {
     notes: link?.notes ?? '',
     createdAt: link?.createdAt ?? null,
     lastAccessAt: link?.lastAccessAt ?? null,
-    acceptanceRate: acceptance?.tasa_aceptacion_pct ?? null,
+    acceptanceRate,
     acceptedSuggestions: acceptance?.total_aceptadas ?? 0,
     rejectedSuggestions: acceptance?.total_rechazadas ?? 0,
     unansweredSuggestions: acceptance?.sin_respuesta ?? 0,
-    totalSubmissions: acceptance?.total_envios ?? 0,
-    totalErrors,
-    primarySignal: primarySignal ? getErrorTypeLabel(primarySignal.type) : 'Sin señales',
-    status: getStudentStatus(totalErrors),
-    errorDistribution: mapErrorDistribution(errors),
-    topWords: mapTopWords(summary?.top_palabras),
+    totalSubmissions,
+    recurringWords,
+    primarySignal: topWords[0]?.word ?? 'Sin palabras recurrentes',
+    status: getStudentStatus({ acceptanceRate, totalSubmissions, recurringWords }),
+    feedbackMix: mapFeedbackMix(acceptance),
+    topWords,
   }
 }

@@ -11,9 +11,10 @@ export function getRateSeverity(rate) {
 
 export function getStatusSeverity(status) {
   const severities = {
-    Estable: 'success',
-    Revisar: 'warn',
+    'En progreso': 'success',
+    Acompanar: 'danger',
     Observar: 'danger',
+    'Sin datos': 'secondary',
   }
 
   return severities[status] ?? 'secondary'

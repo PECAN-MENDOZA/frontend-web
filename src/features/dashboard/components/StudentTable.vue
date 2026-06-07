@@ -18,12 +18,11 @@ defineProps({
     <div class="panel__header">
       <div>
         <p class="overline">Pulso del aula</p>
-        <h2>Resumen del aula</h2>
+        <h2>Resumen por estudiante</h2>
       </div>
-      <button class="text-action" type="button">Ver todos los estudiantes <i class="pi pi-arrow-right"></i></button>
     </div>
 
-    <DataTable :value="students" class="student-table" table-style="min-width: 48rem">
+    <DataTable :value="students" class="student-table" table-style="min-width: 54rem">
       <Column header="Estudiante">
         <template #body="{ data }">
           <div class="student-cell">
@@ -35,13 +34,14 @@ defineProps({
           </div>
         </template>
       </Column>
-      <Column header="Aceptación">
+      <Column header="Aceptacion">
         <template #body="{ data }">
           <Tag :value="formatPercentage(data.acceptanceRate)" :severity="getRateSeverity(data.acceptanceRate)" />
         </template>
       </Column>
-      <Column field="totalCorrections" header="Correcciones" />
-      <Column header="Señal principal">
+      <Column field="totalSubmissions" header="Envios" />
+      <Column field="recurringWords" header="Palabras" />
+      <Column header="Palabra recurrente">
         <template #body="{ data }">
           <span class="signal-label">{{ data.primarySignal }}</span>
         </template>

@@ -8,7 +8,7 @@ import StudentTable from '@/features/dashboard/components/StudentTable.vue'
 import { useDashboard } from '@/features/dashboard/composables/useDashboard'
 import { useAuthStore } from '@/features/auth/store/auth.store'
 import PageHeader from '@/shared/components/PageHeader.vue'
-import ErrorDistribution from '@/shared/components/insights/ErrorDistribution.vue'
+import FeedbackMixPanel from '@/shared/components/insights/FeedbackMixPanel.vue'
 import MetricCard from '@/shared/components/insights/MetricCard.vue'
 import TopWordsTable from '@/shared/components/insights/TopWordsTable.vue'
 
@@ -16,15 +16,32 @@ const { dashboardStore, selectedMonth, monthOptions, refreshDashboard } = useDas
 const authStore = useAuthStore()
 
 const teacherFirstName = computed(() => authStore.user?.name.split(' ')[0] ?? 'docente')
-const leadingError = computed(() => dashboardStore.errorDistribution[0])
+const recurrentWord = computed(() => dashboardStore.dashboard?.recurrentWord)
+const focusStudent = computed(() => dashboardStore.dashboard?.focusStudent)
+const focusTitle = computed(() => {
+  if (recurrentWord.value) return `"${recurrentWord.value.word}" merece refuerzo breve esta semana.`
+  if (focusStudent.value) return `${focusStudent.value.name} necesita una mirada cercana.`
+  return 'Cuando haya envios, este panel marcara la prioridad del aula.'
+})
+const focusDescription = computed(() => {
+  if (recurrentWord.value) {
+    return `Aparece ${recurrentWord.value.frequency} veces entre las correcciones aceptadas. Conviene preparar una actividad corta con ejemplos similares.`
+  }
+
+  if (focusStudent.value) {
+    return `${focusStudent.value.name} acumula ${focusStudent.value.recurringWords} palabras recurrentes este mes.`
+  }
+
+  return 'El backend ya no clasifica tipos de error; ahora la lectura se centra en aceptacion y palabras corregidas.'
+})
 </script>
 
 <template>
   <div class="dashboard-page">
     <PageHeader
-      eyebrow="Revisión de aprendizaje de mayo"
-      :title="`Buenos días, ${teacherFirstName}.`"
-      description="Una vista enfocada en las señales que pueden orientar tu próxima conversación en el aula."
+      eyebrow="Seguimiento mensual"
+      :title="`Buenos dias, ${teacherFirstName}.`"
+      description="Una vista docente centrada en lo que el backend ahora puede medir: aceptacion de sugerencias, palabras recurrentes y estudiantes que necesitan acompanamiento."
     >
       <template #actions>
         <Select
@@ -51,16 +68,16 @@ const leadingError = computed(() => dashboardStore.errorDistribution[0])
 
     <Message
       v-if="dashboardStore.dashboard && !dashboardStore.dashboard.hasAcceptanceData"
-      severity="warn"
+      severity="info"
       :closable="false"
     >
-      La tasa de aceptación no está disponible temporalmente desde la API. Las demás señales del aula
-      están actualizadas.
+      Aun no hay envios para el mes seleccionado. La vista se actualizara cuando los estudiantes usen el
+      teclado.
     </Message>
 
     <template v-if="dashboardStore.isLoading && !dashboardStore.dashboard">
-      <div class="metrics-grid">
-        <Skeleton v-for="item in 3" :key="item" height="9rem" border-radius="1.25rem" />
+      <div class="metrics-grid metrics-grid--four">
+        <Skeleton v-for="item in 4" :key="item" height="9rem" border-radius="1.25rem" />
       </div>
       <div class="dashboard-grid">
         <Skeleton height="23rem" border-radius="1.25rem" />
@@ -69,45 +86,51 @@ const leadingError = computed(() => dashboardStore.errorDistribution[0])
     </template>
 
     <template v-else-if="dashboardStore.dashboard">
-      <section class="metrics-grid" aria-label="Métricas del aula">
+      <section class="metrics-grid metrics-grid--four" aria-label="Metricas del aula">
         <MetricCard
-          label="Estudiantes activos"
+          label="Estudiantes vinculados"
           :value="dashboardStore.metrics.activeStudents.value"
           :change="dashboardStore.metrics.activeStudents.change"
           icon="pi pi-users"
           tone="ocean"
         />
         <MetricCard
-          label="Aceptación de sugerencias"
+          label="Aceptacion global"
           :value="dashboardStore.metrics.acceptanceRate.value"
           :change="dashboardStore.metrics.acceptanceRate.change"
           icon="pi pi-check-circle"
           tone="coral"
         />
         <MetricCard
-          label="Errores detectados"
-          :value="dashboardStore.metrics.detectedErrors.value"
-          :change="dashboardStore.metrics.detectedErrors.change"
-          icon="pi pi-compass"
+          label="Palabras recurrentes"
+          :value="dashboardStore.metrics.recurringWords.value"
+          :change="dashboardStore.metrics.recurringWords.change"
+          icon="pi pi-list-check"
           tone="amber"
+        />
+        <MetricCard
+          label="Acompanamiento"
+          :value="dashboardStore.metrics.studentsToSupport.value"
+          :change="dashboardStore.metrics.studentsToSupport.change"
+          icon="pi pi-heart"
+          tone="moss"
         />
       </section>
 
-      <div class="dashboard-grid">
-        <ErrorDistribution :items="dashboardStore.errorDistribution" />
+      <div class="dashboard-grid dashboard-grid--redesign">
+        <FeedbackMixPanel
+          :items="dashboardStore.feedbackMix"
+          title="Como respondio el aula"
+          eyebrow="Aceptadas e ignoradas"
+        />
 
         <section class="panel insight-panel">
           <div class="insight-panel__icon">
             <i class="pi pi-lightbulb"></i>
           </div>
-          <p class="overline">Nota docente</p>
-          <h2>{{ leadingError.type }} es la principal oportunidad de mejora este mes.</h2>
-          <p>
-            {{ leadingError.percentage }}% de las señales detectadas corresponden a errores de tipo
-            {{ leadingError.type.toLowerCase() }}. Una actividad breve y enfocada puede facilitar la
-            siguiente sesión de escritura.
-          </p>
-          <Button label="Ver actividad sugerida" icon="pi pi-arrow-up-right" icon-pos="right" />
+          <p class="overline">Prioridad docente</p>
+          <h2>{{ focusTitle }}</h2>
+          <p>{{ focusDescription }}</p>
           <span>Actualizado {{ dashboardStore.dashboard.updatedAt }}</span>
         </section>
       </div>

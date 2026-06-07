@@ -9,7 +9,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
 
   const metrics = computed(() => dashboard.value?.metrics ?? {})
   const students = computed(() => dashboard.value?.students ?? [])
-  const errorDistribution = computed(() => dashboard.value?.errorDistribution ?? [])
+  const feedbackMix = computed(() => dashboard.value?.feedbackMix ?? [])
   const topWords = computed(() => dashboard.value?.topWords ?? [])
 
   async function loadDashboard(month) {
@@ -19,7 +19,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
     try {
       dashboard.value = await getDashboardSummary(month)
     } catch {
-      errorMessage.value = 'No pudimos cargar el resumen del aula. Inténtalo nuevamente.'
+      errorMessage.value = 'No pudimos cargar el resumen del aula. Intentalo nuevamente.'
     } finally {
       isLoading.value = false
     }
@@ -31,7 +31,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
     errorMessage,
     metrics,
     students,
-    errorDistribution,
+    feedbackMix,
     topWords,
     loadDashboard,
   }

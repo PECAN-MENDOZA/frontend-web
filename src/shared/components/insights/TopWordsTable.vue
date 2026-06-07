@@ -1,7 +1,6 @@
 <script setup>
 import Column from 'primevue/column'
 import DataTable from 'primevue/datatable'
-import ProgressBar from 'primevue/progressbar'
 import Tag from 'primevue/tag'
 
 defineProps({
@@ -10,14 +9,6 @@ defineProps({
     required: true,
   },
 })
-
-function getTypeSeverity(type) {
-  return {
-    Ortográfico: 'danger',
-    Fonológico: 'info',
-    Semántico: 'warn',
-  }[type]
-}
 </script>
 
 <template>
@@ -25,29 +16,29 @@ function getTypeSeverity(type) {
     <div class="panel__header">
       <div>
         <p class="overline">Palabras recurrentes</p>
-        <h2>Patrones para reforzar</h2>
+        <h2>Refuerzos que se repiten</h2>
       </div>
       <span class="panel__meta">Top 10</span>
     </div>
 
-    <DataTable :value="words" class="words-table">
-      <Column header="Original">
+    <DataTable :value="words" class="words-table" empty-message="Sin palabras recurrentes para este mes.">
+      <Column header="#">
+        <template #body="{ data, index }">
+          <Tag :value="data.rank ?? index + 1" severity="secondary" rounded />
+        </template>
+      </Column>
+      <Column header="Palabra">
         <template #body="{ data }">
           <strong>{{ data.word }}</strong>
         </template>
       </Column>
-      <Column header="Tipo">
-        <template #body="{ data }">
-          <Tag :value="data.type" :severity="getTypeSeverity(data.type)" />
-        </template>
-      </Column>
       <Column field="frequency" header="Repeticiones" />
-      <Column header="Confianza">
+      <Column field="acceptedCount" header="Aceptadas" />
+      <Column header="Lectura docente">
         <template #body="{ data }">
-          <div class="confidence-cell">
-            <ProgressBar :value="data.confidencePercent" :show-value="false" />
-            <span>{{ data.confidencePercent }}%</span>
-          </div>
+          <span class="signal-label">
+            Reforzar en frases cortas con {{ data.word }}
+          </span>
         </template>
       </Column>
     </DataTable>

@@ -1,17 +1,16 @@
 import { api } from '@/shared/services/api'
-import {
-  ERROR_TYPE_METADATA,
-  getErrorTypeLabel,
-  getInitials,
-  getStudentStatus,
-} from '@/shared/utils/kpi'
+import { getInitials, getStudentStatus, mapFeedbackMix, mapTopWords, sumTopWordFrequency } from '@/shared/utils/kpi'
 
 export async function getDashboardSummary(month) {
   const studentLinks = await api.get('/teachers/students')
   const studentKpis = await Promise.all(studentLinks.map((student) => getStudentKpis(student, month)))
-  const errorDistribution = getClassErrorDistribution(studentKpis)
-  const acceptanceMetric = getClassAcceptanceMetric(studentKpis)
-  const detectedErrors = errorDistribution.reduce((total, item) => total + item.count, 0)
+  const feedbackTotals = getClassFeedbackTotals(studentKpis)
+  const acceptanceMetric = getClassAcceptanceMetric(feedbackTotals, studentKpis.length)
+  const topWords = getClassTopWords(studentKpis)
+  const students = studentKpis.map(mapStudent)
+  const focusStudent = students
+    .filter((student) => student.status !== 'Sin datos')
+    .sort((first, second) => second.recurringWords - first.recurringWords)[0]
 
   return {
     updatedAt: new Intl.DateTimeFormat('es-PE', {
@@ -20,136 +19,125 @@ export async function getDashboardSummary(month) {
     }).format(new Date()),
     selectedMonth: month,
     hasAcceptanceData: acceptanceMetric.isAvailable,
+    feedbackMix: mapFeedbackMix(feedbackTotals),
+    focusStudent,
+    recurrentWord: topWords[0] ?? null,
     metrics: {
       activeStudents: {
         value: studentLinks.length,
         change: 'Vinculados a tu aula',
       },
       acceptanceRate: acceptanceMetric,
-      detectedErrors: {
-        value: detectedErrors,
-        change: 'Durante el mes seleccionado',
+      recurringWords: {
+        value: topWords.reduce((total, word) => total + word.frequency, 0),
+        change: 'Repeticiones aceptadas en el mes',
+      },
+      studentsToSupport: {
+        value: students.filter((student) => student.status === 'Acompanar').length,
+        change: 'Necesitan seguimiento cercano',
       },
     },
-    errorDistribution,
-    students: studentKpis.map(mapStudent),
-    topWords: getClassTopWords(studentKpis),
+    students,
+    topWords,
   }
 }
 
 async function getStudentKpis(student, month) {
-  const basePath = `/kpis/students/${student.studentId}`
-  const [acceptance, distribution, topWords] = await Promise.allSettled([
-    api.get(`${basePath}/acceptance-rate?month=${month}`),
-    api.get(`${basePath}/errors-by-type?month=${month}`),
-    api.get(`${basePath}/top-words?month=${month}`),
-  ])
+  try {
+    const summary = await api.get(`/kpis/students/${student.studentId}/summary?month=${month}`)
 
-  return {
-    student,
-    acceptance: getSettledValue(acceptance),
-    distribution: getSettledValue(distribution),
-    topWords: getSettledValue(topWords),
+    return {
+      student,
+      summary,
+      acceptance: summary?.tasa_aceptacion ?? null,
+      topWords: mapTopWords(summary?.top_palabras),
+    }
+  } catch {
+    return {
+      student,
+      summary: null,
+      acceptance: null,
+      topWords: [],
+    }
   }
 }
 
-function getSettledValue(result) {
-  return result.status === 'fulfilled' ? result.value : null
+function getClassFeedbackTotals(studentKpis) {
+  return studentKpis.reduce(
+    (totals, { acceptance }) => ({
+      total_envios: totals.total_envios + (acceptance?.total_envios ?? 0),
+      total_aceptadas: totals.total_aceptadas + (acceptance?.total_aceptadas ?? 0),
+      total_rechazadas: totals.total_rechazadas + (acceptance?.total_rechazadas ?? 0),
+      sin_respuesta: totals.sin_respuesta + (acceptance?.sin_respuesta ?? 0),
+    }),
+    {
+      total_envios: 0,
+      total_aceptadas: 0,
+      total_rechazadas: 0,
+      sin_respuesta: 0,
+    },
+  )
 }
 
-function getClassAcceptanceMetric(studentKpis) {
-  const responses = studentKpis.map(({ acceptance }) => acceptance).filter(Boolean)
-  const totalSubmissions = sum(responses, 'total_envios')
-  const totalAccepted = sum(responses, 'total_aceptadas')
-
-  if (!responses.length || !totalSubmissions) {
+function getClassAcceptanceMetric(totals, studentCount) {
+  if (!studentCount || !totals.total_envios) {
     return {
       value: '--',
-      change: 'No disponible desde la API',
+      change: 'Aun no hay envios del mes',
       isAvailable: false,
     }
   }
 
   return {
-    value: `${((totalAccepted * 100) / totalSubmissions).toFixed(1)}%`,
-    change: `${totalAccepted} de ${totalSubmissions} aceptadas`,
+    value: `${((totals.total_aceptadas * 100) / totals.total_envios).toFixed(1)}%`,
+    change: `${totals.total_aceptadas} de ${totals.total_envios} aceptadas`,
     isAvailable: true,
   }
-}
-
-function getClassErrorDistribution(studentKpis) {
-  const counts = new Map()
-
-  studentKpis.forEach(({ distribution }) => {
-    distribution?.distribucion.forEach(({ type, count }) => {
-      counts.set(type, (counts.get(type) ?? 0) + count)
-    })
-  })
-
-  const total = [...counts.values()].reduce((sum, count) => sum + count, 0)
-
-  return Object.entries(ERROR_TYPE_METADATA).map(([type, metadata]) => {
-    const count = counts.get(type) ?? 0
-    return {
-      type: metadata.label,
-      count,
-      percentage: total ? Number(((count * 100) / total).toFixed(1)) : 0,
-      tone: metadata.tone,
-    }
-  })
 }
 
 function getClassTopWords(studentKpis) {
   const words = new Map()
 
   studentKpis.forEach(({ topWords }) => {
-    topWords?.top_palabras.forEach((word) => {
-      const key = `${word.palabra_original}:${word.tipo_mas_comun}`
-      const current = words.get(key) ?? {
-        word: word.palabra_original,
-        type: getErrorTypeLabel(word.tipo_mas_comun),
+    topWords.forEach((word) => {
+      const current = words.get(word.word) ?? {
+        word: word.word,
         frequency: 0,
-        confidenceTotal: 0,
         acceptedCount: 0,
+        studentCount: 0,
       }
 
       current.frequency += word.frequency
-      current.confidenceTotal += word.confianza_promedio * word.frequency
-      current.acceptedCount += word.veces_corregida_aceptada
-      words.set(key, current)
+      current.acceptedCount += word.acceptedCount
+      current.studentCount += 1
+      words.set(word.word, current)
     })
   })
 
   return [...words.values()]
-    .map((word) => ({
-      ...word,
-      confidence: word.frequency ? word.confidenceTotal / word.frequency : 0,
-      confidencePercent: word.frequency
-        ? Math.round((word.confidenceTotal / word.frequency) * 100)
-        : 0,
-    }))
     .sort((first, second) => second.frequency - first.frequency)
     .slice(0, 10)
+    .map((word, index) => ({ ...word, rank: index + 1 }))
 }
 
-function mapStudent({ student, acceptance, distribution }) {
-  const totalErrors = distribution?.total_errores ?? 0
-  const primarySignal = [...(distribution?.distribucion ?? [])].sort(
-    (first, second) => second.count - first.count,
-  )[0]
+function mapStudent({ student, acceptance, topWords }) {
+  const recurringWords = sumTopWordFrequency(topWords)
+  const acceptanceRate = acceptance?.tasa_aceptacion_pct ?? null
+  const totalSubmissions = acceptance?.total_envios ?? 0
+  const status = getStudentStatus({ acceptanceRate, totalSubmissions, recurringWords })
 
   return {
     id: student.studentId,
     name: student.studentRealName,
     alias: student.studentUsername,
     initials: getInitials(student.studentRealName),
-    acceptanceRate: acceptance?.tasa_aceptacion_pct ?? null,
-    totalCorrections: totalErrors,
-    primarySignal: primarySignal ? getErrorTypeLabel(primarySignal.type) : 'Sin señales',
-    status: getStudentStatus(totalErrors),
+    acceptanceRate,
+    totalSubmissions,
+    acceptedSuggestions: acceptance?.total_aceptadas ?? 0,
+    rejectedSuggestions: acceptance?.total_rechazadas ?? 0,
+    unansweredSuggestions: acceptance?.sin_respuesta ?? 0,
+    recurringWords,
+    primarySignal: topWords[0]?.word ?? 'Sin palabras recurrentes',
+    status,
   }
-}
-
-function sum(items, key) {
-  return items.reduce((total, item) => total + item[key], 0)
 }

@@ -6,10 +6,11 @@ import Button from 'primevue/button'
 import Message from 'primevue/message'
 import Select from 'primevue/select'
 import Skeleton from 'primevue/skeleton'
+import StudentCredentialDialog from '@/features/students/components/StudentCredentialDialog.vue'
 import { useReportDownload } from '@/features/reports/composables/useReportDownload'
 import { useStudentDetail } from '@/features/students/composables/useStudentDetail'
 import { formatPercentage } from '@/features/dashboard/utils/formatters'
-import ErrorDistribution from '@/shared/components/insights/ErrorDistribution.vue'
+import FeedbackMixPanel from '@/shared/components/insights/FeedbackMixPanel.vue'
 import MetricCard from '@/shared/components/insights/MetricCard.vue'
 import TopWordsTable from '@/shared/components/insights/TopWordsTable.vue'
 
@@ -17,6 +18,11 @@ const router = useRouter()
 const { studentsStore, selectedMonth, monthOptions, refreshStudent } = useStudentDetail()
 const student = computed(() => studentsStore.selectedStudent)
 const studentId = computed(() => student.value?.id)
+const resetCredential = computed(() =>
+  studentsStore.resetPinCredentials
+    ? { ...studentsStore.resetPinCredentials, studentRealName: student.value?.name }
+    : null,
+)
 const {
   buttonLabel: reportButtonLabel,
   errorMessage: reportErrorMessage,
@@ -24,6 +30,11 @@ const {
   isReportAvailable,
   downloadReport,
 } = useReportDownload(studentId, selectedMonth)
+
+function resetPin() {
+  if (!studentId.value) return
+  studentsStore.resetStudentPin(studentId.value)
+}
 </script>
 
 <template>
@@ -38,6 +49,10 @@ const {
 
     <Message v-if="studentsStore.errorMessage" severity="error">
       {{ studentsStore.errorMessage }}
+    </Message>
+
+    <Message v-if="studentsStore.resetPinErrorMessage" severity="warn" :closable="false">
+      {{ studentsStore.resetPinErrorMessage }}
     </Message>
 
     <Message v-if="reportErrorMessage" severity="warn" :closable="false">
@@ -78,6 +93,14 @@ const {
             @click="refreshStudent"
           />
           <Button
+            label="Regenerar PIN"
+            icon="pi pi-key"
+            severity="secondary"
+            outlined
+            :loading="studentsStore.isResettingPin"
+            @click="resetPin"
+          />
+          <Button
             :label="reportButtonLabel"
             icon="pi pi-download"
             :loading="isReportLoading"
@@ -87,44 +110,48 @@ const {
         </div>
       </section>
 
-      <section class="metrics-grid" aria-label="Métricas de aprendizaje del estudiante">
+      <section class="metrics-grid" aria-label="Metricas de aprendizaje del estudiante">
         <MetricCard
-          label="Aceptación de sugerencias"
+          label="Aceptacion de sugerencias"
           :value="formatPercentage(student.acceptanceRate)"
           :change="`${student.acceptedSuggestions} de ${student.totalSubmissions} aceptadas`"
           icon="pi pi-check-circle"
           tone="ocean"
         />
         <MetricCard
-          label="Señales detectadas"
-          :value="student.totalErrors"
-          change="Durante el mes seleccionado"
-          icon="pi pi-compass"
+          label="Envios del mes"
+          :value="student.totalSubmissions"
+          change="Solicitudes hechas desde el teclado"
+          icon="pi pi-send"
           tone="coral"
         />
         <MetricCard
-          label="Señal principal"
+          label="Palabra recurrente"
           :value="student.primarySignal"
-          change="Área de refuerzo más frecuente"
-          icon="pi pi-chart-bar"
+          change="Principal refuerzo aceptado"
+          icon="pi pi-sparkles"
           tone="amber"
         />
       </section>
 
       <div class="student-detail-grid">
-        <ErrorDistribution :items="student.errorDistribution" />
+        <FeedbackMixPanel
+          :items="student.feedbackMix"
+          title="Como respondio este estudiante"
+          eyebrow="Feedback individual"
+        />
 
         <section class="panel student-context">
           <p class="overline">Contexto docente</p>
-          <h2>Notas para la próxima conversación</h2>
-          <p>{{ student.notes || 'Aún no se agregaron notas docentes.' }}</p>
+          <h2>Notas para la proxima conversacion</h2>
+          <p>{{ student.notes || 'Aun no se agregaron notas docentes.' }}</p>
           <dl>
             <div>
               <dt>Aceptadas</dt>
               <dd>{{ student.acceptedSuggestions }}</dd>
             </div>
             <div>
-              <dt>Rechazadas</dt>
+              <dt>Ignoradas</dt>
               <dd>{{ student.rejectedSuggestions }}</dd>
             </div>
             <div>
@@ -136,6 +163,14 @@ const {
       </div>
 
       <TopWordsTable :words="student.topWords" />
+
+      <StudentCredentialDialog
+        :credential="resetCredential"
+        header="Nuevo PIN temporal"
+        intro="Entrega este nuevo PIN al estudiante. El alias se mantiene igual."
+        action-label="Ya entregue el nuevo PIN"
+        @close="studentsStore.clearResetPinCredentials"
+      />
     </template>
   </div>
 </template>

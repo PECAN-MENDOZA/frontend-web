@@ -36,14 +36,14 @@ defineEmits(['select'])
         </div>
       </template>
     </Column>
-    <Column header="Aceptación">
+    <Column header="Aceptacion">
       <template #body="{ data }">
         <Tag :value="formatPercentage(data.acceptanceRate)" :severity="getRateSeverity(data.acceptanceRate)" />
       </template>
     </Column>
-    <Column field="totalSubmissions" header="Envíos" />
-    <Column field="totalErrors" header="Señales" />
-    <Column header="Señal principal">
+    <Column field="totalSubmissions" header="Envios" />
+    <Column field="recurringWords" header="Palabras" />
+    <Column header="Palabra recurrente">
       <template #body="{ data }">
         <span class="signal-label">{{ data.primarySignal }}</span>
       </template>

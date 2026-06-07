@@ -17,9 +17,10 @@ Create a local `.env` file only when the API URL differs from the default:
 VITE_API_BASE_URL=http://localhost:8080/api/v1
 ```
 
-The educator dashboard uses the teacher login endpoint and aggregates the linked students, error
-distribution, and top words from the backend. If the acceptance-rate endpoint is unavailable, the
-interface keeps the remaining live metrics visible and marks that KPI as temporarily unavailable.
+The educator dashboard uses the teacher login endpoint and aggregates linked students, acceptance
+rates, recurring words, PIN access actions, and monthly PDF reports from the backend. The current
+contract does not expose error-type distribution or confidence scores, so the interface focuses on
+accepted feedback and words that need reinforcement.
 
 ## Validation
 

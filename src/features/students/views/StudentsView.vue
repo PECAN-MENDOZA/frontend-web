@@ -5,7 +5,9 @@ import InputText from 'primevue/inputtext'
 import Message from 'primevue/message'
 import Select from 'primevue/select'
 import Skeleton from 'primevue/skeleton'
+import CreateStudentAccountDialog from '@/features/students/components/CreateStudentAccountDialog.vue'
 import StudentsTable from '@/features/students/components/StudentsTable.vue'
+import { useCreateStudentAccount } from '@/features/students/composables/useCreateStudentAccount'
 import { useStudents } from '@/features/students/composables/useStudents'
 import PageHeader from '@/shared/components/PageHeader.vue'
 import MetricCard from '@/shared/components/insights/MetricCard.vue'
@@ -20,6 +22,7 @@ const {
   averageAcceptance,
   monthOptions,
 } = useStudents()
+const { isDialogVisible, openCreateStudent, createStudent } = useCreateStudentAccount(selectedMonth)
 
 function openStudent(studentId) {
   router.push({ name: 'student-detail', params: { studentId } })
@@ -31,9 +34,10 @@ function openStudent(studentId) {
     <PageHeader
       eyebrow="Directorio del aula"
       title="Tus estudiantes."
-      description="Pasa de las señales del aula al contexto individual sin perder la visión general del aprendizaje."
+      description="Gestiona cuentas con PIN y revisa el progreso individual desde los datos mensuales del teclado."
     >
       <template #actions>
+        <Button label="Crear estudiante" icon="pi pi-user-plus" @click="openCreateStudent" />
         <Select
           v-model="selectedMonth"
           :options="monthOptions"
@@ -56,7 +60,7 @@ function openStudent(studentId) {
       {{ studentsStore.errorMessage }}
     </Message>
 
-    <section class="metrics-grid" aria-label="Métricas del directorio de estudiantes">
+    <section class="metrics-grid" aria-label="Metricas del directorio de estudiantes">
       <MetricCard
         label="Estudiantes vinculados"
         :value="studentsStore.students.length"
@@ -65,16 +69,16 @@ function openStudent(studentId) {
         tone="ocean"
       />
       <MetricCard
-        label="Aceptación promedio"
+        label="Aceptacion promedio"
         :value="averageAcceptance"
-        change="Entre estudiantes vinculados"
+        change="Entre estudiantes con envios"
         icon="pi pi-check-circle"
         tone="coral"
       />
       <MetricCard
-        label="Requieren revisión"
+        label="Acompanamiento"
         :value="reviewCount"
-        change="Perfiles con 15+ señales"
+        change="Perfiles con baja aceptacion o alta recurrencia"
         icon="pi pi-flag"
         tone="amber"
       />
@@ -97,5 +101,14 @@ function openStudent(studentId) {
       </div>
       <StudentsTable v-else :students="filteredStudents" @select="openStudent" />
     </section>
+
+    <CreateStudentAccountDialog
+      v-model:visible="isDialogVisible"
+      :is-saving="studentsStore.isCreating"
+      :error-message="studentsStore.creationErrorMessage"
+      :created-account="studentsStore.createdStudentAccount"
+      @submit="createStudent"
+      @close-credentials="studentsStore.clearCreatedStudentAccount"
+    />
   </div>
 </template>

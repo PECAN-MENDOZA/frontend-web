@@ -40,7 +40,8 @@ body {
 }
 
 button,
-input {
+input,
+textarea {
   font: inherit;
 }
 
@@ -62,7 +63,7 @@ p {
 h1,
 h2 {
   font-family: var(--font-display);
-  letter-spacing: -0.04em;
+  letter-spacing: 0;
 }
 
 .overline {
@@ -586,6 +587,10 @@ h2 {
   gap: 1rem;
 }
 
+.metrics-grid--four {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .metric-card {
   display: flex;
   position: relative;
@@ -654,6 +659,14 @@ h2 {
   background: var(--color-amber);
 }
 
+.metric-card--moss {
+  color: var(--color-moss);
+}
+
+.metric-card--moss .metric-card__icon {
+  background: var(--color-moss);
+}
+
 .metric-card p,
 .metric-card span {
   color: var(--color-ink-soft);
@@ -673,6 +686,7 @@ h2 {
   font-family: var(--font-display);
   font-size: 2.25rem;
   line-height: 1;
+  overflow-wrap: anywhere;
 }
 
 .metric-card span {
@@ -683,6 +697,10 @@ h2 {
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(18rem, 0.65fr);
   gap: 1rem;
+}
+
+.dashboard-grid--redesign {
+  grid-template-columns: minmax(0, 1.18fr) minmax(20rem, 0.82fr);
 }
 
 .panel {
@@ -712,14 +730,16 @@ h2 {
   font-weight: 700;
 }
 
-.distribution-chart {
+.distribution-chart,
+.feedback-chart {
   display: flex;
   padding: 1.4rem;
   align-items: center;
   gap: 2rem;
 }
 
-.distribution-chart__ring {
+.distribution-chart__ring,
+.feedback-chart__ring {
   display: grid;
   width: 11rem;
   height: 11rem;
@@ -733,7 +753,8 @@ h2 {
   );
 }
 
-.distribution-chart__center {
+.distribution-chart__center,
+.feedback-chart__center {
   display: grid;
   width: 7.5rem;
   height: 7.5rem;
@@ -743,48 +764,57 @@ h2 {
   background: var(--color-surface);
 }
 
-.distribution-chart__center strong {
+.distribution-chart__center strong,
+.feedback-chart__center strong {
   font-family: var(--font-display);
   font-size: 2.2rem;
   line-height: 1;
 }
 
-.distribution-chart__center span {
+.distribution-chart__center span,
+.feedback-chart__center span {
   margin-top: 0.25rem;
   color: var(--color-ink-soft);
   font-size: 0.68rem;
   text-transform: uppercase;
 }
 
-.distribution-chart__legend {
+.distribution-chart__legend,
+.feedback-chart__legend {
   display: grid;
   width: 100%;
   gap: 0.9rem;
 }
 
 .distribution-item__header,
-.distribution-item__header div {
+.distribution-item__header div,
+.feedback-item__header,
+.feedback-item__header div {
   display: flex;
   align-items: center;
 }
 
-.distribution-item__header {
+.distribution-item__header,
+.feedback-item__header {
   justify-content: space-between;
   gap: 1rem;
   font-size: 0.78rem;
 }
 
-.distribution-item__header div {
+.distribution-item__header div,
+.feedback-item__header div {
   gap: 0.4rem;
 }
 
-.distribution-item__dot {
+.distribution-item__dot,
+.feedback-item__dot {
   width: 0.55rem;
   height: 0.55rem;
   border-radius: 50%;
 }
 
-.distribution-item__track {
+.distribution-item__track,
+.feedback-item__track {
   height: 0.35rem;
   margin-top: 0.48rem;
   overflow: hidden;
@@ -792,13 +822,15 @@ h2 {
   background: rgba(26, 68, 61, 0.09);
 }
 
-.distribution-item__bar {
+.distribution-item__bar,
+.feedback-item__bar {
   display: block;
   height: 100%;
   border-radius: inherit;
 }
 
-.distribution-item small {
+.distribution-item small,
+.feedback-item small {
   display: block;
   margin-top: 0.3rem;
   color: var(--color-ink-soft);
@@ -815,6 +847,10 @@ h2 {
 
 .tone-amber {
   background: var(--color-amber);
+}
+
+.tone-moss {
+  background: var(--color-moss);
 }
 
 .insight-panel {
@@ -928,28 +964,6 @@ h2 {
   color: var(--color-ink-soft);
 }
 
-.confidence-cell {
-  display: flex;
-  min-width: 8rem;
-  align-items: center;
-  gap: 0.55rem;
-}
-
-.confidence-cell .p-progressbar {
-  width: 5rem;
-  height: 0.35rem;
-  background: rgba(26, 68, 61, 0.09);
-}
-
-.confidence-cell .p-progressbar-value {
-  background: var(--color-ocean);
-}
-
-.confidence-cell span {
-  color: var(--color-ink-soft);
-  font-size: 0.7rem;
-}
-
 /* Student directory */
 .directory-panel {
   overflow: hidden;
@@ -1000,6 +1014,173 @@ h2 {
   background: rgba(238, 244, 239, 0.42);
 }
 
+.student-account-dialog {
+  width: min(92vw, 34rem);
+}
+
+.student-credentials-dialog {
+  width: min(92vw, 37rem);
+}
+
+.student-account-dialog .p-dialog-content,
+.student-credentials-dialog .p-dialog-content {
+  display: grid;
+  gap: 1rem;
+}
+
+.student-account-dialog__intro {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.student-account-dialog__icon {
+  display: grid;
+  width: 3.15rem;
+  height: 3.15rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 1rem;
+  color: #fffaf1;
+  background: var(--color-ocean);
+  box-shadow: 0 10px 18px rgba(45, 112, 108, 0.2);
+}
+
+.student-account-dialog h3,
+.credential-reveal h3 {
+  margin: 0;
+  color: var(--color-ink);
+  font-family: var(--font-display);
+  font-size: 1.65rem;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+}
+
+.student-account-dialog__intro p:last-child,
+.credential-reveal__heading p {
+  margin-top: 0.45rem;
+  color: var(--color-ink-soft);
+  font-size: 0.78rem;
+  line-height: 1.55;
+}
+
+.student-account-form {
+  display: grid;
+  gap: 0.95rem;
+}
+
+.student-account-form label {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.student-account-form label > span {
+  color: var(--color-ink);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.student-account-form small {
+  margin-left: 0.25rem;
+  color: var(--color-ink-soft);
+  font-size: 0.64rem;
+  font-weight: 500;
+}
+
+.student-account-form .p-textarea {
+  resize: vertical;
+}
+
+.credential-reveal {
+  display: grid;
+  gap: 1rem;
+}
+
+.credential-reveal__heading {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.credential-reveal__heading .p-tag {
+  width: max-content;
+}
+
+.credential-sheet {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid rgba(45, 112, 108, 0.16);
+  border-radius: 1rem;
+  background:
+    radial-gradient(circle at 95% 8%, rgba(233, 173, 78, 0.12), transparent 10rem),
+    rgba(238, 244, 239, 0.58);
+}
+
+.credential-sheet__row {
+  display: grid;
+  position: relative;
+  min-height: 5rem;
+  padding: 0.95rem 1rem;
+  align-items: center;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.65rem;
+}
+
+.credential-sheet__row + .credential-sheet__row {
+  border-top: 1px solid rgba(45, 112, 108, 0.13);
+}
+
+.credential-sheet__row small,
+.credential-sheet__row code {
+  display: block;
+}
+
+.credential-sheet__row small {
+  color: var(--color-ink-soft);
+  font-size: 0.63rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.credential-sheet__row code {
+  margin-top: 0.28rem;
+  color: var(--color-ocean-dark);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.credential-sheet__row > span {
+  position: absolute;
+  right: 3.3rem;
+  bottom: 0.35rem;
+  color: var(--color-ocean);
+  font-size: 0.62rem;
+  font-weight: 700;
+}
+
+.credential-sheet__row--password code {
+  color: #b85f24;
+}
+
+.credential-reveal__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  color: var(--color-ink-soft);
+  font-size: 0.69rem;
+}
+
+.credential-reveal__meta span {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.credential-reveal__meta i {
+  color: var(--color-coral);
+}
+
 .student-profile {
   display: flex;
   padding: 1.35rem;
@@ -1016,6 +1197,11 @@ h2 {
   display: flex;
   align-items: center;
   gap: 0.85rem;
+}
+
+.student-profile__actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .student-profile__identity .p-avatar {
@@ -1099,16 +1285,23 @@ h2 {
 }
 
 @media (max-width: 74rem) {
-  .distribution-chart {
+  .metrics-grid--four {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .distribution-chart,
+  .feedback-chart {
     gap: 1.2rem;
   }
 
-  .distribution-chart__ring {
+  .distribution-chart__ring,
+  .feedback-chart__ring {
     width: 9rem;
     height: 9rem;
   }
 
-  .distribution-chart__center {
+  .distribution-chart__center,
+  .feedback-chart__center {
     width: 6rem;
     height: 6rem;
   }
@@ -1205,6 +1398,7 @@ h2 {
   }
 
   .page-header__actions {
+    flex-wrap: wrap;
     justify-content: space-between;
   }
 
@@ -1212,7 +1406,12 @@ h2 {
     grid-template-columns: 1fr;
   }
 
-  .distribution-chart {
+  .metrics-grid--four {
+    grid-template-columns: 1fr;
+  }
+
+  .distribution-chart,
+  .feedback-chart {
     display: grid;
     justify-items: center;
   }
@@ -1237,6 +1436,7 @@ h2 {
   }
 
   .student-profile__actions {
+    flex-wrap: wrap;
     justify-content: space-between;
   }
 }
