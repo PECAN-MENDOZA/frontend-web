@@ -10,6 +10,8 @@ import StudentCredentialDialog from '@/features/students/components/StudentCrede
 import { useReportDownload } from '@/features/reports/composables/useReportDownload'
 import { useStudentDetail } from '@/features/students/composables/useStudentDetail'
 import { formatPercentage } from '@/features/dashboard/utils/formatters'
+import AcceptanceTrendPanel from '@/shared/components/insights/AcceptanceTrendPanel.vue'
+import ErrorTypesPanel from '@/shared/components/insights/ErrorTypesPanel.vue'
 import FeedbackMixPanel from '@/shared/components/insights/FeedbackMixPanel.vue'
 import MetricCard from '@/shared/components/insights/MetricCard.vue'
 import TopWordsTable from '@/shared/components/insights/TopWordsTable.vue'
@@ -134,6 +136,11 @@ function resetPin() {
         />
       </section>
 
+      <AcceptanceTrendPanel
+        :trend="studentsStore.acceptanceTrend"
+        :loading="studentsStore.isInsightsLoading"
+      />
+
       <div class="student-detail-grid">
         <FeedbackMixPanel
           :items="student.feedbackMix"
@@ -161,6 +168,11 @@ function resetPin() {
           </dl>
         </section>
       </div>
+
+      <ErrorTypesPanel
+        :error-types="studentsStore.errorTypes"
+        :loading="studentsStore.isInsightsLoading"
+      />
 
       <TopWordsTable :words="student.topWords" />
 

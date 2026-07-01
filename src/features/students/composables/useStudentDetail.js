@@ -2,11 +2,12 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { STUDENT_MONTH_OPTIONS } from '@/features/students/composables/useStudents'
 import { useStudentsStore } from '@/features/students/store/students.store'
+import { getCurrentMonthValue } from '@/shared/utils/month'
 
 export function useStudentDetail() {
   const route = useRoute()
   const studentsStore = useStudentsStore()
-  const selectedMonth = ref('2026-05')
+  const selectedMonth = ref(getCurrentMonthValue())
   const studentId = computed(() => route.params.studentId)
 
   function loadStudent() {

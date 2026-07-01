@@ -1,15 +1,12 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useStudentsStore } from '@/features/students/store/students.store'
+import { getCurrentMonthValue, getMonthOptions } from '@/shared/utils/month'
 
-export const STUDENT_MONTH_OPTIONS = [
-  { label: 'Mayo 2026', value: '2026-05' },
-  { label: 'Abril 2026', value: '2026-04' },
-  { label: 'Marzo 2026', value: '2026-03' },
-]
+export const STUDENT_MONTH_OPTIONS = getMonthOptions()
 
 export function useStudents() {
   const studentsStore = useStudentsStore()
-  const selectedMonth = ref('2026-05')
+  const selectedMonth = ref(getCurrentMonthValue())
   const searchQuery = ref('')
 
   const filteredStudents = computed(() => {

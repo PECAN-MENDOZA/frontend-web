@@ -1,14 +1,11 @@
 import { onMounted, ref, watch } from 'vue'
 import { useDashboardStore } from '@/features/dashboard/store/dashboard.store'
+import { getCurrentMonthValue, getMonthOptions } from '@/shared/utils/month'
 
 export function useDashboard() {
   const dashboardStore = useDashboardStore()
-  const selectedMonth = ref('2026-05')
-  const monthOptions = [
-    { label: 'Mayo 2026', value: '2026-05' },
-    { label: 'Abril 2026', value: '2026-04' },
-    { label: 'Marzo 2026', value: '2026-03' },
-  ]
+  const selectedMonth = ref(getCurrentMonthValue())
+  const monthOptions = getMonthOptions()
 
   onMounted(() => {
     if (!dashboardStore.dashboard) {

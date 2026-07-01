@@ -1,5 +1,6 @@
 import { api } from '@/shared/services/api'
 import { getInitials, getStudentStatus, mapFeedbackMix, mapTopWords, sumTopWordFrequency } from '@/shared/utils/kpi'
+import { formatMonthShortLabel } from '@/shared/utils/month'
 
 export async function getStudents(month) {
   const links = await api.get('/teachers/students')
@@ -22,6 +23,49 @@ export async function getStudentDetail(studentId, month) {
   const link = links.find((item) => item.studentId === studentId)
 
   return mapStudentSummary(link, summary)
+}
+
+export async function getAcceptanceTrend(studentId, from, to) {
+  const data = await api.get(
+    `/kpis/students/${studentId}/acceptance-trend?from=${from}&to=${to}`,
+  )
+  return mapAcceptanceTrend(data)
+}
+
+export async function getErrorTypes(studentId, month) {
+  const data = await api.get(`/kpis/students/${studentId}/error-types?month=${month}`)
+  return mapErrorTypes(data)
+}
+
+function mapAcceptanceTrend(data) {
+  const serie = data?.serie ?? []
+
+  return {
+    from: data?.desde ?? null,
+    to: data?.hasta ?? null,
+    points: serie.map((point) => ({
+      month: point.month,
+      label: formatMonthShortLabel(point.month),
+      acceptanceRate: point.tasa_aceptacion_pct ?? 0,
+      totalSubmissions: point.total_envios ?? 0,
+      acceptedCount: point.total_aceptadas ?? 0,
+    })),
+  }
+}
+
+function mapErrorTypes(data) {
+  const tipos = data?.tipos_error ?? []
+
+  return {
+    month: data?.month ?? null,
+    totalErrors: data?.total_errores ?? 0,
+    items: tipos.map((item) => ({
+      type: item.tipo,
+      label: item.nombre ?? item.tipo,
+      count: item.cantidad ?? 0,
+      percentage: item.porcentaje ?? 0,
+    })),
+  }
 }
 
 async function getStudentListItem(link, month) {

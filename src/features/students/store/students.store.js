@@ -2,16 +2,22 @@ import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import {
   createStudentAccount as createStudentAccountRequest,
+  getAcceptanceTrend,
+  getErrorTypes,
   getStudentDetail,
   getStudents,
   resetStudentPin as resetStudentPinRequest,
 } from '@/features/students/services/students.service'
+import { getMonthRange } from '@/shared/utils/month'
 
 export const useStudentsStore = defineStore('students', () => {
   const students = ref([])
   const selectedStudent = ref(null)
+  const acceptanceTrend = ref(null)
+  const errorTypes = ref(null)
   const isLoading = ref(false)
   const isDetailLoading = ref(false)
+  const isInsightsLoading = ref(false)
   const isCreating = ref(false)
   const isResettingPin = ref(false)
   const errorMessage = ref('')
@@ -37,6 +43,8 @@ export const useStudentsStore = defineStore('students', () => {
     isDetailLoading.value = true
     errorMessage.value = ''
 
+    loadStudentInsights(studentId, month)
+
     try {
       selectedStudent.value = await getStudentDetail(studentId, month)
     } catch {
@@ -45,6 +53,22 @@ export const useStudentsStore = defineStore('students', () => {
     } finally {
       isDetailLoading.value = false
     }
+  }
+
+  // La tendencia y los tipos de error son complementarios: si fallan no deben
+  // tumbar el perfil, así que se cargan aparte y cada uno cae a un valor vacío.
+  async function loadStudentInsights(studentId, month) {
+    isInsightsLoading.value = true
+    const { from, to } = getMonthRange(month)
+
+    const [trend, types] = await Promise.all([
+      getAcceptanceTrend(studentId, from, to).catch(() => null),
+      getErrorTypes(studentId, month).catch(() => null),
+    ])
+
+    acceptanceTrend.value = trend
+    errorTypes.value = types
+    isInsightsLoading.value = false
   }
 
   async function createStudentAccount(student, month) {
@@ -90,14 +114,19 @@ export const useStudentsStore = defineStore('students', () => {
 
   function clearSelectedStudent() {
     selectedStudent.value = null
+    acceptanceTrend.value = null
+    errorTypes.value = null
     clearResetPinCredentials()
   }
 
   return {
     students,
     selectedStudent,
+    acceptanceTrend,
+    errorTypes,
     isLoading,
     isDetailLoading,
+    isInsightsLoading,
     isCreating,
     isResettingPin,
     errorMessage,
