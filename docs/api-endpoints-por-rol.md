@@ -83,8 +83,10 @@ Envía un texto y obtiene la corrección + sugerencias de la IA. Crea una **sesi
   "sugerencia_elegida": null,
   "acepto_correccion": null,
   "tiempo_respuesta_ms": null,
+  "texto_final": null,
+  "fue_editada": false,
   "palabras_corregidas": [],
-  "createdAt": "2026-06-30T12:00:00Z"
+  "createdAt": "2026-07-01T12:00:00Z"
 }
 ```
 
@@ -92,10 +94,15 @@ Envía un texto y obtiene la corrección + sugerencias de la IA. Crea una **sesi
 Registra si el alumno **aceptó o rechazó** la corrección. **Este es el paso que alimenta el aprendizaje de la IA y los KPIs del profesor.**
 ```jsonc
 // Request — CorrectionFeedbackRequest
-{ "sugerencia_elegida": "el niño jugó con la pelota", "acepto_correccion": true }
-// Response — CorrectionSessionResponse   (ahora con palabras_corregidas derivadas por diff)
+{ "acepto_correccion": true,
+  "sugerencia_elegida": "el niño jugó con la pelota",  // base: obligatoria si acepto=true, debe ser una de suggestions
+  "texto_final": "el niño jugó con su pelota" }         // 🆕 opcional: lo que el alumno realmente insertó (puede diferir)
+// Response — CorrectionSessionResponse   (con palabras_corregidas derivadas por diff, + texto_final y fue_editada)
 ```
 - `acepto_correccion` es **obligatorio**. Si es `true`, `sugerencia_elegida` es obligatoria y debe ser una de las `suggestions` ofrecidas (si no → `400`).
+- `texto_final` (🆕) es **opcional**. Si el alumno **edita** la sugerencia antes de aceptar, envíalo con el texto final; si lo acepta tal cual, omítelo (o mándalo igual a `sugerencia_elegida`). No hace falta que esté en `suggestions`.
+- El backend usa `texto_final` (si viene) para el diff palabra-por-palabra **y como texto que aprende la IA**. En la respuesta, `fue_editada = true` cuando `texto_final` difiere de `sugerencia_elegida`.
+- **No se permite editar sin sugerencia base**: si `acepto=true` debes mandar siempre una `sugerencia_elegida` válida, aunque también mandes `texto_final`.
 
 ### `GET /api/v1/corrections/sessions/{sessionId}/words` → 200
 Palabras corregidas de una sesión.
@@ -159,8 +166,10 @@ Tasa de aceptación del mes.
 // AcceptanceRateResponse
 { "id_estudiante": "uuid", "month": "2026-06", "total_envios": 40,
   "total_aceptadas": 24, "total_rechazadas": 10, "sin_respuesta": 6,
+  "total_editadas": 7,          // 🆕 de las aceptadas, cuántas fueron editadas por el alumno
   "tasa_aceptacion_pct": 60.0 }
 ```
+`total_editadas` (🆕) permite distinguir "aceptó tal cual" de "aceptó editando la sugerencia".
 
 ### `GET .../acceptance-trend?from=YYYY-MM&to=YYYY-MM` → 200  🆕
 Progreso de la tasa de aceptación a lo largo de varios meses (rango ≤ 24 meses; meses sin actividad vienen en 0 para una línea continua).
@@ -241,4 +250,6 @@ Estos endpoints los llama **el backend** al servicio de IA; el front/móvil **no
 | **Portal web (docente)** | `TEACHER` | `teachers/students/*`, `kpis/students/*` (incl. 🆕 `acceptance-trend` y `error-types`), `reports/students/*` |
 | **Ambos** | público | `auth/students/login`, `auth/teachers/register`, `auth/teachers/login` |
 
-> 🆕 = endpoint nuevo (desplegado en `backend-00015-gd5`, 2026-06-30). El resto de contratos no cambió: **la app móvil no requiere cambios**; el trabajo nuevo es solo del portal web.
+> 🆕 = nuevo. Cambios por cliente:
+> - **App móvil (teclado):** el `PATCH .../feedback` ahora acepta `texto_final` (opcional) para soportar edición de la sugerencia por el alumno. Es retrocompatible (si no lo mandas, funciona igual que antes), pero para habilitar la edición hay que añadir el campo al request.
+> - **Portal web (docente):** endpoints nuevos `acceptance-trend` y `error-types`; `acceptance-rate`/`summary` ganan `total_editadas`; la respuesta de corrección gana `texto_final`/`fue_editada` (útiles si se muestran sesiones).

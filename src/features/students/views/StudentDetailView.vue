@@ -158,6 +158,10 @@ function resetPin() {
               <dd>{{ student.acceptedSuggestions }}</dd>
             </div>
             <div>
+              <dt>Editadas (de las aceptadas)</dt>
+              <dd>{{ student.editedSuggestions }}</dd>
+            </div>
+            <div>
               <dt>Ignoradas</dt>
               <dd>{{ student.rejectedSuggestions }}</dd>
             </div>

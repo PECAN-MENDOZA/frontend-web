@@ -95,6 +95,7 @@ function mapStudentSummary(link, summary) {
     lastAccessAt: link?.lastAccessAt ?? null,
     acceptanceRate,
     acceptedSuggestions: acceptance?.total_aceptadas ?? 0,
+    editedSuggestions: acceptance?.total_editadas ?? 0,
     rejectedSuggestions: acceptance?.total_rechazadas ?? 0,
     unansweredSuggestions: acceptance?.sin_respuesta ?? 0,
     totalSubmissions,
