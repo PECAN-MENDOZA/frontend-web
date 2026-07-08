@@ -33,7 +33,7 @@ export async function getDashboardSummary(month) {
         change: 'Repeticiones aceptadas en el mes',
       },
       studentsToSupport: {
-        value: students.filter((student) => student.status === 'Acompanar').length,
+        value: students.filter((student) => student.status === 'Acompañar').length,
         change: 'Necesitan seguimiento cercano',
       },
     },
@@ -83,7 +83,7 @@ function getClassAcceptanceMetric(totals, studentCount) {
   if (!studentCount || !totals.total_envios) {
     return {
       value: '--',
-      change: 'Aun no hay envios del mes',
+      change: 'Aún no hay envíos del mes',
       isAvailable: false,
     }
   }

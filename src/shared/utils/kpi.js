@@ -9,7 +9,7 @@ export function getInitials(name = '') {
 
 export function getStudentStatus({ acceptanceRate, totalSubmissions, recurringWords }) {
   if (!totalSubmissions) return 'Sin datos'
-  if (acceptanceRate < 50 || recurringWords >= 8) return 'Acompanar'
+  if (acceptanceRate < 50 || recurringWords >= 8) return 'Acompañar'
   if (acceptanceRate < 70 || recurringWords >= 4) return 'Observar'
   return 'En progreso'
 }

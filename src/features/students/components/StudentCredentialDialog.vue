@@ -20,7 +20,7 @@ const props = defineProps({
   },
   actionLabel: {
     type: String,
-    default: 'Ya entregue el PIN',
+    default: 'Ya entregué el PIN',
   },
 })
 
@@ -66,13 +66,13 @@ function copyWithFallback(value) {
   >
     <div v-if="credential" class="credential-reveal">
       <div class="credential-reveal__heading">
-        <Tag value="Entrega unica" severity="warn" />
-        <h3>El acceso de {{ studentName }} esta listo.</h3>
+        <Tag value="Entrega única" severity="warn" />
+        <h3>El acceso de {{ studentName }} está listo.</h3>
         <p>{{ intro }}</p>
       </div>
 
       <Message severity="warn" :closable="false">
-        El PIN temporal solo se muestra ahora. Entregalo antes de cerrar esta ventana.
+        El PIN temporal solo se muestra ahora. Entrégalo antes de cerrar esta ventana.
       </Message>
 
       <div class="credential-sheet">

@@ -60,7 +60,7 @@ function openStudent(studentId) {
       {{ studentsStore.errorMessage }}
     </Message>
 
-    <section class="metrics-grid" aria-label="Metricas del directorio de estudiantes">
+    <section class="metrics-grid" aria-label="Métricas del directorio de estudiantes">
       <MetricCard
         label="Estudiantes vinculados"
         :value="studentsStore.students.length"
@@ -69,16 +69,16 @@ function openStudent(studentId) {
         tone="ocean"
       />
       <MetricCard
-        label="Aceptacion promedio"
+        label="Aceptación promedio"
         :value="averageAcceptance"
-        change="Entre estudiantes con envios"
+        change="Entre estudiantes con envíos"
         icon="pi pi-check-circle"
         tone="coral"
       />
       <MetricCard
-        label="Acompanamiento"
+        label="Acompañamiento"
         :value="reviewCount"
-        change="Perfiles con baja aceptacion o alta recurrencia"
+        change="Perfiles con baja aceptación o alta recurrencia"
         icon="pi pi-flag"
         tone="amber"
       />

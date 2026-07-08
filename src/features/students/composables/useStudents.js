@@ -23,7 +23,7 @@ export function useStudents() {
   })
 
   const reviewCount = computed(
-    () => studentsStore.students.filter((student) => student.status === 'Acompanar').length,
+    () => studentsStore.students.filter((student) => student.status === 'Acompañar').length,
   )
   const averageAcceptance = computed(() => {
     const rates = studentsStore.students

@@ -80,7 +80,7 @@ function submitStudent() {
         <span>Nombre completo</span>
         <InputText
           v-model="form.studentRealName"
-          placeholder="Ej. Nicolas Herrera"
+          placeholder="Ej. Nicolás Herrera"
           autocomplete="off"
           required
           autofocus
@@ -91,7 +91,7 @@ function submitStudent() {
         <span>Notas docentes <small>Opcional</small></span>
         <Textarea
           v-model="form.notes"
-          placeholder="Agrega contexto util para el seguimiento mensual."
+          placeholder="Agrega contexto útil para el seguimiento mensual."
           rows="4"
           auto-resize
           fluid
@@ -121,7 +121,7 @@ function submitStudent() {
     :credential="createdAccount"
     header="PIN temporal"
     intro="Comparte estos datos con el estudiante para ingresar desde el teclado digital."
-    action-label="Ya entregue el PIN"
+    action-label="Ya entregué el PIN"
     @close="$emit('close-credentials')"
   />
 </template>

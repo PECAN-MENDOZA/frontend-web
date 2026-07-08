@@ -19,7 +19,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
     try {
       dashboard.value = await getDashboardSummary(month)
     } catch {
-      errorMessage.value = 'No pudimos cargar el resumen del aula. Intentalo nuevamente.'
+      errorMessage.value = 'No pudimos cargar el resumen del aula. Inténtalo nuevamente.'
     } finally {
       isLoading.value = false
     }

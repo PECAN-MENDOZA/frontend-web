@@ -110,6 +110,16 @@ const chartOptions = computed(() => ({
   height: 18rem;
 }
 
+/* PrimeVue inserta un wrapper .p-chart sin altura entre el contenedor y el
+   canvas; sin esto el canvas colapsa a su alto por defecto y deja hueco. */
+.trend-panel__chart :deep(.p-chart) {
+  height: 100%;
+}
+
+.trend-panel__chart :deep(canvas) {
+  height: 100% !important;
+}
+
 .trend-panel__empty {
   color: var(--color-ink-soft);
   margin: 0;

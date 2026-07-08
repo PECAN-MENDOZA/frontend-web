@@ -33,7 +33,7 @@ export const useStudentsStore = defineStore('students', () => {
     try {
       students.value = await getStudents(month)
     } catch {
-      errorMessage.value = 'No pudimos cargar tus estudiantes. Intentalo nuevamente.'
+      errorMessage.value = 'No pudimos cargar tus estudiantes. Inténtalo nuevamente.'
     } finally {
       isLoading.value = false
     }
@@ -49,7 +49,7 @@ export const useStudentsStore = defineStore('students', () => {
       selectedStudent.value = await getStudentDetail(studentId, month)
     } catch {
       selectedStudent.value = null
-      errorMessage.value = 'No pudimos cargar el perfil del estudiante. Intentalo nuevamente.'
+      errorMessage.value = 'No pudimos cargar el perfil del estudiante. Inténtalo nuevamente.'
     } finally {
       isDetailLoading.value = false
     }
@@ -80,7 +80,7 @@ export const useStudentsStore = defineStore('students', () => {
       await loadStudents(month)
       return true
     } catch {
-      creationErrorMessage.value = 'No pudimos crear la cuenta del estudiante. Intentalo nuevamente.'
+      creationErrorMessage.value = 'No pudimos crear la cuenta del estudiante. Inténtalo nuevamente.'
       return false
     } finally {
       isCreating.value = false
@@ -95,7 +95,7 @@ export const useStudentsStore = defineStore('students', () => {
       resetPinCredentials.value = await resetStudentPinRequest(studentId)
       return true
     } catch {
-      resetPinErrorMessage.value = 'No pudimos regenerar el PIN. Intentalo nuevamente.'
+      resetPinErrorMessage.value = 'No pudimos regenerar el PIN. Inténtalo nuevamente.'
       return false
     } finally {
       isResettingPin.value = false

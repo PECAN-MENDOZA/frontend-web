@@ -21,7 +21,7 @@ const focusStudent = computed(() => dashboardStore.dashboard?.focusStudent)
 const focusTitle = computed(() => {
   if (recurrentWord.value) return `"${recurrentWord.value.word}" merece refuerzo breve esta semana.`
   if (focusStudent.value) return `${focusStudent.value.name} necesita una mirada cercana.`
-  return 'Cuando haya envios, este panel marcara la prioridad del aula.'
+  return 'Cuando haya envíos, este panel marcará la prioridad del aula.'
 })
 const focusDescription = computed(() => {
   if (recurrentWord.value) {
@@ -32,7 +32,7 @@ const focusDescription = computed(() => {
     return `${focusStudent.value.name} acumula ${focusStudent.value.recurringWords} palabras recurrentes este mes.`
   }
 
-  return 'El backend ya no clasifica tipos de error; ahora la lectura se centra en aceptacion y palabras corregidas.'
+  return 'El backend ya no clasifica tipos de error; ahora la lectura se centra en aceptación y palabras corregidas.'
 })
 </script>
 
@@ -40,8 +40,8 @@ const focusDescription = computed(() => {
   <div class="dashboard-page">
     <PageHeader
       eyebrow="Seguimiento mensual"
-      :title="`Buenos dias, ${teacherFirstName}.`"
-      description="Una vista docente centrada en lo que el backend ahora puede medir: aceptacion de sugerencias, palabras recurrentes y estudiantes que necesitan acompanamiento."
+      :title="`Buenos días, ${teacherFirstName}.`"
+      description="Una vista docente centrada en lo que el backend ahora puede medir: aceptación de sugerencias, palabras recurrentes y estudiantes que necesitan acompañamiento."
     >
       <template #actions>
         <Select
@@ -71,7 +71,7 @@ const focusDescription = computed(() => {
       severity="info"
       :closable="false"
     >
-      Aun no hay envios para el mes seleccionado. La vista se actualizara cuando los estudiantes usen el
+      Aún no hay envíos para el mes seleccionado. La vista se actualizará cuando los estudiantes usen el
       teclado.
     </Message>
 
@@ -86,7 +86,7 @@ const focusDescription = computed(() => {
     </template>
 
     <template v-else-if="dashboardStore.dashboard">
-      <section class="metrics-grid metrics-grid--four" aria-label="Metricas del aula">
+      <section class="metrics-grid metrics-grid--four" aria-label="Métricas del aula">
         <MetricCard
           label="Estudiantes vinculados"
           :value="dashboardStore.metrics.activeStudents.value"
@@ -95,7 +95,7 @@ const focusDescription = computed(() => {
           tone="ocean"
         />
         <MetricCard
-          label="Aceptacion global"
+          label="Aceptación global"
           :value="dashboardStore.metrics.acceptanceRate.value"
           :change="dashboardStore.metrics.acceptanceRate.change"
           icon="pi pi-check-circle"
@@ -109,7 +109,7 @@ const focusDescription = computed(() => {
           tone="amber"
         />
         <MetricCard
-          label="Acompanamiento"
+          label="Acompañamiento"
           :value="dashboardStore.metrics.studentsToSupport.value"
           :change="dashboardStore.metrics.studentsToSupport.change"
           icon="pi pi-heart"
@@ -120,7 +120,7 @@ const focusDescription = computed(() => {
       <div class="dashboard-grid dashboard-grid--redesign">
         <FeedbackMixPanel
           :items="dashboardStore.feedbackMix"
-          title="Como respondio el aula"
+          title="Cómo respondió el aula"
           eyebrow="Aceptadas e ignoradas"
         />
 

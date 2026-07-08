@@ -112,16 +112,16 @@ function resetPin() {
         </div>
       </section>
 
-      <section class="metrics-grid" aria-label="Metricas de aprendizaje del estudiante">
+      <section class="metrics-grid" aria-label="Métricas de aprendizaje del estudiante">
         <MetricCard
-          label="Aceptacion de sugerencias"
+          label="Aceptación de sugerencias"
           :value="formatPercentage(student.acceptanceRate)"
           :change="`${student.acceptedSuggestions} de ${student.totalSubmissions} aceptadas`"
           icon="pi pi-check-circle"
           tone="ocean"
         />
         <MetricCard
-          label="Envios del mes"
+          label="Envíos del mes"
           :value="student.totalSubmissions"
           change="Solicitudes hechas desde el teclado"
           icon="pi pi-send"
@@ -144,14 +144,14 @@ function resetPin() {
       <div class="student-detail-grid">
         <FeedbackMixPanel
           :items="student.feedbackMix"
-          title="Como respondio este estudiante"
+          title="Cómo respondió este estudiante"
           eyebrow="Feedback individual"
         />
 
         <section class="panel student-context">
           <p class="overline">Contexto docente</p>
-          <h2>Notas para la proxima conversacion</h2>
-          <p>{{ student.notes || 'Aun no se agregaron notas docentes.' }}</p>
+          <h2>Notas para la próxima conversación</h2>
+          <p>{{ student.notes || 'Aún no se agregaron notas docentes.' }}</p>
           <dl>
             <div>
               <dt>Aceptadas</dt>
@@ -184,7 +184,7 @@ function resetPin() {
         :credential="resetCredential"
         header="Nuevo PIN temporal"
         intro="Entrega este nuevo PIN al estudiante. El alias se mantiene igual."
-        action-label="Ya entregue el nuevo PIN"
+        action-label="Ya entregué el nuevo PIN"
         @close="studentsStore.clearResetPinCredentials"
       />
     </template>

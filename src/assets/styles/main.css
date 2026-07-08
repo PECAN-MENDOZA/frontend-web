@@ -697,6 +697,7 @@ h2 {
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(18rem, 0.65fr);
   gap: 1rem;
+  align-items: start;
 }
 
 .dashboard-grid--redesign {
@@ -1228,6 +1229,7 @@ h2 {
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(18rem, 0.65fr);
   gap: 1rem;
+  align-items: start;
 }
 
 .student-context {
