@@ -4,6 +4,8 @@ export function copyWithFallback(value, doc = globalThis.document) {
   if (!doc) return false
 
   const field = doc.createElement('textarea')
+  // select() mueve el foco al campo temporal: se devuelve a donde estaba al terminar.
+  const previouslyFocused = doc.activeElement ?? null
   let isAppended = false
 
   try {
@@ -24,6 +26,10 @@ export function copyWithFallback(value, doc = globalThis.document) {
 
     if (isAppended) {
       field.remove()
+    }
+
+    if (previouslyFocused?.isConnected && typeof previouslyFocused.focus === 'function') {
+      previouslyFocused.focus()
     }
   }
 }

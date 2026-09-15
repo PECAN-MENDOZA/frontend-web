@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import Message from 'primevue/message'
@@ -13,6 +13,7 @@ import {
   annotationNextStep,
   annotationStatusLabel,
   currentImports,
+  firstInvalidField,
   formatCount,
   formatMetric,
   importFormErrors,
@@ -28,11 +29,11 @@ const COPIED_FEEDBACK_MS = 1800
 const KIND_COPY = {
   ORTHOGRAPHY: {
     description: 'Una fila por sesión completada; el evaluador cuenta las palabras con error.',
-    inputId: 'orthography-import-file',
+    idPrefix: 'orthography-import',
   },
   SEMANTIC: {
     description: 'Una fila por sugerencia evaluada; el evaluador puntúa 0, 1 o 2.',
-    inputId: 'semantic-import-file',
+    idPrefix: 'semantic-import',
   },
 }
 
@@ -40,6 +41,10 @@ const props = defineProps({
   kind: {
     type: String,
     required: true,
+  },
+  studyId: {
+    type: String,
+    default: null,
   },
   // Bloque orthographyAnnotation / semanticAnnotation de los resultados (o null).
   annotation: {
@@ -78,6 +83,21 @@ const fileInput = ref(null)
 let copiedTimer = null
 
 const copy = computed(() => KIND_COPY[props.kind] ?? KIND_COPY.ORTHOGRAPHY)
+// Identificadores estables por columna para etiquetas, ayudas y errores (aria-*).
+const ids = computed(() => {
+  const prefix = copy.value.idPrefix
+
+  return {
+    slot: `${prefix}-slot`,
+    slotLabel: `${prefix}-slot-label`,
+    slotError: `${prefix}-slot-error`,
+    rater: `${prefix}-rater`,
+    raterError: `${prefix}-rater-error`,
+    file: `${prefix}-file`,
+    fileHelp: `${prefix}-file-help`,
+    fileError: `${prefix}-file-error`,
+  }
+})
 const title = computed(() => annotationKindLabel(props.kind))
 const status = computed(() => annotationStatusLabel(props.annotation?.status))
 const nextStep = computed(() => annotationNextStep(props.annotation?.status))
@@ -101,6 +121,13 @@ watch(
   },
 )
 
+// El formulario pertenece a un lote de un estudio: si cambia cualquiera de los dos (otro
+// estudio, lote nuevo o lote desaparecido), lo elegido ya no corresponde y se descarta.
+watch(
+  () => [props.studyId, props.batch?.id ?? null],
+  () => resetForm(),
+)
+
 onUnmounted(() => window.clearTimeout(copiedTimer))
 
 function isPending(action) {
@@ -111,17 +138,32 @@ function onFileChange(event) {
   form.value.file = event.target.files?.[0] ?? null
 }
 
-function submitImport() {
+async function submitImport() {
   isSubmitted.value = true
 
-  if (!isFormValid.value || !props.batch || props.isBusy) return
+  if (!isFormValid.value) {
+    // Los errores se pintan tras el tick; luego el foco va al primer control inválido.
+    await nextTick()
+    focusField(firstInvalidField(importFormErrors(form.value)))
+    return
+  }
+
+  if (!props.batch || props.isBusy) return
 
   emit('import', props.batch, { ...form.value, rater: form.value.rater.trim() })
+}
+
+function focusField(field) {
+  if (!field) return
+
+  document.getElementById(ids.value[field])?.focus()
 }
 
 function resetForm() {
   form.value = { slot: null, rater: '', file: null }
   isSubmitted.value = false
+  isCopied.value = false
+  window.clearTimeout(copiedTimer)
 
   if (fileInput.value) fileInput.value.value = ''
 }
@@ -290,10 +332,14 @@ async function copyHash() {
 
     <form class="research-form research-annotation__form" @submit.prevent="submitImport">
       <p class="research-annotation__label">Importar puntajes</p>
-      <label>
-        <span>Ranura</span>
+      <!-- El combobox del Select no es etiquetable: recibe su nombre por aria-labelledby. -->
+      <label :for="ids.slot">
+        <span :id="ids.slotLabel">Ranura</span>
         <Select
           v-model="form.slot"
+          :input-id="ids.slot"
+          :label-id="ids.slot"
+          :aria-labelledby="ids.slotLabel"
           :options="ANNOTATION_SLOT_OPTIONS"
           option-label="label"
           option-value="value"
@@ -302,12 +348,16 @@ async function copyHash() {
           fluid
           :disabled="!batch || isBusy"
           :invalid="Boolean(errors.slot)"
+          :pt="{ label: { 'aria-describedby': errors.slot ? ids.slotError : undefined } }"
         />
-        <small v-if="errors.slot" class="research-form__error">{{ errors.slot }}</small>
+        <small v-if="errors.slot" :id="ids.slotError" class="research-form__error">
+          {{ errors.slot }}
+        </small>
       </label>
-      <label>
+      <label :for="ids.rater">
         <span>Nombre del evaluador</span>
         <InputText
+          :id="ids.rater"
           v-model="form.rater"
           size="small"
           fluid
@@ -315,22 +365,29 @@ async function copyHash() {
           placeholder="Quien completó el archivo"
           :disabled="!batch || isBusy"
           :invalid="Boolean(errors.rater)"
+          :aria-describedby="errors.rater ? ids.raterError : undefined"
         />
-        <small v-if="errors.rater" class="research-form__error">{{ errors.rater }}</small>
+        <small v-if="errors.rater" :id="ids.raterError" class="research-form__error">
+          {{ errors.rater }}
+        </small>
       </label>
-      <label :for="copy.inputId">
+      <label :for="ids.file">
         <span>Archivo CSV <small>máximo 5 MB</small></span>
         <input
-          :id="copy.inputId"
+          :id="ids.file"
           ref="fileInput"
           type="file"
           accept=".csv,text/csv"
           class="research-file-input"
           :disabled="!batch || isBusy"
+          :aria-invalid="errors.file ? 'true' : undefined"
+          :aria-describedby="errors.file ? ids.fileError : ids.fileHelp"
           @change="onFileChange"
         />
-        <small v-if="errors.file" class="research-form__error">{{ errors.file }}</small>
-        <small v-else class="research-form__help">
+        <small v-if="errors.file" :id="ids.fileError" class="research-form__error">
+          {{ errors.file }}
+        </small>
+        <small v-else :id="ids.fileHelp" class="research-form__help">
           Devuelve el export tal cual, con la columna de puntaje completada.
         </small>
       </label>

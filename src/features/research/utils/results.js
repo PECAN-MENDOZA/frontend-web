@@ -14,6 +14,7 @@ const SHORT_ID_LENGTH = 8
 const SHORT_HASH_LENGTH = 12
 const EMPTY = '—'
 const MINUS = '−'
+const IMPORT_FIELD_ORDER = ['slot', 'rater', 'file']
 
 export const ANNOTATION_SLOT_OPTIONS = [
   { value: 'RATER_1', label: 'Evaluador 1' },
@@ -61,7 +62,7 @@ export function metricStatus(kind, results) {
     case 'TAS_ACCEPTED':
       return tasStatus(results?.tasAccepted, results?.semanticAnnotation)
     default:
-      return status('Sin datos', 'secondary')
+      return status('Sin datos', 'secondary', '', 'none')
   }
 }
 
@@ -77,6 +78,7 @@ function peoStatus(results) {
       'Muestra insuficiente',
       'warn',
       'Se necesitan al menos dos participantes con palabras contables en ambas condiciones.',
+      'insufficient',
     )
   }
 
@@ -85,6 +87,7 @@ function peoStatus(results) {
       'IC 95 % por debajo de 0',
       'success',
       'El límite superior del IC 95 % de la diferencia de PEO es menor que 0.',
+      'criterion_met',
     )
   }
 
@@ -92,17 +95,19 @@ function peoStatus(results) {
     'Sin evidencia concluyente',
     'info',
     'El IC 95 % de la diferencia de PEO incluye el 0 o no se puede calcular.',
+    'criterion_not_met',
   )
 }
 
 function ppmStatus(ppm) {
-  if (!ppm) return status('Sin muestra', 'secondary')
+  if (!ppm) return status('Sin muestra', 'secondary', '', 'none')
 
   if (ppm.descriptive) {
     return status(
       'Resultado descriptivo',
       'info',
       'No hay un margen de no inferioridad configurado: se informan los valores sin evaluar el criterio.',
+      'descriptive',
     )
   }
 
@@ -113,6 +118,7 @@ function ppmStatus(ppm) {
       'No inferior (IC 95 %)',
       'success',
       `El límite inferior del IC 95 % de la diferencia de PPM supera ${MINUS}${margin}.`,
+      'criterion_met',
     )
   }
 
@@ -121,6 +127,7 @@ function ppmStatus(ppm) {
       'No se demuestra no inferioridad',
       'warn',
       `El límite inferior del IC 95 % de la diferencia de PPM no supera ${MINUS}${margin}.`,
+      'criterion_not_met',
     )
   }
 
@@ -128,6 +135,7 @@ function ppmStatus(ppm) {
     'Muestra insuficiente',
     'warn',
     'Con menos de dos participantes no hay intervalo de confianza para evaluar el margen.',
+    'insufficient',
   )
 }
 
@@ -136,13 +144,14 @@ function tasStatus(tas, annotation) {
 
   if (gate) return gate
 
-  if (!tas) return status('Sin sugerencias evaluadas', 'secondary')
+  if (!tas) return status('Sin sugerencias evaluadas', 'secondary', '', 'none')
 
   if (tas.descriptive) {
     return status(
       'Resultado descriptivo',
       'info',
       'No hay un límite de TAS configurado: se informan los valores sin evaluar el criterio.',
+      'descriptive',
     )
   }
 
@@ -153,6 +162,7 @@ function tasStatus(tas, annotation) {
       'Límite superior del IC bajo el límite',
       'success',
       `El límite superior del intervalo de Wilson es menor que ${limit}.`,
+      'criterion_met',
     )
   }
 
@@ -161,10 +171,11 @@ function tasStatus(tas, annotation) {
       'Límite superior del IC por encima del límite',
       'danger',
       `El límite superior del intervalo de Wilson alcanza o supera ${limit}.`,
+      'criterion_not_met',
     )
   }
 
-  return status('Sin sugerencias evaluadas', 'secondary')
+  return status('Sin sugerencias evaluadas', 'secondary', '', 'none')
 }
 
 // Mientras la anotación no esté adjudicada no hay métrica que interpretar; el mensaje del
@@ -176,14 +187,16 @@ function annotationGate(annotation) {
 
   const message = translateBackendMessage(annotation?.message)
 
-  if (state === 'NO_SAMPLE') return status('Sin muestra', 'secondary', message)
-  if (state === 'NOT_APPLICABLE') return status('Nada que evaluar', 'secondary', message)
+  if (state === 'NO_SAMPLE') return status('Sin muestra', 'secondary', message, 'none')
+  if (state === 'NOT_APPLICABLE') return status('Nada que evaluar', 'secondary', message, 'none')
 
-  return status('Pendiente de adjudicación', 'warn', message)
+  return status('Pendiente de adjudicación', 'warn', message, 'pending')
 }
 
-function status(label, severity, message = '') {
-  return { label, severity, message }
+// `state` es la clave estable con la que los paneles deciden avisos y estilos; la etiqueta es
+// solo copy: pending | insufficient | criterion_met | criterion_not_met | descriptive | none.
+function status(label, severity, message = '', state = 'none') {
+  return { label, severity, message, state }
 }
 
 // ------------------------------------------------------------------ anotación
@@ -212,6 +225,16 @@ export function latestBatch(batches, kind) {
   return [...ofKind].sort(
     (first, second) => new Date(second.createdAt).getTime() - new Date(first.createdAt).getTime(),
   )[0]
+}
+
+// Lote de trabajo de una columna: el que citan los resultados (batchId) si está en la lista y
+// es del mismo tipo; si no, el más reciente de ese tipo.
+export function annotationBatch(batches, kind, batchId) {
+  const cited = batchId
+    ? (batches ?? []).find((batch) => batch.id === batchId && batch.kind === kind)
+    : null
+
+  return cited ?? latestBatch(batches, kind)
 }
 
 // Una fila por ranura, en orden, con la importación vigente (o null).
@@ -249,6 +272,11 @@ export function importFormErrors({ slot, rater, file } = {}) {
   }
 
   return errors
+}
+
+// Primer control inválido en el orden visual del formulario, para devolverle el foco.
+export function firstInvalidField(errors) {
+  return IMPORT_FIELD_ORDER.find((field) => Boolean(errors?.[field])) ?? null
 }
 
 // ------------------------------------------------------------------ formato

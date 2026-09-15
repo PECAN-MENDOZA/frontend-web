@@ -30,6 +30,11 @@ export async function request(path, options = {}) {
     const requestError = new Error(error.message ?? 'Ocurrió un error inesperado en la solicitud.')
 
     requestError.status = response.status
+    // Los 400 de validación detallan el error por campo (validationErrors) para poder nombrarlos.
+    requestError.validationErrors =
+      error.validationErrors && typeof error.validationErrors === 'object'
+        ? error.validationErrors
+        : {}
     throw requestError
   }
 

@@ -4,10 +4,12 @@ import {
   ANNOTATION_SLOT_OPTIONS,
   IMPORT_MAX_BYTES,
   SCORER_VERSION,
+  annotationBatch,
   annotationKindLabel,
   annotationNextStep,
   annotationStatusLabel,
   currentImports,
+  firstInvalidField,
   formatCi,
   formatCount,
   formatMetric,
@@ -302,6 +304,46 @@ test('metricStatus tolerates unknown kinds and missing results', () => {
   assert.equal(metricStatus('PPM', undefined).label, 'Sin muestra')
 })
 
+// The panel decides its warnings from `state`, never from the label copy.
+test('metricStatus exposes a stable state key next to the label', () => {
+  const stateOf = (kind, overrides) => metricStatus(kind, results(overrides)).state
+
+  assert.equal(stateOf('PEO', { orthographyAnnotation: annotation('NOT_ADJUDICATED') }), 'pending')
+  assert.equal(stateOf('PEO', { orthographyAnnotation: annotation('NO_SAMPLE') }), 'none')
+  assert.equal(stateOf('PEO', { orthographyAnnotation: annotation('NOT_APPLICABLE') }), 'none')
+  assert.equal(stateOf('PEO', { peo: null }), 'insufficient')
+  assert.equal(stateOf('PEO'), 'criterion_met')
+  assert.equal(
+    stateOf('PEO', { peo: { ...results().peo, upperCiBelowZero: false } }),
+    'criterion_not_met',
+  )
+  assert.equal(
+    stateOf('PEO', { peo: { ...results().peo, upperCiBelowZero: null } }),
+    'criterion_not_met',
+  )
+
+  assert.equal(stateOf('PPM', { ppm: null }), 'none')
+  assert.equal(stateOf('PPM', { ppm: { ...results().ppm, descriptive: true } }), 'descriptive')
+  assert.equal(stateOf('PPM'), 'criterion_met')
+  assert.equal(
+    stateOf('PPM', { ppm: { ...results().ppm, nonInferior: false } }),
+    'criterion_not_met',
+  )
+  assert.equal(stateOf('PPM', { ppm: { ...results().ppm, nonInferior: null } }), 'insufficient')
+
+  assert.equal(stateOf('TAS', { semanticAnnotation: annotation('NO_BATCH') }), 'pending')
+  assert.equal(stateOf('TAS', { tas: null }), 'none')
+  assert.equal(stateOf('TAS', { tas: tas({ descriptive: true }) }), 'descriptive')
+  assert.equal(stateOf('TAS'), 'criterion_met')
+  assert.equal(stateOf('TAS', { tas: tas({ upperCiBelowLimit: false }) }), 'criterion_not_met')
+  assert.equal(stateOf('TAS', { tas: tas({ upperCiBelowLimit: null }) }), 'none')
+  assert.equal(
+    stateOf('TAS_ACCEPTED', { tasAccepted: tas({ upperCiBelowLimit: false }) }),
+    'criterion_not_met',
+  )
+  assert.equal(stateOf('OTHER'), 'none')
+})
+
 // ------------------------------------------------------------------ annotation helpers
 
 test('annotationNextStep tells the researcher what to do for every status', () => {
@@ -371,6 +413,30 @@ test('latestBatch picks the newest batch of a kind', () => {
   assert.equal(latestBatch(batches, 'SEMANTIC').id, 'sem')
   assert.equal(latestBatch([], 'SEMANTIC'), null)
   assert.equal(latestBatch(undefined, 'SEMANTIC'), null)
+})
+
+test('annotationBatch prefers the batch cited by the results and falls back to the newest', () => {
+  const batches = [
+    { id: 'old', kind: 'ORTHOGRAPHY', createdAt: '2026-09-01T10:00:00Z' },
+    { id: 'new', kind: 'ORTHOGRAPHY', createdAt: '2026-09-10T10:00:00Z' },
+    { id: 'sem', kind: 'SEMANTIC', createdAt: '2026-09-12T10:00:00Z' },
+  ]
+
+  assert.equal(annotationBatch(batches, 'ORTHOGRAPHY', 'old').id, 'old')
+  assert.equal(annotationBatch(batches, 'ORTHOGRAPHY', null).id, 'new')
+  assert.equal(annotationBatch(batches, 'ORTHOGRAPHY', 'missing').id, 'new')
+  // A batchId of another kind never leaks into this column.
+  assert.equal(annotationBatch(batches, 'ORTHOGRAPHY', 'sem').id, 'new')
+  assert.equal(annotationBatch([], 'SEMANTIC', 'sem'), null)
+  assert.equal(annotationBatch(undefined, 'SEMANTIC', undefined), null)
+})
+
+test('firstInvalidField follows the visual order slot, rater, file', () => {
+  assert.equal(firstInvalidField({ rater: 'x', file: 'y' }), 'rater')
+  assert.equal(firstInvalidField({ file: 'y', slot: 'z' }), 'slot')
+  assert.equal(firstInvalidField({ file: 'y' }), 'file')
+  assert.equal(firstInvalidField({}), null)
+  assert.equal(firstInvalidField(undefined), null)
 })
 
 test('currentImports returns one row per slot, in order, with the current import or null', () => {

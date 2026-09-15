@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import Skeleton from 'primevue/skeleton'
 import AnnotationColumn from '@/features/research/components/AnnotationColumn.vue'
-import { latestBatch } from '@/features/research/utils/results'
+import { annotationBatch } from '@/features/research/utils/results'
 
 const COLUMNS = [
   { kind: 'ORTHOGRAPHY', annotationKey: 'orthographyAnnotation' },
@@ -10,6 +10,10 @@ const COLUMNS = [
 ]
 
 const props = defineProps({
+  studyId: {
+    type: String,
+    default: null,
+  },
   results: {
     type: Object,
     default: null,
@@ -44,12 +48,17 @@ const props = defineProps({
 
 defineEmits(['create', 'download', 'import'])
 
+// El lote de trabajo es el que citan los resultados; sin resultados, el más reciente del tipo.
 const columns = computed(() =>
-  COLUMNS.map((column) => ({
-    ...column,
-    annotation: props.results?.[column.annotationKey] ?? null,
-    batch: latestBatch(props.batches, column.kind),
-  })),
+  COLUMNS.map((column) => {
+    const annotation = props.results?.[column.annotationKey] ?? null
+
+    return {
+      ...column,
+      annotation,
+      batch: annotationBatch(props.batches, column.kind, annotation?.batchId ?? null),
+    }
+  }),
 )
 </script>
 
@@ -67,10 +76,12 @@ const columns = computed(() =>
       <Skeleton v-for="item in 2" :key="item" height="26rem" border-radius="1rem" />
     </div>
     <div v-else class="research-annotation__grid">
+      <!-- Una columna por estudio: al cambiar de estudio se monta limpia (formulario incluido). -->
       <AnnotationColumn
         v-for="column in columns"
-        :key="column.kind"
+        :key="`${column.kind}-${studyId ?? ''}`"
         :kind="column.kind"
+        :study-id="studyId"
         :annotation="column.annotation"
         :batch="column.batch"
         :import-summary="importSummaries[column.kind] ?? null"

@@ -76,12 +76,11 @@ const metric = computed(() => METRICS[props.kind])
 const block = computed(() => props.results?.[metric.value.key] ?? null)
 const paired = computed(() => block.value?.paired ?? null)
 const status = computed(() => metricStatus(props.kind, props.results))
-const isPending = computed(() =>
-  ['Pendiente de adjudicación', 'Sin muestra', 'Nada que evaluar'].includes(status.value.label),
-)
+// Las decisiones salen de `state`, nunca del texto de la etiqueta.
+const isPending = computed(() => ['pending', 'none'].includes(status.value.state))
 const isDescriptive = computed(() => Boolean(block.value?.descriptive))
 const warning = computed(() => {
-  if (status.value.label === 'Pendiente de adjudicación') return PENDING_WARNING
+  if (status.value.state === 'pending') return PENDING_WARNING
   if (isDescriptive.value) return metric.value.warning
 
   return ''

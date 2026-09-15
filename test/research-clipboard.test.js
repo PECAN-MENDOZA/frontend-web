@@ -63,6 +63,48 @@ test('copyWithFallback reports success only when execCommand returns true', () =
   assert.deepEqual(failureDoc.body.children, [])
 })
 
+test('copyWithFallback returns the focus to the element that had it before selecting', () => {
+  for (const execCommand of [() => true, () => false]) {
+    const doc = fakeDocument({ execCommand })
+    const button = {
+      isConnected: true,
+      focus() {
+        doc.activeElement = this
+      },
+    }
+    const original = doc.createElement
+
+    doc.activeElement = button
+    doc.createElement = () => {
+      const field = original()
+
+      field.select = () => {
+        doc.activeElement = field
+      }
+
+      return field
+    }
+
+    copyWithFallback('K7MP2XQ9', doc)
+    assert.equal(doc.activeElement, button)
+  }
+})
+
+test('copyWithFallback leaves the focus alone when the previous element left the DOM', () => {
+  const doc = fakeDocument({ execCommand: () => true })
+  let focused = 0
+  const detached = {
+    isConnected: false,
+    focus() {
+      focused += 1
+    },
+  }
+
+  doc.activeElement = detached
+  copyWithFallback('K7MP2XQ9', doc)
+  assert.equal(focused, 0)
+})
+
 test('copyText prefers the async clipboard and falls back when it rejects', async () => {
   const written = []
   const clipboard = {

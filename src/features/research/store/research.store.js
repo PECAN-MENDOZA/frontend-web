@@ -26,8 +26,8 @@ import {
 import { requestErrorMessage } from '@/features/research/utils/errors'
 import {
   StudyChangedError,
+  createGuardedLoader,
   createPendingCounter,
-  createRequestGuard,
   issueThenRefresh,
 } from '@/features/research/utils/mutations'
 import { overviewCounts, pairRows, versionStrip } from '@/features/research/utils/overview'
@@ -52,7 +52,9 @@ export const useResearchStore = defineStore('research', () => {
   const protocols = ref([])
   const results = ref(null)
   const technicalEvaluations = ref([])
-  const isLoading = ref(false)
+  // Cada carga tiene su propio indicador: ninguna apaga una carga que no inició.
+  const isLoadingStudies = ref(false)
+  const isLoadingOverview = ref(false)
   const isLoadingResults = ref(false)
   const isLoadingEvaluations = ref(false)
   const pendingOperations = ref(0)
@@ -62,9 +64,42 @@ export const useResearchStore = defineStore('research', () => {
   // Estudio cuyos resultados se pidieron: solo ese se recarga tras una mutación o "Actualizar".
   let resultsStudyId = null
 
-  // Descarta respuestas de una selección anterior (A → B con A resolviendo al final).
-  const overviewGuard = createRequestGuard(() => selectedStudyId.value)
-  const resultsGuard = createRequestGuard(() => selectedStudyId.value)
+  // Cargas con guarda de generación: solo la petición más reciente publica datos, error y
+  // apaga su indicador; las de estudio descartan además respuestas de una selección anterior.
+  const studiesLoader = createGuardedLoader({
+    setLoading: (value) => {
+      isLoadingStudies.value = value
+    },
+    setError: (message) => {
+      error.value = message
+    },
+  })
+  const overviewLoader = createGuardedLoader({
+    getSelectedStudyId: () => selectedStudyId.value,
+    setLoading: (value) => {
+      isLoadingOverview.value = value
+    },
+    setError: (message) => {
+      error.value = message
+    },
+  })
+  const resultsLoader = createGuardedLoader({
+    getSelectedStudyId: () => selectedStudyId.value,
+    setLoading: (value) => {
+      isLoadingResults.value = value
+    },
+    setError: (message) => {
+      resultsError.value = message
+    },
+  })
+  const evaluationsLoader = createGuardedLoader({
+    setLoading: (value) => {
+      isLoadingEvaluations.value = value
+    },
+    setError: (message) => {
+      evaluationsError.value = message
+    },
+  })
   // isMutating cubre el POST y la recarga posterior, incluso con operaciones solapadas.
   const pendingCounter = createPendingCounter((pending) => {
     pendingOperations.value = pending
@@ -73,6 +108,7 @@ export const useResearchStore = defineStore('research', () => {
   const selectedStudy = computed(
     () => studies.value.find((study) => study.id === selectedStudyId.value) ?? null,
   )
+  const isLoading = computed(() => isLoadingStudies.value || isLoadingOverview.value)
   const isMutating = computed(() => pendingOperations.value > 0)
   const rows = computed(() => pairRows(participants.value, runs.value))
   const counts = computed(() => overviewCounts(rows.value, runs.value, batches.value))
@@ -82,32 +118,28 @@ export const useResearchStore = defineStore('research', () => {
   )
   const latestProtocol = computed(() => protocols.value[0] ?? null)
 
-  async function loadStudies() {
-    isLoading.value = true
-    error.value = ''
+  // Carga inicial: la lista y, con selección, su resumen. La carga de la lista sigue activa
+  // mientras espera ese resumen; una selección posterior lo reemplaza sin apagar nada ajeno.
+  function loadStudies() {
+    return studiesLoader.load({
+      request: listStudies,
+      fallback: GENERIC_STUDIES_ERROR,
+      apply: async (data) => {
+        studies.value = data
 
-    try {
-      studies.value = await listStudies()
+        if (selectedStudyId.value && !data.some((study) => study.id === selectedStudyId.value)) {
+          persistSelection(null)
+        }
 
-      if (
-        selectedStudyId.value &&
-        !studies.value.some((study) => study.id === selectedStudyId.value)
-      ) {
-        persistSelection(null)
-      }
+        if (!selectedStudyId.value && data.length === 1) {
+          persistSelection(data[0].id)
+        }
 
-      if (!selectedStudyId.value && studies.value.length === 1) {
-        persistSelection(studies.value[0].id)
-      }
-
-      if (selectedStudyId.value) {
-        await loadOverview(selectedStudyId.value)
-      }
-    } catch (requestError) {
-      error.value = requestErrorMessage(requestError, GENERIC_STUDIES_ERROR)
-    } finally {
-      isLoading.value = false
-    }
+        if (selectedStudyId.value) {
+          await loadOverview(selectedStudyId.value)
+        }
+      },
+    })
   }
 
   function selectStudy(studyId) {
@@ -117,85 +149,60 @@ export const useResearchStore = defineStore('research', () => {
     return loadOverview(studyId)
   }
 
-  async function loadOverview(studyId = selectedStudyId.value) {
-    if (!studyId) return
+  // Todas las cargas devuelven { ok } para que la recarga posterior a una mutación informe un
+  // fallo parcial sin negar el POST ya aplicado.
+  function loadOverview(studyId = selectedStudyId.value) {
+    if (!studyId) return Promise.resolve({ ok: false })
 
-    const generation = overviewGuard.begin()
-
-    isLoading.value = true
-    error.value = ''
-
-    try {
-      const [participantsData, runsData, batchesData, protocolsData] = await Promise.all([
-        listParticipants(studyId),
-        listRuns(studyId),
-        listAnnotationBatches(studyId),
-        listProtocols(studyId),
-      ])
-
-      // Una selección o recarga más reciente ya reemplazó a esta petición.
-      if (!overviewGuard.isCurrent(generation, studyId)) return
-
-      participants.value = participantsData
-      runs.value = runsData
-      batches.value = batchesData
-      protocols.value = protocolsData
-    } catch (requestError) {
-      if (overviewGuard.isCurrent(generation, studyId)) {
-        error.value = requestErrorMessage(requestError, GENERIC_OVERVIEW_ERROR)
-      }
-    } finally {
-      // Solo la petición más reciente apaga la carga (aunque la selección haya quedado vacía).
-      if (overviewGuard.isLatest(generation)) {
-        isLoading.value = false
-      }
-    }
+    return overviewLoader.load({
+      studyId,
+      fallback: GENERIC_OVERVIEW_ERROR,
+      request: () =>
+        Promise.all([
+          listParticipants(studyId),
+          listRuns(studyId),
+          listAnnotationBatches(studyId),
+          listProtocols(studyId),
+        ]),
+      apply: ([participantsData, runsData, batchesData, protocolsData]) => {
+        participants.value = participantsData
+        runs.value = runsData
+        batches.value = batchesData
+        protocols.value = protocolsData
+      },
+    })
   }
 
   // Resultados del estudio (PEO, PPM, TAS, anotación, procedencia): se piden aparte del resumen
   // porque solo la vista de resultados los necesita.
-  async function loadResults(studyId = selectedStudyId.value) {
-    if (!studyId) return
-
-    const generation = resultsGuard.begin()
+  function loadResults(studyId = selectedStudyId.value) {
+    if (!studyId) return Promise.resolve({ ok: false })
 
     resultsStudyId = studyId
-    isLoadingResults.value = true
-    resultsError.value = ''
 
-    try {
-      const data = await getStudyResults(studyId)
-
-      if (!resultsGuard.isCurrent(generation, studyId)) return
-
-      results.value = data
-    } catch (requestError) {
-      if (resultsGuard.isCurrent(generation, studyId)) {
-        resultsError.value = requestErrorMessage(requestError, GENERIC_RESULTS_ERROR)
-      }
-    } finally {
-      if (resultsGuard.isLatest(generation)) {
-        isLoadingResults.value = false
-      }
-    }
+    return resultsLoader.load({
+      studyId,
+      fallback: GENERIC_RESULTS_ERROR,
+      request: () => getStudyResults(studyId),
+      apply: (data) => {
+        results.value = data
+      },
+    })
   }
 
-  async function loadTechnicalEvaluations() {
-    isLoadingEvaluations.value = true
-    evaluationsError.value = ''
-
-    try {
-      technicalEvaluations.value = await listTechnicalEvaluations()
-    } catch (requestError) {
-      evaluationsError.value = requestErrorMessage(requestError, GENERIC_EVALUATIONS_ERROR)
-    } finally {
-      isLoadingEvaluations.value = false
-    }
+  function loadTechnicalEvaluations() {
+    return evaluationsLoader.load({
+      fallback: GENERIC_EVALUATIONS_ERROR,
+      request: listTechnicalEvaluations,
+      apply: (data) => {
+        technicalEvaluations.value = data
+      },
+    })
   }
 
   // "Actualizar": recarga la lista de estudios (estado, versión activa), el resumen y, si la
   // vista de resultados ya los pidió, los resultados.
-  function refreshAll() {
+  async function refreshAll() {
     const studyId = selectedStudyId.value
     const refreshes = [refreshStudies(), loadOverview(studyId)]
 
@@ -203,7 +210,7 @@ export const useResearchStore = defineStore('research', () => {
       refreshes.push(loadResults(studyId))
     }
 
-    return Promise.all(refreshes)
+    return allOk(await Promise.all(refreshes))
   }
 
   function addStudy({ code, title }) {
@@ -214,6 +221,8 @@ export const useResearchStore = defineStore('research', () => {
           requestError.status === 409 ? 'Ya existe un estudio con ese código' : null,
       )
 
+      // Una lista pedida antes del POST ya no representa el estado: no puede quitar el estudio.
+      studiesLoader.invalidate()
       studies.value = [study, ...studies.value]
       await selectStudy(study.id)
 
@@ -331,15 +340,16 @@ export const useResearchStore = defineStore('research', () => {
   }
 
   // Anotación ciega: crear un lote congela las ejecuciones completadas de este momento.
+  // Devuelve el resultado del POST junto con el de la recarga ({ ok }) para que la vista no
+  // afirme una actualización que no ocurrió.
   function createBatch(kind) {
     const studyId = selectedStudyId.value
 
     return pendingCounter.track(async () => {
       const batch = await post(() => createAnnotationBatchRequest(studyId, kind))
+      const refresh = await refreshAfterMutation(studyId, { includeResults: true })
 
-      await refreshAfterMutation(studyId, { includeResults: true })
-
-      return batch
+      return { batch, refresh }
     })
   }
 
@@ -350,10 +360,9 @@ export const useResearchStore = defineStore('research', () => {
       const summary = await post(() =>
         importAnnotationRequest(studyId, batchId, { slot, rater: rater.trim(), file }),
       )
+      const refresh = await refreshAfterMutation(studyId, { includeResults: true })
 
-      await refreshAfterMutation(studyId, { includeResults: true })
-
-      return summary
+      return { summary, refresh }
     })
   }
 
@@ -376,9 +385,9 @@ export const useResearchStore = defineStore('research', () => {
       const evaluation = await post(() => createTechnicalEvaluationRequest(payload))
 
       technicalEvaluations.value = [evaluation, ...technicalEvaluations.value]
-      await loadTechnicalEvaluations()
+      const refresh = await loadTechnicalEvaluations()
 
-      return evaluation
+      return { evaluation, refresh }
     })
   }
 
@@ -404,6 +413,7 @@ export const useResearchStore = defineStore('research', () => {
   }
 
   // Recarga solo el estudio de origen; si la selección cambió, el resultado se ignora.
+  // Devuelve { ok: true } solo si todos los GET de la recarga respondieron.
   async function refreshAfterMutation(
     studyId,
     { includeStudies = false, includeResults = false } = {},
@@ -422,19 +432,27 @@ export const useResearchStore = defineStore('research', () => {
       }
     }
 
-    await Promise.all(refreshes)
+    const outcomes = await Promise.all(refreshes)
 
     if (selectedStudyId.value !== studyId) {
       throw new StudyChangedError()
     }
+
+    return allOk(outcomes)
   }
 
-  async function refreshStudies() {
-    try {
-      studies.value = await listStudies()
-    } catch (requestError) {
-      error.value = requestErrorMessage(requestError, GENERIC_REFRESH_ERROR)
-    }
+  function refreshStudies() {
+    return studiesLoader.load({
+      request: listStudies,
+      fallback: GENERIC_REFRESH_ERROR,
+      apply: (data) => {
+        studies.value = data
+      },
+    })
+  }
+
+  function allOk(outcomes) {
+    return { ok: outcomes.every((outcome) => outcome.ok) }
   }
 
   function clearStudyData() {
@@ -470,6 +488,8 @@ export const useResearchStore = defineStore('research', () => {
     activeProtocol,
     latestProtocol,
     isLoading,
+    isLoadingStudies,
+    isLoadingOverview,
     isLoadingResults,
     isLoadingEvaluations,
     isMutating,

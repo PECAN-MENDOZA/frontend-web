@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
 import Skeleton from 'primevue/skeleton'
@@ -13,6 +13,7 @@ import ParticipantDirectory from '@/features/research/components/ParticipantDire
 import ProtocolEditor from '@/features/research/components/ProtocolEditor.vue'
 import StudySelector from '@/features/research/components/StudySelector.vue'
 import { useResearchStore } from '@/features/research/store/research.store'
+import { captureFocusOrigin, resolveReturnFocus } from '@/features/research/utils/focus'
 import { StudyChangedError } from '@/features/research/utils/mutations'
 import { studyStatusLabel } from '@/features/research/utils/study'
 
@@ -28,6 +29,10 @@ const createErrorMessage = ref('')
 const issuedCredential = ref(null)
 // Qué acción (y de qué fila) está en curso: solo ese botón muestra el spinner.
 const pendingAction = ref(null)
+const directory = ref(null)
+// Botón que originó el código: queda deshabilitado (o desaparece) durante la recarga, así que
+// se captura antes de la mutación y se decide el foco de retorno al cerrar el diálogo.
+let credentialOrigin = null
 
 const study = computed(() => researchStore.selectedStudy)
 const isClosed = computed(() => study.value?.status === 'CLOSED')
@@ -101,6 +106,8 @@ function addParticipant() {
 }
 
 function generateCode(participant) {
+  credentialOrigin = captureFocusOrigin()
+
   return runPending({ kind: 'generate', participantId: participant.id }, async () => {
     try {
       // El diálogo se abre en cuanto el POST resuelve; la recarga sigue en segundo plano.
@@ -137,6 +144,9 @@ function revokeCode(participant, runId) {
 }
 
 function regenerateCode(participant, runId) {
+  // Antes del diálogo de confirmación: su botón "Regenerar" desaparece al aceptar.
+  credentialOrigin = captureFocusOrigin()
+
   confirm.require({
     header: `Regenerar código de ${participant.pseudonym}`,
     message: 'Se revocará el código pendiente y se emitirá uno nuevo.',
@@ -160,7 +170,42 @@ function revealCredential(credential) {
 }
 
 function closeCredential() {
+  const origin = credentialOrigin
+
+  credentialOrigin = null
   issuedCredential.value = null
+  returnFocus(origin)
+}
+
+// El diálogo se cierra a veces antes de que termine la recarga, con el botón de origen aún
+// deshabilitado: se espera a que la mutación acabe y, si el botón sigue ahí y habilitado, el
+// foco vuelve a él; si no (por ejemplo, la fila ya muestra otras acciones), va al título de la
+// tabla de participantes.
+async function returnFocus(origin) {
+  await whenNotMutating()
+  await nextTick()
+
+  const target = resolveReturnFocus(origin)
+
+  if (target) {
+    target.focus()
+  } else {
+    directory.value?.focusHeading()
+  }
+}
+
+function whenNotMutating() {
+  if (!researchStore.isMutating) return Promise.resolve()
+
+  return new Promise((resolve) => {
+    watch(
+      () => researchStore.isMutating,
+      (isMutating) => {
+        if (!isMutating) resolve()
+      },
+      { once: true },
+    )
+  })
 }
 
 async function runPending(action, operation) {
@@ -206,7 +251,7 @@ function notify(severity, summary, detail) {
         <Button
           label="Nuevo estudio"
           icon="pi pi-plus"
-          :disabled="researchStore.isMutating"
+          :disabled="researchStore.isMutating || researchStore.isLoadingStudies"
           @click="openCreateStudy"
         />
         <Button
@@ -282,6 +327,7 @@ function notify(severity, summary, detail) {
       />
 
       <ParticipantDirectory
+        ref="directory"
         :participants="researchStore.participants"
         :runs="researchStore.runs"
         :study="study"

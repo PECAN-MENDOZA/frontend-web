@@ -13,7 +13,7 @@ import StudySelector from '@/features/research/components/StudySelector.vue'
 import TechnicalEvaluationPanel from '@/features/research/components/TechnicalEvaluationPanel.vue'
 import { useResearchStore } from '@/features/research/store/research.store'
 import { saveBlob } from '@/features/research/utils/download'
-import { StudyChangedError } from '@/features/research/utils/mutations'
+import { StudyChangedError, refreshOutcomeMessage } from '@/features/research/utils/mutations'
 import {
   annotationKindLabel,
   formatCount,
@@ -25,6 +25,10 @@ import {
 import { formatDateTime } from '@/features/research/utils/study'
 
 const TOAST_LIFE_MS = 4000
+const EVALUATIONS_REFRESH_COPY = {
+  updated: 'La lista de evaluaciones se actualizó.',
+  failed: 'No se pudo actualizar la lista de evaluaciones',
+}
 
 const researchStore = useResearchStore()
 const confirm = useConfirm()
@@ -37,6 +41,9 @@ const annotationErrors = reactive({ ORTHOGRAPHY: '', SEMANTIC: '' })
 const isDownloadingAnalysis = ref(false)
 const recordError = ref('')
 const recordedCount = ref(0)
+// El POST se aplicó pero algún GET de la recarga falló: aviso con reintento, sin negar el POST.
+const refreshWarning = ref(null)
+const isRetryingRefresh = ref(false)
 
 const study = computed(() => researchStore.selectedStudy)
 const results = computed(() => researchStore.results)
@@ -71,6 +78,7 @@ watch(
     importSummaries.SEMANTIC = null
     annotationErrors.ORTHOGRAPHY = ''
     annotationErrors.SEMANTIC = ''
+    refreshWarning.value = null
 
     if (studyId) {
       researchStore.loadResults(studyId)
@@ -94,12 +102,12 @@ function createBatch(kind) {
         importSummaries[kind] = null
 
         try {
-          const batch = await researchStore.createBatch(kind)
+          const { batch, refresh } = await researchStore.createBatch(kind)
 
-          notify(
-            'success',
+          announceMutation(
             'Lote creado',
             `${formatCount(batch.rowCount)} filas listas para descargar y repartir a los evaluadores.`,
+            refresh,
           )
         } catch (error) {
           handleAnnotationError(kind, error, 'No pudimos crear el lote')
@@ -128,11 +136,13 @@ function importAnnotation(batch, form) {
     importSummaries[batch.kind] = null
 
     try {
-      importSummaries[batch.kind] = await researchStore.importAnnotationFile(batch.id, form)
-      notify(
-        'success',
+      const { summary, refresh } = await researchStore.importAnnotationFile(batch.id, form)
+
+      importSummaries[batch.kind] = summary
+      announceMutation(
         'Importación registrada',
-        `${slotLabel(form.slot)} · ${form.rater}. Los resultados se actualizaron.`,
+        `${slotLabel(form.slot)} · ${form.rater}.`,
+        refresh,
       )
     } catch (error) {
       handleAnnotationError(batch.kind, error, 'No pudimos importar el archivo')
@@ -159,19 +169,44 @@ function recordEvaluation(payload) {
     recordError.value = ''
 
     try {
-      const evaluation = await researchStore.recordTechnicalEvaluation(payload)
+      const { evaluation, refresh } = await researchStore.recordTechnicalEvaluation(payload)
 
       recordedCount.value += 1
+      // Si la recarga de la lista falló, el panel muestra su propio error con reintento.
       notify(
         'success',
         'Evaluación registrada',
-        `${evaluation.modelVersion} · F0.5 ${formatMetric(evaluation.fZeroFive, { digits: 4 })}.`,
+        refreshOutcomeMessage(refresh, {
+          detail: `${evaluation.modelVersion} · F0.5 ${formatMetric(evaluation.fZeroFive, { digits: 4 })}.`,
+          ...EVALUATIONS_REFRESH_COPY,
+        }).detail,
       )
     } catch (error) {
       // El backend re-valida y su mensaje se muestra tal cual (traducido si es conocido).
       recordError.value = error.message
     }
   })
+}
+
+// El POST ya se aplicó: se anuncia siempre; la actualización de la vista solo si todos los GET
+// de la recarga respondieron. Si no, queda un aviso con reintento.
+function announceMutation(summary, detail, refresh) {
+  const outcome = refreshOutcomeMessage(refresh, { detail })
+
+  notify('success', summary, outcome.detail)
+  refreshWarning.value = outcome.warning || null
+}
+
+async function retryRefresh() {
+  isRetryingRefresh.value = true
+
+  try {
+    const { ok } = await researchStore.refreshAll()
+
+    if (ok) refreshWarning.value = null
+  } finally {
+    isRetryingRefresh.value = false
+  }
 }
 
 // Cambiar de estudio durante una operación no es un fallo: el backend ya la aplicó.
@@ -235,6 +270,22 @@ function notify(severity, summary, detail) {
       </template>
     </PageHeader>
 
+    <Message v-if="refreshWarning" severity="warn" :closable="false">
+      <div class="research-refresh-warning">
+        <span>{{ refreshWarning }}</span>
+        <Button
+          label="Reintentar"
+          icon="pi pi-refresh"
+          size="small"
+          severity="secondary"
+          outlined
+          :loading="isRetryingRefresh"
+          :disabled="researchStore.isMutating"
+          @click="retryRefresh"
+        />
+      </div>
+    </Message>
+
     <template v-if="researchStore.isLoading && !researchStore.studies.length">
       <Skeleton height="24rem" border-radius="1.25rem" />
       <Skeleton height="16rem" border-radius="1.25rem" />
@@ -244,14 +295,14 @@ function notify(severity, summary, detail) {
       v-else-if="researchStore.error && !researchStore.studies.length"
       class="panel research-empty-state"
     >
-      <i class="pi pi-exclamation-triangle research-empty-state__icon"></i>
+      <i class="pi pi-exclamation-triangle research-empty-state__icon" aria-hidden="true"></i>
       <h2>No pudimos cargar tus estudios</h2>
       <p>{{ researchStore.error }}</p>
       <Button label="Reintentar" icon="pi pi-refresh" @click="researchStore.loadStudies" />
     </div>
 
     <div v-else-if="!researchStore.studies.length" class="panel research-empty-state">
-      <i class="pi pi-chart-line research-empty-state__icon"></i>
+      <i class="pi pi-chart-line research-empty-state__icon" aria-hidden="true"></i>
       <h2>Aún no hay un estudio</h2>
       <p>
         Crea un estudio desde <strong>Estudio</strong> y completa sesiones para ver sus resultados.
@@ -266,13 +317,13 @@ function notify(severity, summary, detail) {
     </div>
 
     <div v-else-if="!study" class="panel research-empty-state">
-      <i class="pi pi-compass research-empty-state__icon"></i>
+      <i class="pi pi-compass research-empty-state__icon" aria-hidden="true"></i>
       <h2>Elige un estudio</h2>
       <p>Selecciona un estudio arriba para revisar su anotación y sus resultados.</p>
     </div>
 
     <div v-else-if="researchStore.resultsError && !results" class="panel research-empty-state">
-      <i class="pi pi-exclamation-triangle research-empty-state__icon"></i>
+      <i class="pi pi-exclamation-triangle research-empty-state__icon" aria-hidden="true"></i>
       <h2>No pudimos cargar los resultados</h2>
       <p>{{ researchStore.resultsError }}</p>
       <Button
@@ -295,6 +346,7 @@ function notify(severity, summary, detail) {
       </Message>
 
       <AnnotationWorkflow
+        :study-id="researchStore.selectedStudyId"
         :results="results"
         :batches="researchStore.batches"
         :import-summaries="importSummaries"
@@ -308,7 +360,7 @@ function notify(severity, summary, detail) {
       />
 
       <div v-if="!hasSample" class="panel research-empty-state">
-        <i class="pi pi-users research-empty-state__icon"></i>
+        <i class="pi pi-users research-empty-state__icon" aria-hidden="true"></i>
         <h2>Todavía no hay una muestra</h2>
         <p>
           Ningún participante tiene un par completo: al menos una sesión completada y no excluida en
@@ -346,18 +398,6 @@ function notify(severity, summary, detail) {
           </span>
         </div>
       </template>
-
-      <TechnicalEvaluationPanel
-        :evaluations="researchStore.technicalEvaluations"
-        :is-loading="researchStore.isLoadingEvaluations"
-        :is-busy="researchStore.isMutating"
-        :is-recording="isRecording"
-        :load-error="researchStore.evaluationsError"
-        :record-error="recordError"
-        :recorded-count="recordedCount"
-        @record="recordEvaluation"
-        @retry="researchStore.loadTechnicalEvaluations"
-      />
 
       <section v-if="provenance" class="panel research-provenance" aria-label="Procedencia">
         <div class="panel__header">
@@ -437,5 +477,19 @@ function notify(severity, summary, detail) {
         </div>
       </section>
     </template>
+
+    <!-- Independiente del estudio y de sus resultados: siempre accesible, con su propia carga. -->
+    <TechnicalEvaluationPanel
+      :evaluations="researchStore.technicalEvaluations"
+      :is-loading="researchStore.isLoadingEvaluations"
+      :is-busy="researchStore.isMutating"
+      :is-recording="isRecording"
+      :load-error="researchStore.evaluationsError"
+      :record-error="recordError"
+      :recorded-count="recordedCount"
+      @record="recordEvaluation"
+      @change="recordError = ''"
+      @retry="researchStore.loadTechnicalEvaluations"
+    />
   </div>
 </template>

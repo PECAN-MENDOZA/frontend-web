@@ -1570,6 +1570,27 @@ h2 {
   display: inline-flex;
 }
 
+/* Foco de retorno programático (tabindex="-1") tras cerrar el diálogo de código. */
+.research-directory__title:focus {
+  outline: none;
+}
+
+.research-directory__title:focus-visible {
+  outline: 2px solid var(--color-ocean);
+  outline-offset: 4px;
+  border-radius: 0.25rem;
+}
+
+/* Aviso de recarga fallida tras un POST aplicado: texto y reintento en la misma fila. */
+.research-refresh-warning {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem 1rem;
+  width: 100%;
+}
+
 .research-directory__actions {
   display: flex;
   flex-wrap: wrap;

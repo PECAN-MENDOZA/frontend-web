@@ -76,6 +76,15 @@ const BACKEND_MESSAGES = {
   'Model version is required (at most 160 characters)':
     'La versión del modelo es obligatoria (máximo 160 caracteres).',
   'Technical evaluation not found': 'No encontramos la evaluación técnica.',
+  // Bean Validation (400 con validationErrors por campo).
+  'Request validation failed': 'La solicitud no pasó la validación.',
+}
+
+// Reglas de puntaje por tipo de lote (AnnotationKind.scoreRule).
+const SCORE_RULES = {
+  'a non-negative integer (words with at least one orthographic error)':
+    'un entero no negativo (palabras con al menos un error ortográfico)',
+  '0, 1 or 2 (semantic safety scale)': '0, 1 o 2 (escala de seguridad semántica)',
 }
 
 // Mensajes con una parte variable (código de muestra, fila, ranura…): se traduce el molde y
@@ -89,7 +98,8 @@ const BACKEND_PATTERNS = [
   ],
   [
     /^Score for sample (\S+) must be (.+), got '(.*)'$/,
-    'El puntaje de la muestra $1 debe ser $2; se recibió «$3»',
+    (text, code, rule, value) =>
+      `El puntaje de la muestra ${code} debe ser ${SCORE_RULES[rule] ?? rule}; se recibió «${value}»`,
   ],
   [/^Unknown sample code in row (\d+): (.+)$/, 'Código de muestra desconocido en la fila $1: $2'],
   [/^Duplicate sample code in row (\d+): (.+)$/, 'Código de muestra repetido en la fila $1: $2'],
@@ -114,6 +124,10 @@ const BACKEND_PATTERNS = [
   ],
   [/^Category '(.+)' is repeated$/, 'La categoría «$1» está repetida'],
   // Estados de anotación de los resultados (research-api.md §5).
+  [
+    /^Adjudicated (?:orthography|semantic) scores cover all (\d+) included (runs|suggestions)$/,
+    (text, total, unit) => `La adjudicación cubre las ${total} ${ANNOTATION_UNITS[unit]} incluidas`,
+  ],
   [
     /^Batch (\S+) is the most recent (orthography|semantic) batch but has no current adjudication over the current rater imports; import its rater and adjudication files(.*)$/s,
     (text, batchId, kind, detail) =>
@@ -158,5 +172,11 @@ export function translateBackendMessage(message) {
 export function requestErrorMessage(requestError, fallback) {
   if (!requestError || typeof requestError.status !== 'number') return fallback
 
-  return translateBackendMessage(requestError.message) || fallback
+  const message = translateBackendMessage(requestError.message) || fallback
+  const fields = Object.keys(requestError.validationErrors ?? {})
+
+  // Los 400 de validación traen el detalle por campo: se nombran los campos, no sus reglas.
+  if (fields.length === 0) return message
+
+  return `${message.replace(/\.$/, '')}; revisa los campos: ${fields.join(', ')}.`
 }

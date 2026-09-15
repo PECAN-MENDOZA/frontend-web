@@ -48,13 +48,17 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['record', 'retry'])
+// `change` avisa a la vista de que el archivo elegido cambió o se quitó (limpia su error).
+const emit = defineEmits(['record', 'retry', 'change'])
 
 const fileInput = ref(null)
 const fileName = ref('')
 const report = ref(null)
 const readErrors = ref([])
 const isReading = ref(false)
+// Cada selección o limpieza invalida las lecturas pendientes: una lectura antigua nunca
+// publica su informe sobre un archivo más nuevo (o sobre ninguno).
+let readToken = 0
 
 const validationErrors = computed(() =>
   report.value ? technicalEvaluationErrors(report.value) : [],
@@ -70,10 +74,13 @@ watch(
 
 async function onFileChange(event) {
   const file = event.target.files?.[0] ?? null
+  const token = ++readToken
 
   report.value = null
   readErrors.value = []
+  isReading.value = false
   fileName.value = file?.name ?? ''
+  emit('change')
 
   if (!file) return
 
@@ -85,20 +92,28 @@ async function onFileChange(event) {
   isReading.value = true
 
   try {
-    report.value = JSON.parse(await file.text())
+    const text = await file.text()
+
+    if (token !== readToken) return
+
+    report.value = JSON.parse(text)
   } catch {
-    readErrors.value = ['El archivo no contiene JSON válido.']
+    if (token === readToken) readErrors.value = ['El archivo no contiene JSON válido.']
   } finally {
-    isReading.value = false
+    if (token === readToken) isReading.value = false
   }
 }
 
 function clearFile() {
+  readToken += 1
   report.value = null
   readErrors.value = []
+  isReading.value = false
   fileName.value = ''
 
   if (fileInput.value) fileInput.value.value = ''
+
+  emit('change')
 }
 
 function submit() {
@@ -126,14 +141,8 @@ function submit() {
         final.
       </p>
 
-      <div
-        v-if="isLoading && !evaluations.length"
-        class="research-evaluation__list"
-        aria-busy="true"
-      >
-        <Skeleton v-for="item in 2" :key="item" height="5.5rem" border-radius="0.9rem" />
-      </div>
-      <div v-else-if="loadError && !evaluations.length" class="research-evaluation__error">
+      <!-- El error de carga se muestra aunque exista una lista previa: puede estar desactualizada. -->
+      <div v-if="loadError" class="research-evaluation__error" role="alert">
         <p>{{ loadError }}</p>
         <Button
           label="Reintentar"
@@ -141,13 +150,22 @@ function submit() {
           size="small"
           severity="secondary"
           outlined
+          :loading="isLoading"
           @click="emit('retry')"
         />
       </div>
-      <p v-else-if="!evaluations.length" class="research-evaluation__empty">
+
+      <div
+        v-if="isLoading && !evaluations.length"
+        class="research-evaluation__list"
+        aria-busy="true"
+      >
+        <Skeleton v-for="item in 2" :key="item" height="5.5rem" border-radius="0.9rem" />
+      </div>
+      <p v-else-if="!evaluations.length && !loadError" class="research-evaluation__empty">
         Aún no hay evaluaciones registradas. Sube el informe JSON para registrar la primera.
       </p>
-      <ul v-else class="research-evaluation__list">
+      <ul v-else-if="evaluations.length" class="research-evaluation__list">
         <li
           v-for="evaluation in evaluations"
           :key="evaluation.id"

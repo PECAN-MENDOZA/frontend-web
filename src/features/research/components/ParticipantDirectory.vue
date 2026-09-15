@@ -44,7 +44,13 @@ defineEmits(['add', 'generate', 'revoke', 'regenerate'])
 
 const CLOCK_INTERVAL_MS = 30_000
 const now = ref(new Date())
+const heading = ref(null)
 let clock = null
+
+// Destino de foco estable cuando el botón que abrió el diálogo de código ya no existe.
+defineExpose({
+  focusHeading: () => heading.value?.focus(),
+})
 
 const isStudyActive = computed(() => props.study?.status === 'ACTIVE')
 const isStudyClosed = computed(() => props.study?.status === 'CLOSED')
@@ -92,7 +98,7 @@ onUnmounted(() => window.clearInterval(clock))
     <div class="panel__header">
       <div>
         <p class="overline">Directorio seudonimizado</p>
-        <h2>Participantes</h2>
+        <h2 ref="heading" tabindex="-1" class="research-directory__title">Participantes</h2>
       </div>
       <span v-tooltip.bottom="addHint || undefined" class="research-directory__add">
         <Button

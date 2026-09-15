@@ -89,6 +89,64 @@ test('translateBackendMessage covers the dynamic annotation status messages', ()
   )
 })
 
+test('translateBackendMessage translates the ADJUDICATED coverage message of both kinds', () => {
+  assert.equal(
+    translateBackendMessage('Adjudicated orthography scores cover all 12 included runs'),
+    'La adjudicación cubre las 12 sesiones incluidas',
+  )
+  assert.equal(
+    translateBackendMessage('Adjudicated semantic scores cover all 3 included suggestions'),
+    'La adjudicación cubre las 3 sugerencias incluidas',
+  )
+})
+
+test('translateBackendMessage translates the score rule of an invalid sample score', () => {
+  assert.equal(
+    translateBackendMessage(
+      "Score for sample T-AAAAAAAA must be a non-negative integer (words with at least one orthographic error), got 'x'",
+    ),
+    'El puntaje de la muestra T-AAAAAAAA debe ser un entero no negativo (palabras con al menos un error ortográfico); se recibió «x»',
+  )
+  assert.equal(
+    translateBackendMessage(
+      "Score for sample T-BBBBBBBB must be 0, 1 or 2 (semantic safety scale), got '7'",
+    ),
+    'El puntaje de la muestra T-BBBBBBBB debe ser 0, 1 o 2 (escala de seguridad semántica); se recibió «7»',
+  )
+  // An unknown rule is kept verbatim rather than dropped.
+  assert.equal(
+    translateBackendMessage("Score for sample T-CCCCCCCC must be something new, got ''"),
+    'El puntaje de la muestra T-CCCCCCCC debe ser something new; se recibió «»',
+  )
+})
+
+test('translateBackendMessage translates the Bean Validation summary', () => {
+  assert.equal(
+    translateBackendMessage('Request validation failed'),
+    'La solicitud no pasó la validación.',
+  )
+})
+
+test('requestErrorMessage lists the invalid fields when the response exposes them', () => {
+  const fallback = 'No pudimos completar la acción.'
+  const error = Object.assign(new Error('Request validation failed'), {
+    status: 400,
+    validationErrors: { scorerVersion: 'must match', datasetSha256: 'must match' },
+  })
+
+  assert.equal(
+    requestErrorMessage(error, fallback),
+    'La solicitud no pasó la validación; revisa los campos: scorerVersion, datasetSha256.',
+  )
+  assert.equal(
+    requestErrorMessage(
+      Object.assign(new Error('Request validation failed'), { status: 400, validationErrors: {} }),
+      fallback,
+    ),
+    'La solicitud no pasó la validación.',
+  )
+})
+
 test('translateBackendMessage returns unknown or empty messages untouched', () => {
   assert.equal(translateBackendMessage('Algo salió mal'), 'Algo salió mal')
   assert.equal(translateBackendMessage('  Study not found  '), 'No encontramos el estudio.')
