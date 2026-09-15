@@ -19,11 +19,11 @@ const { authStore, credentials, submitSignIn } = useAuth()
       </div>
 
       <div class="login-page__story-content">
-        <p class="overline">Espacio docente</p>
+        <p class="overline">Portal de seguimiento e investigación</p>
         <h1>Descubre el patrón de aprendizaje detrás de cada palabra.</h1>
         <p>
           Transforma las señales de escritura diarias en una guía cercana y enfocada para cada
-          estudiante.
+          espacio de trabajo.
         </p>
       </div>
 
@@ -42,7 +42,7 @@ const { authStore, credentials, submitSignIn } = useAuth()
       <form class="login-card" @submit.prevent="submitSignIn">
         <div>
           <p class="overline">Te damos la bienvenida</p>
-          <h2>Ingresa a tu aula</h2>
+          <h2>Ingresa al portal</h2>
           <p class="login-card__subtitle">{{ APP_TAGLINE }}</p>
         </div>
 
@@ -96,7 +96,7 @@ const { authStore, credentials, submitSignIn } = useAuth()
 
         <p class="login-card__hint">
           <i class="pi pi-lock"></i>
-          Acceso protegido solo para docentes autorizados.
+          Acceso protegido solo para personal autorizado.
         </p>
       </form>
     </div>

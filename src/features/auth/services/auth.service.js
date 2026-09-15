@@ -2,9 +2,15 @@ import { api, TOKEN_KEY } from '@/shared/services/api'
 
 const USER_KEY = 'florisboard_user'
 const EXPIRATION_KEY = 'florisboard_token_expiration'
+const ROLE_LABELS = { TEACHER: 'Docente', RESEARCHER: 'Investigador' }
 
 export async function signIn(credentials) {
-  const response = await getTeacherSession(credentials)
+  const response = await getStaffSession(credentials)
+
+  if (!ROLE_LABELS[response.role]) {
+    throw new Error('Tu cuenta no tiene un rol habilitado para este portal.')
+  }
+
   const session = {
     token: response.token,
     expiresAt: response.expiresAt,
@@ -13,7 +19,7 @@ export async function signIn(credentials) {
       name: getNameFromEmail(credentials.email),
       email: credentials.email,
       role: response.role,
-      roleLabel: 'Docente',
+      roleLabel: ROLE_LABELS[response.role] ?? response.role,
     },
   }
 
@@ -24,9 +30,9 @@ export async function signIn(credentials) {
   return session
 }
 
-async function getTeacherSession(credentials) {
+async function getStaffSession(credentials) {
   try {
-    return await api.post('/auth/teachers/login', credentials, {
+    return await api.post('/auth/staff/login', credentials, {
       skipUnauthorizedEvent: true,
     })
   } catch {
