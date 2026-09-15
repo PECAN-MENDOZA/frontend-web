@@ -35,6 +35,8 @@ const BACKEND_MESSAGES = {
   'Study has no completed runs to annotate':
     'El estudio no tiene sesiones completadas para anotar.',
   'Study has no suggestions to annotate': 'El estudio no tiene sugerencias para anotar.',
+  'Sample code collision, retry the batch creation':
+    'Hubo una colisión al generar los códigos de muestra; vuelve a crear el lote.',
   'Batch is already frozen': 'El lote ya está congelado.',
   'Batch content no longer matches its export hash':
     'El contenido del lote ya no coincide con el hash de su export.',

@@ -52,6 +52,14 @@ function submitStudy() {
 
   emit('submit', { code: form.code.trim(), title: form.title.trim() })
 }
+
+// Mientras el POST está en curso el diálogo no se cierra (ni X, ni Escape, ni Cancelar): su
+// resultado —por ejemplo "Ya existe un estudio con ese código"— debe verse aquí.
+function close() {
+  if (props.isSaving) return
+
+  emit('update:visible', false)
+}
 </script>
 
 <template>
@@ -59,11 +67,12 @@ function submitStudy() {
     :visible="visible"
     modal
     header="Nuevo estudio"
+    :closable="!isSaving"
     class="research-dialog"
-    @update:visible="$emit('update:visible', $event)"
+    @update:visible="close"
   >
     <div class="research-dialog__intro">
-      <span class="research-dialog__icon"><i class="pi pi-book"></i></span>
+      <span class="research-dialog__icon"><i class="pi pi-book" aria-hidden="true"></i></span>
       <div>
         <p class="overline">Estudio experimental</p>
         <h3>Crea un estudio para reunir participantes.</h3>
@@ -109,13 +118,7 @@ function submitStudy() {
     </form>
 
     <template #footer>
-      <Button
-        label="Cancelar"
-        severity="secondary"
-        text
-        :disabled="isSaving"
-        @click="$emit('update:visible', false)"
-      />
+      <Button label="Cancelar" severity="secondary" text :disabled="isSaving" @click="close" />
       <Button
         label="Crear estudio"
         icon="pi pi-arrow-right"

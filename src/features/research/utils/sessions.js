@@ -16,10 +16,10 @@ const INCIDENT_LABELS = {
 
 // Disposición analítica de una ejecución: qué puede entrar al análisis y qué no.
 export const READINESS_OPTIONS = [
-  { value: 'analizable', label: 'Analizable', severity: 'success' },
-  { value: 'abierta', label: 'Abierta', severity: 'warn' },
-  { value: 'descartada', label: 'Descartada', severity: 'secondary' },
-  { value: 'excluida', label: 'Excluida', severity: 'danger' },
+  { value: 'analizable', label: 'Analizable' },
+  { value: 'abierta', label: 'Abierta' },
+  { value: 'descartada', label: 'Descartada' },
+  { value: 'excluida', label: 'Excluida' },
 ]
 
 export function runReadiness(run) {
@@ -28,14 +28,6 @@ export function runReadiness(run) {
   if (OPEN_STATUSES.includes(run.status)) return 'abierta'
 
   return 'descartada'
-}
-
-export function readinessLabel(readiness) {
-  return findReadiness(readiness)?.label ?? readiness
-}
-
-export function readinessSeverity(readiness) {
-  return findReadiness(readiness)?.severity ?? 'secondary'
 }
 
 // El backend no filtra ejecuciones: cada criterio acepta un valor, una lista o nada.
@@ -137,10 +129,6 @@ export function truncateText(text, maxLength) {
   if (!text || text.length <= maxLength) return text ?? ''
 
   return `${text.slice(0, maxLength - 1)}…`
-}
-
-function findReadiness(readiness) {
-  return READINESS_OPTIONS.find((option) => option.value === readiness)
 }
 
 function toList(value) {

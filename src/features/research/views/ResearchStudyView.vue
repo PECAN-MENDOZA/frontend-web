@@ -37,11 +37,8 @@ let credentialOrigin = null
 const study = computed(() => researchStore.selectedStudy)
 const isClosed = computed(() => study.value?.status === 'CLOSED')
 
-onMounted(() => {
-  if (!researchStore.studies.length) {
-    researchStore.loadStudies()
-  }
-})
+// La lista se pide si falta o si la cargó otra cuenta en esta pestaña.
+onMounted(() => researchStore.ensureStudies())
 
 function openCreateStudy() {
   createErrorMessage.value = ''
@@ -275,21 +272,21 @@ function notify(severity, summary, detail) {
       v-else-if="researchStore.error && !researchStore.studies.length"
       class="panel research-empty-state"
     >
-      <i class="pi pi-exclamation-triangle research-empty-state__icon"></i>
+      <i class="pi pi-exclamation-triangle research-empty-state__icon" aria-hidden="true"></i>
       <h2>No pudimos cargar tus estudios</h2>
       <p>{{ researchStore.error }}</p>
       <Button label="Reintentar" icon="pi pi-refresh" @click="researchStore.loadStudies" />
     </div>
 
     <div v-else-if="!researchStore.studies.length" class="panel research-empty-state">
-      <i class="pi pi-book research-empty-state__icon"></i>
+      <i class="pi pi-book research-empty-state__icon" aria-hidden="true"></i>
       <h2>Aún no hay un estudio</h2>
       <p>Crea el primero para definir sus consignas y empezar a reunir participantes seudónimos.</p>
       <Button label="Nuevo estudio" icon="pi pi-plus" @click="openCreateStudy" />
     </div>
 
     <div v-else-if="!study" class="panel research-empty-state">
-      <i class="pi pi-compass research-empty-state__icon"></i>
+      <i class="pi pi-compass research-empty-state__icon" aria-hidden="true"></i>
       <h2>Elige un estudio</h2>
       <p>Selecciona un estudio arriba para gestionar su protocolo y sus participantes.</p>
     </div>

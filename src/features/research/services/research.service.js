@@ -8,10 +8,6 @@ export function createStudy({ code, title }) {
   return api.post('/research/studies', { code, title })
 }
 
-export function closeStudy(studyId) {
-  return api.post(`/research/studies/${studyId}/close`)
-}
-
 export function listProtocols(studyId) {
   return api.get(`/research/studies/${studyId}/protocols`)
 }
@@ -51,10 +47,6 @@ export function listAnnotationBatches(studyId) {
 // Anotación ciega: el lote congela las ejecuciones completadas del momento; el export es un CSV.
 export function createAnnotationBatch(studyId, kind) {
   return api.post(`/research/studies/${studyId}/annotation-batches?${query({ kind })}`)
-}
-
-export function getAnnotationBatch(studyId, batchId) {
-  return api.get(`/research/studies/${studyId}/annotation-batches/${batchId}`)
 }
 
 export function downloadAnnotationExport(studyId, batchId) {

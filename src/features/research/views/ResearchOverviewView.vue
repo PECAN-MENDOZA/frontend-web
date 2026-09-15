@@ -10,11 +10,8 @@ import { useResearchStore } from '@/features/research/store/research.store'
 
 const researchStore = useResearchStore()
 
-onMounted(() => {
-  if (!researchStore.studies.length) {
-    researchStore.loadStudies()
-  }
-})
+// La lista se pide si falta o si la cargó otra cuenta en esta pestaña.
+onMounted(() => researchStore.ensureStudies())
 </script>
 
 <template>
@@ -51,15 +48,18 @@ onMounted(() => {
       <Skeleton height="18rem" border-radius="1.25rem" />
     </template>
 
-    <div v-else-if="researchStore.error && !researchStore.studies.length" class="panel research-empty-state">
-      <i class="pi pi-exclamation-triangle research-empty-state__icon"></i>
+    <div
+      v-else-if="researchStore.error && !researchStore.studies.length"
+      class="panel research-empty-state"
+    >
+      <i class="pi pi-exclamation-triangle research-empty-state__icon" aria-hidden="true"></i>
       <h2>No pudimos cargar tus estudios</h2>
       <p>{{ researchStore.error }}</p>
       <Button label="Reintentar" icon="pi pi-refresh" @click="researchStore.loadStudies" />
     </div>
 
     <div v-else-if="!researchStore.studies.length" class="panel research-empty-state">
-      <i class="pi pi-compass research-empty-state__icon"></i>
+      <i class="pi pi-compass research-empty-state__icon" aria-hidden="true"></i>
       <h2>Aún no hay un estudio</h2>
       <p>
         Crea un estudio desde <strong>Estudio</strong> para comenzar a reunir participantes y
@@ -75,7 +75,7 @@ onMounted(() => {
     </div>
 
     <div v-else-if="!researchStore.selectedStudy" class="panel research-empty-state">
-      <i class="pi pi-compass research-empty-state__icon"></i>
+      <i class="pi pi-compass research-empty-state__icon" aria-hidden="true"></i>
       <h2>Elige un estudio</h2>
       <p>Selecciona un estudio arriba para ver su progreso.</p>
     </div>
@@ -139,8 +139,8 @@ onMounted(() => {
         <span v-for="version in researchStore.versions.modelVersions" :key="`model-${version}`">
           Modelo {{ version }}
         </span>
-        <span v-for="version in researchStore.versions.backendVersions" :key="`backend-${version}`">
-          Backend {{ version }}
+        <span v-for="version in researchStore.versions.backendVersions" :key="`service-${version}`">
+          Servicio {{ version }}
         </span>
       </section>
     </template>

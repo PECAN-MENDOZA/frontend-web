@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
@@ -7,10 +7,13 @@ import ConfirmDialog from 'primevue/confirmdialog'
 import Tag from 'primevue/tag'
 import Toast from 'primevue/toast'
 import { useAuthStore } from '@/features/auth/store/auth.store'
+import { useResearchStore } from '@/features/research/store/research.store'
+import { refreshStatusLabel } from '@/features/research/utils/study'
 import { APP_NAME } from '@/shared/constants/app'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const researchStore = useResearchStore()
 const isNavigationOpen = ref(false)
 
 const navigationItems = [
@@ -20,21 +23,42 @@ const navigationItems = [
   { label: 'Resultados', icon: 'pi pi-chart-line', to: '/research/results' },
 ]
 
+// Solo afirma una actualización que ocurrió: hora de la última recarga completa exitosa, y
+// nada mientras haya una carga o un error en pantalla.
+const refreshStatus = computed(() =>
+  refreshStatusLabel(researchStore.lastRefreshAt, {
+    isLoading: researchStore.isLoading || researchStore.isLoadingResults,
+    hasError: Boolean(researchStore.error || researchStore.resultsError),
+  }),
+)
+
 function closeNavigation() {
   isNavigationOpen.value = false
 }
 
+// authStore.signOut() emite auth:signed-out, que descarta los datos de investigación de la cuenta.
 function signOut() {
   authStore.signOut()
   router.push({ name: 'login' })
 }
 
+function handleSignedOut() {
+  researchStore.reset()
+}
+
 function handleUnauthorized() {
+  researchStore.reset()
   router.push({ name: 'login' })
 }
 
-onMounted(() => window.addEventListener('auth:unauthorized', handleUnauthorized))
-onUnmounted(() => window.removeEventListener('auth:unauthorized', handleUnauthorized))
+onMounted(() => {
+  window.addEventListener('auth:signed-out', handleSignedOut)
+  window.addEventListener('auth:unauthorized', handleUnauthorized)
+})
+onUnmounted(() => {
+  window.removeEventListener('auth:signed-out', handleSignedOut)
+  window.removeEventListener('auth:unauthorized', handleUnauthorized)
+})
 </script>
 
 <template>
@@ -67,14 +91,14 @@ onUnmounted(() => window.removeEventListener('auth:unauthorized', handleUnauthor
           exact-active-class="router-link-active"
           @click="closeNavigation"
         >
-          <i :class="item.icon"></i>
+          <i :class="item.icon" aria-hidden="true"></i>
           <span>{{ item.label }}</span>
         </RouterLink>
       </nav>
 
       <div class="sidebar__footer">
         <div class="sidebar__status">
-          <i class="pi pi-shield"></i>
+          <i class="pi pi-shield" aria-hidden="true"></i>
           <div>
             <span>Sesión protegida</span>
             <small>Acceso a datos auditado</small>
@@ -101,8 +125,7 @@ onUnmounted(() => window.removeEventListener('auth:unauthorized', handleUnauthor
         </div>
 
         <div class="topbar__actions">
-          <Tag value="Datos actualizados" severity="success" rounded />
-          <Button icon="pi pi-bell" text rounded aria-label="Notificaciones" />
+          <Tag v-if="refreshStatus" :value="refreshStatus" severity="secondary" rounded />
           <div class="topbar__profile">
             <Avatar :label="authStore.userInitials" shape="circle" />
             <div>

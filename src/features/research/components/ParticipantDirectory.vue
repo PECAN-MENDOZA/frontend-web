@@ -43,6 +43,7 @@ const props = defineProps({
 defineEmits(['add', 'generate', 'revoke', 'regenerate'])
 
 const CLOCK_INTERVAL_MS = 30_000
+const ADD_HINT_ID = 'research-directory-add-hint'
 const now = ref(new Date())
 const heading = ref(null)
 let clock = null
@@ -75,6 +76,7 @@ const rows = computed(() =>
       nextSession: nextSessionLabel(participant.nextSession),
       code,
       actions: participantActions(participant, code, props.study),
+      generateHintId: `research-generate-hint-${participant.id}`,
       participant,
     }
   }),
@@ -100,14 +102,18 @@ onUnmounted(() => window.clearInterval(clock))
         <p class="overline">Directorio seudonimizado</p>
         <h2 ref="heading" tabindex="-1" class="research-directory__title">Participantes</h2>
       </div>
+      <!-- El motivo del botón deshabilitado vive en el tooltip (puntero) y en texto solo para
+           lectores de pantalla, enlazado con aria-describedby. -->
       <span v-tooltip.bottom="addHint || undefined" class="research-directory__add">
         <Button
           label="Añadir participante"
           icon="pi pi-plus"
           :disabled="!isStudyActive || isLocked"
           :loading="isAdding"
+          :aria-describedby="addHint ? ADD_HINT_ID : undefined"
           @click="$emit('add')"
         />
+        <span v-if="addHint" :id="ADD_HINT_ID" class="research-sr-only">{{ addHint }}</span>
       </span>
     </div>
 
@@ -157,8 +163,16 @@ onUnmounted(() => window.clearInterval(clock))
                 outlined
                 :disabled="!data.actions.canGenerate || isLocked"
                 :loading="isRowPending('generate', data.id)"
+                :aria-describedby="data.actions.generateHint ? data.generateHintId : undefined"
                 @click="$emit('generate', data.participant)"
               />
+              <span
+                v-if="data.actions.generateHint"
+                :id="data.generateHintId"
+                class="research-sr-only"
+              >
+                {{ data.actions.generateHint }}
+              </span>
             </span>
             <Button
               v-if="data.actions.showRegenerate"

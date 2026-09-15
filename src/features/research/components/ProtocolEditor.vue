@@ -169,7 +169,7 @@ function requestActivation() {
 
       <template v-else-if="showEditor">
         <p v-if="activeProtocol" class="research-protocol__hint">
-          <i class="pi pi-info-circle"></i>
+          <i class="pi pi-info-circle" aria-hidden="true"></i>
           La versión v{{ activeProtocol.version }} sigue activa hasta que actives esta nueva
           versión.
         </p>
@@ -264,7 +264,7 @@ function requestActivation() {
           <p class="research-prompt__text">{{ displayedProtocol.taskBPrompt }}</p>
         </div>
         <p v-if="!isClosed" class="research-protocol__hint">
-          <i class="pi pi-lock"></i>
+          <i class="pi pi-lock" aria-hidden="true"></i>
           Esta versión está bloqueada. Para cambiar las consignas crea una nueva versión.
         </p>
       </template>

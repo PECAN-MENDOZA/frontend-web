@@ -23,16 +23,20 @@ import {
   listTechnicalEvaluations,
   revokeAccessCode as revokeAccessCodeRequest,
 } from '@/features/research/services/research.service'
+import { useAuthStore } from '@/features/auth/store/auth.store'
 import { requestErrorMessage } from '@/features/research/utils/errors'
 import {
   StudyChangedError,
   createGuardedLoader,
   createPendingCounter,
   issueThenRefresh,
+  revokeThenReissue,
+  shouldReloadStudies,
 } from '@/features/research/utils/mutations'
 import { overviewCounts, pairRows, versionStrip } from '@/features/research/utils/overview'
 
 const SELECTED_STUDY_KEY = 'florisboard_research_study'
+const OWNER_USER_KEY = 'florisboard_research_owner'
 const GENERIC_ACTION_ERROR = 'No pudimos completar la acción. Inténtalo nuevamente.'
 const GENERIC_STUDIES_ERROR = 'No pudimos cargar tus estudios. Inténtalo nuevamente.'
 const GENERIC_OVERVIEW_ERROR = 'No pudimos cargar el resumen del estudio. Inténtalo nuevamente.'
@@ -44,8 +48,13 @@ const GENERIC_EVALUATIONS_ERROR =
 const GENERIC_DOWNLOAD_ERROR = 'No pudimos descargar el archivo. Inténtalo nuevamente.'
 
 export const useResearchStore = defineStore('research', () => {
+  const authStore = useAuthStore()
   const studies = ref([])
   const selectedStudyId = ref(localStorage.getItem(SELECTED_STUDY_KEY) || null)
+  // Cuenta que cargó la lista: otra cuenta en la misma pestaña nunca reutiliza estos datos.
+  const ownerUserId = ref(localStorage.getItem(OWNER_USER_KEY) || null)
+  // Momento de la última recarga completa exitosa ("Actualizar"); null si no hay una vigente.
+  const lastRefreshAt = ref(null)
   const participants = ref([])
   const runs = ref([])
   const batches = ref([])
@@ -113,19 +122,34 @@ export const useResearchStore = defineStore('research', () => {
   const rows = computed(() => pairRows(participants.value, runs.value))
   const counts = computed(() => overviewCounts(rows.value, runs.value, batches.value))
   const versions = computed(() => versionStrip(selectedStudy.value, runs.value))
-  const activeProtocol = computed(
-    () => protocols.value.find((protocol) => protocol.status === 'ACTIVE') ?? null,
-  )
-  const latestProtocol = computed(() => protocols.value[0] ?? null)
+
+  // Entrada de cada vista: pide la lista si falta o si la cargó otra cuenta (en ese caso los
+  // datos en memoria se descartan antes, para que la otra cuenta nunca los vea ni actúe sobre ellos).
+  function ensureStudies() {
+    const userId = currentUserId()
+
+    if (!shouldReloadStudies(ownerUserId.value, userId, studies.value.length > 0)) {
+      return Promise.resolve({ ok: true })
+    }
+
+    if (ownerUserId.value !== userId) {
+      reset()
+    }
+
+    return loadStudies()
+  }
 
   // Carga inicial: la lista y, con selección, su resumen. La carga de la lista sigue activa
   // mientras espera ese resumen; una selección posterior lo reemplaza sin apagar nada ajeno.
   function loadStudies() {
+    const userId = currentUserId()
+
     return studiesLoader.load({
       request: listStudies,
       fallback: GENERIC_STUDIES_ERROR,
       apply: async (data) => {
         studies.value = data
+        persistOwner(userId)
 
         if (selectedStudyId.value && !data.some((study) => study.id === selectedStudyId.value)) {
           persistSelection(null)
@@ -145,6 +169,7 @@ export const useResearchStore = defineStore('research', () => {
   function selectStudy(studyId) {
     persistSelection(studyId)
     clearStudyData()
+    lastRefreshAt.value = null
 
     return loadOverview(studyId)
   }
@@ -201,16 +226,32 @@ export const useResearchStore = defineStore('research', () => {
   }
 
   // "Actualizar": recarga la lista de estudios (estado, versión activa), el resumen y, si la
-  // vista de resultados ya los pidió, los resultados.
+  // vista de resultados ya los pidió, los resultados. Devuelve el resultado por recurso además
+  // del global, para que cada aviso se limpie según el recurso que lo originó.
   async function refreshAll() {
     const studyId = selectedStudyId.value
-    const refreshes = [refreshStudies(), loadOverview(studyId)]
+    const includeResults = Boolean(studyId) && resultsStudyId === studyId
+    const [studiesOutcome, overview, results] = await Promise.all([
+      refreshStudies(),
+      loadOverview(studyId),
+      includeResults ? loadResults(studyId) : Promise.resolve(null),
+    ])
+    const outcome = allOk([studiesOutcome, overview, results ?? { ok: true }])
 
-    if (studyId && resultsStudyId === studyId) {
-      refreshes.push(loadResults(studyId))
+    if (outcome.ok && selectedStudyId.value === studyId) {
+      lastRefreshAt.value = new Date()
     }
 
-    return allOk(await Promise.all(refreshes))
+    return { ...outcome, studies: studiesOutcome, overview, results }
+  }
+
+  // Reintento del aviso "No se pudieron actualizar los resultados": exactamente la recarga que
+  // lo originó (resumen + resultados del estudio), sin la lista de estudios.
+  async function refreshStudyResults() {
+    const studyId = selectedStudyId.value
+    const [overview, results] = await Promise.all([loadOverview(studyId), loadResults(studyId)])
+
+    return { overview, results }
   }
 
   function addStudy({ code, title }) {
@@ -299,14 +340,15 @@ export const useResearchStore = defineStore('research', () => {
   }
 
   // Regenerar = revocar el pendiente y, solo si eso funciona, emitir uno nuevo; todo con los
-  // identificadores capturados al inicio, aunque la selección cambie mientras tanto.
+  // identificadores capturados al inicio, aunque la selección cambie mientras tanto. Si la
+  // emisión falla tras revocar, se recarga igual y el error lo dice.
   function reissueAccessCode(participantId, runId, onCredential) {
     const studyId = selectedStudyId.value
     const studyCode = selectedStudy.value?.code ?? null
 
     return pendingCounter.track(async () => {
-      await post(() => revokeAccessCodeRequest(studyId, runId))
-      await issueThenRefresh(
+      await revokeThenReissue(
+        () => post(() => revokeAccessCodeRequest(studyId, runId)),
         () => issueCredential(studyId, studyCode, participantId),
         () => refreshAfterMutation(studyId),
         onCredential,
@@ -465,6 +507,28 @@ export const useResearchStore = defineStore('research', () => {
     resultsStudyId = null
   }
 
+  // Cierre de sesión o sesión caducada: nada de esta cuenta sobrevive para la siguiente. Las
+  // peticiones en curso quedan obsoletas (no publican ni apagan nada); el contador de
+  // operaciones pendientes se libera solo cuando terminan.
+  function reset() {
+    studies.value = []
+    clearStudyData()
+    technicalEvaluations.value = []
+    error.value = ''
+    evaluationsError.value = ''
+    lastRefreshAt.value = null
+    persistSelection(null)
+    persistOwner(null)
+    studiesLoader.invalidate()
+    overviewLoader.invalidate()
+    resultsLoader.invalidate()
+    evaluationsLoader.invalidate()
+  }
+
+  function currentUserId() {
+    return authStore.user?.id ?? null
+  }
+
   function persistSelection(studyId) {
     selectedStudyId.value = studyId
 
@@ -472,6 +536,16 @@ export const useResearchStore = defineStore('research', () => {
       localStorage.setItem(SELECTED_STUDY_KEY, studyId)
     } else {
       localStorage.removeItem(SELECTED_STUDY_KEY)
+    }
+  }
+
+  function persistOwner(userId) {
+    ownerUserId.value = userId
+
+    if (userId) {
+      localStorage.setItem(OWNER_USER_KEY, userId)
+    } else {
+      localStorage.removeItem(OWNER_USER_KEY)
     }
   }
 
@@ -485,8 +559,7 @@ export const useResearchStore = defineStore('research', () => {
     protocols,
     results,
     technicalEvaluations,
-    activeProtocol,
-    latestProtocol,
+    lastRefreshAt,
     isLoading,
     isLoadingStudies,
     isLoadingOverview,
@@ -499,12 +572,15 @@ export const useResearchStore = defineStore('research', () => {
     rows,
     counts,
     versions,
+    ensureStudies,
     loadStudies,
     selectStudy,
     loadOverview,
     loadResults,
     loadTechnicalEvaluations,
     refreshAll,
+    refreshStudyResults,
+    reset,
     addStudy,
     saveProtocolDraft,
     activateStudyProtocol,

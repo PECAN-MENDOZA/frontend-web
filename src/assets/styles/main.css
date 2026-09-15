@@ -1610,8 +1610,9 @@ h2 {
   text-decoration: none;
 }
 
-/* Región solo para lectores de pantalla (anuncio "Copiado"). */
-.research-live-region {
+/* Texto solo para lectores de pantalla (anuncio "Copiado", detalle que el puntero ve en tooltips). */
+.research-live-region,
+.research-sr-only {
   position: absolute;
   width: 1px;
   height: 1px;

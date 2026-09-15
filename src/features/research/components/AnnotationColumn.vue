@@ -5,6 +5,7 @@ import InputText from 'primevue/inputtext'
 import Message from 'primevue/message'
 import Select from 'primevue/select'
 import Tag from 'primevue/tag'
+import AbbreviatedValue from '@/features/research/components/AbbreviatedValue.vue'
 import { copyText } from '@/features/research/utils/clipboard'
 import {
   ANNOTATION_SLOT_OPTIONS,
@@ -96,6 +97,7 @@ const ids = computed(() => {
     file: `${prefix}-file`,
     fileHelp: `${prefix}-file-help`,
     fileError: `${prefix}-file-error`,
+    createHint: `${prefix}-create-hint`,
   }
 })
 const title = computed(() => annotationKindLabel(props.kind))
@@ -211,7 +213,7 @@ async function copyHash() {
           <div>
             <dt>Lote</dt>
             <dd>
-              <span v-tooltip.bottom="batch.id" class="research-mono">{{ shortId(batch.id) }}</span>
+              <AbbreviatedValue :value="batch.id" :short="shortId(batch.id)" />
             </dd>
           </div>
           <div>
@@ -221,9 +223,10 @@ async function copyHash() {
           <div>
             <dt>Hash del export</dt>
             <dd class="research-annotation__hash">
-              <span v-tooltip.bottom="batch.exportSha256" class="research-mono">
-                {{ shortHash(batch.exportSha256) }}
-              </span>
+              <AbbreviatedValue
+                :value="batch.exportSha256"
+                :short="shortHash(batch.exportSha256)"
+              />
               <Button
                 :icon="isCopied ? 'pi pi-check' : 'pi pi-copy'"
                 text
@@ -274,6 +277,7 @@ async function copyHash() {
     </div>
 
     <div class="research-annotation__actions">
+      <!-- La advertencia del tooltip también se anuncia al enfocar el botón (aria-describedby). -->
       <Button
         v-tooltip.bottom="createHint || undefined"
         label="Crear lote"
@@ -281,8 +285,10 @@ async function copyHash() {
         size="small"
         :disabled="isBusy"
         :loading="isPending('create')"
+        :aria-describedby="createHint ? ids.createHint : undefined"
         @click="emit('create', kind)"
       />
+      <span v-if="createHint" :id="ids.createHint" class="research-sr-only">{{ createHint }}</span>
       <Button
         label="Descargar export"
         icon="pi pi-download"

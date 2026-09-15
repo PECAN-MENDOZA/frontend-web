@@ -80,7 +80,9 @@ function close() {
     @update:visible="close"
   >
     <div class="research-dialog__intro">
-      <span class="research-dialog__icon research-dialog__icon--danger"><i :class="icon"></i></span>
+      <span class="research-dialog__icon research-dialog__icon--danger">
+        <i :class="icon" aria-hidden="true"></i>
+      </span>
       <div>
         <p class="overline">Decisión registrada</p>
         <h3>Esta acción no se puede deshacer.</h3>

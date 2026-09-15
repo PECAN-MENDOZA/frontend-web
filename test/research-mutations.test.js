@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
+  REISSUE_PARTIAL_MESSAGE,
   STUDY_CHANGED_MESSAGE,
   StudyChangedError,
   createGuardedLoader,
@@ -8,6 +9,8 @@ import {
   createRequestGuard,
   issueThenRefresh,
   refreshOutcomeMessage,
+  revokeThenReissue,
+  shouldReloadStudies,
 } from '../src/features/research/utils/mutations.js'
 
 function deferred() {
@@ -94,6 +97,108 @@ test('issueThenRefresh still delivers the credential when the refresh fails', as
   )
 
   assert.deepEqual(delivered, { code: 'ABCD1234' })
+})
+
+// ------------------------------------------------------------------ revokeThenReissue
+
+test('revokeThenReissue revokes, delivers the new credential and refreshes once', async () => {
+  const events = []
+  const credential = { code: 'NEWCODE1' }
+
+  const delivered = await revokeThenReissue(
+    async () => events.push('revoke'),
+    async () => {
+      events.push('issue')
+      return credential
+    },
+    async () => events.push('refresh'),
+    (value) => events.push(`credential:${value.code}`),
+  )
+
+  assert.deepEqual(delivered, credential)
+  assert.deepEqual(events, ['revoke', 'issue', 'credential:NEWCODE1', 'refresh'])
+})
+
+test('revokeThenReissue does not issue nor refresh when the revoke fails', async () => {
+  let issued = 0
+  let refreshed = 0
+
+  await assert.rejects(
+    revokeThenReissue(
+      async () => {
+        throw new Error('Solo se puede revocar un código pendiente.')
+      },
+      async () => {
+        issued += 1
+      },
+      async () => {
+        refreshed += 1
+      },
+    ),
+    /Solo se puede revocar un código pendiente\./,
+  )
+
+  assert.equal(issued, 0)
+  assert.equal(refreshed, 0)
+})
+
+test('revokeThenReissue refreshes after a revoked code when the issue fails and says so', async () => {
+  let refreshed = 0
+  let delivered = 0
+
+  await assert.rejects(
+    revokeThenReissue(
+      async () => {},
+      async () => {
+        throw new Error('El estudio no está activo.')
+      },
+      async () => {
+        refreshed += 1
+      },
+      () => {
+        delivered += 1
+      },
+    ),
+    (error) =>
+      error.message ===
+      'El código anterior fue revocado, pero no se pudo emitir uno nuevo: El estudio no está activo.',
+  )
+
+  assert.equal(refreshed, 1, 'the row must stop offering the revoked code')
+  assert.equal(delivered, 0)
+  assert.equal(
+    REISSUE_PARTIAL_MESSAGE,
+    'El código anterior fue revocado, pero no se pudo emitir uno nuevo',
+  )
+})
+
+test('revokeThenReissue keeps the issue failure as the main error even if the recovery refresh throws', async () => {
+  await assert.rejects(
+    revokeThenReissue(
+      async () => {},
+      async () => {
+        throw new Error('No pudimos completar la acción. Inténtalo nuevamente.')
+      },
+      async () => {
+        throw new StudyChangedError()
+      },
+    ),
+    (error) =>
+      !(error instanceof StudyChangedError) &&
+      error.message ===
+        'El código anterior fue revocado, pero no se pudo emitir uno nuevo: No pudimos completar la acción. Inténtalo nuevamente.',
+  )
+})
+
+// ------------------------------------------------------------------ shouldReloadStudies
+
+test('shouldReloadStudies reloads when the list is empty or belongs to another account', () => {
+  assert.equal(shouldReloadStudies(null, 'user-1', false), true, 'first load')
+  assert.equal(shouldReloadStudies('user-1', 'user-1', false), true, 'same account, no list yet')
+  assert.equal(shouldReloadStudies('user-1', 'user-1', true), false, 'same account with a list')
+  assert.equal(shouldReloadStudies('user-1', 'user-2', true), true, 'list of another account')
+  assert.equal(shouldReloadStudies(null, 'user-2', true), true, 'list of an unknown owner')
+  assert.equal(shouldReloadStudies('user-1', null, true), true, 'no session')
 })
 
 test('createRequestGuard ignores the response of study A when it resolves after B', () => {

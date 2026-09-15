@@ -6,6 +6,7 @@ import Skeleton from 'primevue/skeleton'
 import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
 import PageHeader from '@/shared/components/PageHeader.vue'
+import AbbreviatedValue from '@/features/research/components/AbbreviatedValue.vue'
 import AnnotationWorkflow from '@/features/research/components/AnnotationWorkflow.vue'
 import PairedMetricPanel from '@/features/research/components/PairedMetricPanel.vue'
 import ParticipantResultsTable from '@/features/research/components/ParticipantResultsTable.vue'
@@ -62,11 +63,9 @@ const versionsLine = computed(() => {
   ].map(([label, values]) => ({ label, value: values?.length ? values.join(', ') : '—' }))
 })
 
+// La lista se pide si falta o si la cargó otra cuenta en esta pestaña.
 onMounted(() => {
-  if (!researchStore.studies.length) {
-    researchStore.loadStudies()
-  }
-
+  researchStore.ensureStudies()
   researchStore.loadTechnicalEvaluations()
 })
 
@@ -197,16 +196,29 @@ function announceMutation(summary, detail, refresh) {
   refreshWarning.value = outcome.warning || null
 }
 
+// "Reintentar" repite exactamente la recarga que originó el aviso (resumen + resultados); la
+// lista de estudios no participa. El aviso se limpia en cuanto los resultados respondieron.
 async function retryRefresh() {
   isRetryingRefresh.value = true
 
   try {
-    const { ok } = await researchStore.refreshAll()
+    const { results } = await researchStore.refreshStudyResults()
 
-    if (ok) refreshWarning.value = null
+    clearRefreshWarning(results)
   } finally {
     isRetryingRefresh.value = false
   }
+}
+
+// "Actualizar" de la cabecera: si los resultados se recargaron, el aviso ya no es cierto.
+async function refreshAll() {
+  const { results } = await researchStore.refreshAll()
+
+  clearRefreshWarning(results)
+}
+
+function clearRefreshWarning(results) {
+  if (results?.ok) refreshWarning.value = null
 }
 
 // Cambiar de estudio durante una operación no es un fallo: el backend ya la aplicó.
@@ -265,7 +277,7 @@ function notify(severity, summary, detail) {
           outlined
           :loading="researchStore.isLoading || researchStore.isLoadingResults"
           :disabled="!researchStore.selectedStudyId || researchStore.isMutating"
-          @click="researchStore.refreshAll"
+          @click="refreshAll"
         />
       </template>
     </PageHeader>
@@ -457,19 +469,19 @@ function notify(severity, summary, detail) {
                 <strong>{{ annotationKindLabel(dataset.kind) }}</strong>
                 <span>
                   lote
-                  <span v-tooltip.bottom="dataset.batchId" class="research-mono">
-                    {{ shortId(dataset.batchId) }}
-                  </span>
+                  <AbbreviatedValue :value="dataset.batchId" :short="shortId(dataset.batchId)" />
                   · {{ formatCount(dataset.rowCount) }} filas · export
-                  <span v-tooltip.bottom="dataset.exportSha256" class="research-mono">
-                    {{ shortHash(dataset.exportSha256) }}
-                  </span>
+                  <AbbreviatedValue
+                    :value="dataset.exportSha256"
+                    :short="shortHash(dataset.exportSha256)"
+                  />
                 </span>
                 <span>
                   adjudicación v{{ formatCount(dataset.adjudicationVersion) }} ·
-                  <span v-tooltip.bottom="dataset.adjudicationSha256" class="research-mono">
-                    {{ shortHash(dataset.adjudicationSha256) }}
-                  </span>
+                  <AbbreviatedValue
+                    :value="dataset.adjudicationSha256"
+                    :short="shortHash(dataset.adjudicationSha256)"
+                  />
                 </span>
               </li>
             </ul>

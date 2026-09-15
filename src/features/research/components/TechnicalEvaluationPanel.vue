@@ -4,6 +4,7 @@ import Button from 'primevue/button'
 import Message from 'primevue/message'
 import Skeleton from 'primevue/skeleton'
 import Tag from 'primevue/tag'
+import AbbreviatedValue from '@/features/research/components/AbbreviatedValue.vue'
 import {
   formatCount,
   formatMetric,
@@ -175,9 +176,10 @@ function submit() {
             <div>
               <strong>{{ evaluation.modelVersion }}</strong>
               <small>
-                <span v-tooltip.bottom="evaluation.datasetSha256" class="research-mono">
-                  {{ shortHash(evaluation.datasetSha256) }}
-                </span>
+                <AbbreviatedValue
+                  :value="evaluation.datasetSha256"
+                  :short="shortHash(evaluation.datasetSha256)"
+                />
                 · {{ evaluation.scorerVersion }} · {{ formatDateTime(evaluation.createdAt) }}
               </small>
             </div>
@@ -283,9 +285,10 @@ function submit() {
             <div>
               <dt>Conjunto</dt>
               <dd>
-                <span v-tooltip.bottom="preview.datasetSha256" class="research-mono">
-                  {{ shortHash(preview.datasetSha256) }}
-                </span>
+                <AbbreviatedValue
+                  :value="preview.datasetSha256"
+                  :short="shortHash(preview.datasetSha256)"
+                />
               </dd>
             </div>
             <div>

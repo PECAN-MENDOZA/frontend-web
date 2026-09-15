@@ -208,6 +208,16 @@ export function formatDateTime(value) {
   return formatWith(dateTimeFormatter, value)
 }
 
+// Estado del shell: solo afirma "Actualizado hh:mm" con una recarga completa exitosa y sin una
+// carga o un error en curso que la contradiga.
+export function refreshStatusLabel(lastRefreshAt, { isLoading = false, hasError = false } = {}) {
+  if (!lastRefreshAt || isLoading || hasError) return ''
+
+  const time = formatTime(lastRefreshAt)
+
+  return time === '—' ? '' : `Actualizado ${time}`
+}
+
 function promptError(field, taskName, value) {
   if (!value.trim()) {
     return { [field]: `La consigna de la ${taskName} es obligatoria.` }

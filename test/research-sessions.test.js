@@ -9,8 +9,6 @@ import {
   formatDuration,
   incidentLabel,
   incidentSummary,
-  readinessLabel,
-  readinessSeverity,
   reasonErrors,
   runActions,
   runReadiness,
@@ -53,19 +51,13 @@ test('runReadiness classifies runs by status and exclusion', () => {
   assert.equal(runReadiness(run({ status: 'TECHNICAL_FAILURE' })), 'descartada')
 })
 
-test('readiness labels and severities cover every option', () => {
-  assert.deepEqual(
-    READINESS_OPTIONS.map((option) => option.value),
-    ['analizable', 'abierta', 'descartada', 'excluida'],
-  )
-  assert.equal(readinessLabel('analizable'), 'Analizable')
-  assert.equal(readinessLabel('abierta'), 'Abierta')
-  assert.equal(readinessLabel('descartada'), 'Descartada')
-  assert.equal(readinessLabel('excluida'), 'Excluida')
-  assert.equal(readinessSeverity('analizable'), 'success')
-  assert.equal(readinessSeverity('abierta'), 'warn')
-  assert.equal(readinessSeverity('descartada'), 'secondary')
-  assert.equal(readinessSeverity('excluida'), 'danger')
+test('readiness options cover every readiness with a Spanish label', () => {
+  assert.deepEqual(READINESS_OPTIONS, [
+    { value: 'analizable', label: 'Analizable' },
+    { value: 'abierta', label: 'Abierta' },
+    { value: 'descartada', label: 'Descartada' },
+    { value: 'excluida', label: 'Excluida' },
+  ])
 })
 
 test('filterRuns returns every run when no filter is set', () => {

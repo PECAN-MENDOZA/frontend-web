@@ -53,6 +53,7 @@ const isLocked = computed(() => props.isBusy || props.isLoading)
 const rows = computed(() =>
   props.runs.map((run) => {
     const reason = runReason(run)
+    const reasonPreview = truncateText(reason, REASON_PREVIEW_LENGTH)
 
     return {
       id: run.id,
@@ -69,7 +70,8 @@ const rows = computed(() =>
       incidents: incidentSummary(run),
       annotation: annotationState(run, props.batches),
       reason,
-      reasonPreview: truncateText(reason, REASON_PREVIEW_LENGTH),
+      reasonPreview,
+      isReasonTruncated: reasonPreview !== reason,
       actions: runActions(run),
       run,
     }
@@ -145,6 +147,8 @@ function isRowPending(kind, runId) {
           <span class="research-session-table__number">{{ data.duration }}</span>
         </template>
       </Column>
+      <!-- Lo que el puntero ve en un tooltip (versión del servicio, detalle de incidencias, motivo
+           completo) también va como texto solo para lectores de pantalla. -->
       <Column header="Versiones">
         <template #body="{ data }">
           <span
@@ -152,6 +156,9 @@ function isRowPending(kind, runId) {
             class="research-session-table__versions"
           >
             {{ data.appVersion }} · {{ data.modelVersion }}
+            <span v-if="data.backendVersion" class="research-sr-only">
+              · {{ data.backendVersion }}
+            </span>
           </span>
         </template>
       </Column>
@@ -163,6 +170,7 @@ function isRowPending(kind, runId) {
             :class="{ 'research-session-table__number--alert': data.incidentCount > 0 }"
           >
             {{ data.incidentCount }}
+            <span v-if="data.incidents" class="research-sr-only">· {{ data.incidents }}</span>
           </span>
         </template>
       </Column>
@@ -178,10 +186,14 @@ function isRowPending(kind, runId) {
         <template #body="{ data }">
           <span
             v-if="data.reason"
-            v-tooltip.bottom="data.reason !== data.reasonPreview ? data.reason : undefined"
+            v-tooltip.bottom="data.isReasonTruncated ? data.reason : undefined"
             class="research-session-table__reason"
           >
-            {{ data.reasonPreview }}
+            <template v-if="data.isReasonTruncated">
+              <span aria-hidden="true">{{ data.reasonPreview }}</span>
+              <span class="research-sr-only">{{ data.reason }}</span>
+            </template>
+            <template v-else>{{ data.reason }}</template>
           </span>
           <span v-else class="research-session-table__muted">—</span>
         </template>

@@ -22,6 +22,17 @@ const CONDITIONS = ['ASSISTED', 'UNASSISTED']
 const STATUS_OPTIONS = RUN_STATUSES.map((value) => ({ value, label: statusLabel(value) }))
 const CONDITION_OPTIONS = CONDITIONS.map((value) => ({ value, label: conditionLabel(value) }))
 
+// Filtros de la tabla, con identificadores estables para su nombre accesible.
+const FILTERS = [
+  { key: 'status', label: 'Estado', placeholder: 'Todos', options: STATUS_OPTIONS },
+  { key: 'condition', label: 'Condición', placeholder: 'Todas', options: CONDITION_OPTIONS },
+  { key: 'readiness', label: 'Disposición', placeholder: 'Todas', options: READINESS_OPTIONS },
+].map((filter) => ({
+  ...filter,
+  inputId: `research-filter-${filter.key}`,
+  labelId: `research-filter-${filter.key}-label`,
+}))
+
 // Cada decisión: qué se le dice al investigador, qué acción del store la ejecuta y cómo se confirma.
 const DECISIONS = {
   cancel: {
@@ -73,11 +84,8 @@ const decisionTitle = computed(() =>
   decision.value ? `${activeDecision.value.title} · ${decision.value.run.pseudonym}` : '',
 )
 
-onMounted(() => {
-  if (!researchStore.studies.length) {
-    researchStore.loadStudies()
-  }
-})
+// La lista se pide si falta o si la cargó otra cuenta en esta pestaña.
+onMounted(() => researchStore.ensureStudies())
 
 function clearFilters() {
   filters.status = null
@@ -162,14 +170,14 @@ function notify(severity, summary, detail) {
       v-else-if="researchStore.error && !researchStore.studies.length"
       class="panel research-empty-state"
     >
-      <i class="pi pi-exclamation-triangle research-empty-state__icon"></i>
+      <i class="pi pi-exclamation-triangle research-empty-state__icon" aria-hidden="true"></i>
       <h2>No pudimos cargar tus estudios</h2>
       <p>{{ researchStore.error }}</p>
       <Button label="Reintentar" icon="pi pi-refresh" @click="researchStore.loadStudies" />
     </div>
 
     <div v-else-if="!researchStore.studies.length" class="panel research-empty-state">
-      <i class="pi pi-compass research-empty-state__icon"></i>
+      <i class="pi pi-compass research-empty-state__icon" aria-hidden="true"></i>
       <h2>Aún no hay un estudio</h2>
       <p>
         Crea un estudio desde <strong>Estudio</strong> para empezar a registrar sesiones
@@ -185,7 +193,7 @@ function notify(severity, summary, detail) {
     </div>
 
     <div v-else-if="!study" class="panel research-empty-state">
-      <i class="pi pi-compass research-empty-state__icon"></i>
+      <i class="pi pi-compass research-empty-state__icon" aria-hidden="true"></i>
       <h2>Elige un estudio</h2>
       <p>Selecciona un estudio arriba para revisar sus sesiones.</p>
     </div>
@@ -194,7 +202,7 @@ function notify(severity, summary, detail) {
       v-else-if="researchStore.error && !researchStore.runs.length"
       class="panel research-empty-state"
     >
-      <i class="pi pi-exclamation-triangle research-empty-state__icon"></i>
+      <i class="pi pi-exclamation-triangle research-empty-state__icon" aria-hidden="true"></i>
       <h2>No pudimos cargar las sesiones</h2>
       <p>{{ researchStore.error }}</p>
       <Button
@@ -210,39 +218,25 @@ function notify(severity, summary, detail) {
         {{ researchStore.error }}
       </Message>
 
+      <!-- El combobox del Select no es etiquetable: cada filtro recibe su nombre por aria-labelledby,
+           así conserva "Estado/Condición/Disposición" aunque se elija un valor. -->
       <div class="research-filters" role="group" aria-label="Filtrar sesiones">
-        <label class="research-filters__field">
-          <span>Estado</span>
+        <label
+          v-for="filter in FILTERS"
+          :key="filter.key"
+          :for="filter.inputId"
+          class="research-filters__field"
+        >
+          <span :id="filter.labelId">{{ filter.label }}</span>
           <Select
-            v-model="filters.status"
-            :options="STATUS_OPTIONS"
+            v-model="filters[filter.key]"
+            :input-id="filter.inputId"
+            :label-id="filter.inputId"
+            :aria-labelledby="filter.labelId"
+            :options="filter.options"
             option-label="label"
             option-value="value"
-            placeholder="Todos"
-            show-clear
-            size="small"
-          />
-        </label>
-        <label class="research-filters__field">
-          <span>Condición</span>
-          <Select
-            v-model="filters.condition"
-            :options="CONDITION_OPTIONS"
-            option-label="label"
-            option-value="value"
-            placeholder="Todas"
-            show-clear
-            size="small"
-          />
-        </label>
-        <label class="research-filters__field">
-          <span>Disposición</span>
-          <Select
-            v-model="filters.readiness"
-            :options="READINESS_OPTIONS"
-            option-label="label"
-            option-value="value"
-            placeholder="Todas"
+            :placeholder="filter.placeholder"
             show-clear
             size="small"
           />

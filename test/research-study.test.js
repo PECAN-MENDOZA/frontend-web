@@ -10,6 +10,7 @@ import {
   nextSessionLabel,
   participantActions,
   protocolFormErrors,
+  refreshStatusLabel,
   sequenceLabel,
   studyFormErrors,
 } from '../src/features/research/utils/study.js'
@@ -264,4 +265,14 @@ test('matchesPendingAction only matches the row and kind being mutated', () => {
   assert.equal(matchesPendingAction({ kind: 'add' }, 'add'), true)
   assert.equal(matchesPendingAction({ kind: 'add' }, 'generate', 'p1'), false)
   assert.equal(matchesPendingAction(null, 'add'), false)
+})
+
+test('refreshStatusLabel shows the time of the last full refresh only when nothing is pending', () => {
+  const refreshedAt = new Date(2026, 8, 15, 14, 5)
+
+  assert.equal(refreshStatusLabel(refreshedAt), 'Actualizado 14:05')
+  assert.equal(refreshStatusLabel(null), '')
+  assert.equal(refreshStatusLabel(refreshedAt, { isLoading: true }), '')
+  assert.equal(refreshStatusLabel(refreshedAt, { hasError: true }), '')
+  assert.equal(refreshStatusLabel('not a date'), '')
 })

@@ -169,3 +169,10 @@ test('requestErrorMessage keeps the backend message and falls back when there is
   assert.equal(requestErrorMessage(new TypeError('Failed to fetch'), fallback), fallback)
   assert.equal(requestErrorMessage(null, fallback), fallback)
 })
+
+test('translateBackendMessage translates the sample code collision of a batch creation', () => {
+  assert.equal(
+    translateBackendMessage('Sample code collision, retry the batch creation'),
+    'Hubo una colisión al generar los códigos de muestra; vuelve a crear el lote.',
+  )
+})
