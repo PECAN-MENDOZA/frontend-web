@@ -51,7 +51,14 @@ export function restoreSession() {
   }
 
   try {
-    return { token, expiresAt, user: JSON.parse(storedUser) }
+    const user = JSON.parse(storedUser)
+
+    if (!ROLE_LABELS[user.role]) {
+      clearSession()
+      return null
+    }
+
+    return { token, expiresAt, user }
   } catch {
     clearSession()
     return null

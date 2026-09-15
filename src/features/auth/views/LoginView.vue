@@ -57,7 +57,7 @@ const { authStore, credentials, submitSignIn } = useAuth()
             v-model="credentials.email"
             type="email"
             autocomplete="email"
-            placeholder="docente@colegio.edu.pe"
+            placeholder="usuario@institucion.edu"
             fluid
           />
         </div>

@@ -1,11 +1,11 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'
 const TOKEN_KEY = 'florisboard_access_token'
 
-function getHeaders(customHeaders = {}) {
+function getHeaders(customHeaders = {}, isFormData = false) {
   const token = localStorage.getItem(TOKEN_KEY)
 
   return {
-    'Content-Type': 'application/json',
+    ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...customHeaders,
   }
@@ -13,9 +13,10 @@ function getHeaders(customHeaders = {}) {
 
 export async function request(path, options = {}) {
   const { responseType, skipUnauthorizedEvent, ...fetchOptions } = options
+  const isFormData = fetchOptions.body instanceof FormData
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...fetchOptions,
-    headers: getHeaders(options.headers),
+    headers: getHeaders(options.headers, isFormData),
   })
 
   if (response.status === 401 && !skipUnauthorizedEvent) {
@@ -49,6 +50,12 @@ export const api = {
   },
   post(path, body, options) {
     return request(path, { ...options, method: 'POST', body: JSON.stringify(body) })
+  },
+  patch(path, body, options) {
+    return request(path, { ...options, method: 'PATCH', body: JSON.stringify(body) })
+  },
+  upload(path, formData, options) {
+    return request(path, { ...options, method: 'POST', body: formData })
   },
   download(path, options) {
     return request(path, { ...options, method: 'GET', responseType: 'blob' })

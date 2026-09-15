@@ -1311,6 +1311,95 @@ h2 {
   line-height: 1.6;
 }
 
+.research-empty-state .p-button {
+  margin-top: 0.5rem;
+}
+
+.research-focal {
+  display: grid;
+  padding: 1.6rem 1.75rem;
+  gap: 0.35rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: rgba(255, 253, 248, 0.86);
+  box-shadow: var(--shadow-card);
+}
+
+.research-focal__value {
+  color: var(--color-ink);
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 5vw, 4.2rem);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.research-focal__caption {
+  color: var(--color-ink-soft);
+  font-size: 0.82rem;
+}
+
+.research-support-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.research-support-card {
+  display: grid;
+  padding: 1rem 1.1rem;
+  gap: 0.35rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: rgba(255, 253, 248, 0.84);
+  box-shadow: var(--shadow-card);
+}
+
+.research-support-card span {
+  color: var(--color-ink-soft);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.research-support-card strong {
+  color: var(--color-ink);
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.research-table-empty {
+  padding: 2.25rem;
+  color: var(--color-ink-soft);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.paired-progress-table .p-datatable-tbody > tr > td {
+  font-variant-numeric: tabular-nums;
+}
+
+.paired-progress-table__cell {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.research-version-strip {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 0.9rem 1.1rem;
+  gap: 0.5rem 1.2rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: rgba(238, 244, 239, 0.5);
+  color: var(--color-ink-soft);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
 @keyframes rise-in {
   from {
     opacity: 0;
@@ -1324,7 +1413,8 @@ h2 {
 }
 
 @media (max-width: 74rem) {
-  .metrics-grid--four {
+  .metrics-grid--four,
+  .research-support-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -1445,7 +1535,8 @@ h2 {
     grid-template-columns: 1fr;
   }
 
-  .metrics-grid--four {
+  .metrics-grid--four,
+  .research-support-grid {
     grid-template-columns: 1fr;
   }
 
@@ -1461,7 +1552,8 @@ h2 {
 
   .student-table,
   .words-table,
-  .student-directory-table {
+  .student-directory-table,
+  .paired-progress-table {
     overflow-x: auto;
   }
 

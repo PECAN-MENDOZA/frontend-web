@@ -8,7 +8,11 @@ import { canAccessRoute, homeForRole } from '@/features/auth/utils/access'
 const routes = [
   {
     path: '/',
-    redirect: { name: 'dashboard' },
+    redirect: () => {
+      const authStore = useAuthStore()
+
+      return authStore.isAuthenticated ? homeForRole(authStore.user?.role) : { name: 'login' }
+    },
   },
   {
     path: '/auth',
