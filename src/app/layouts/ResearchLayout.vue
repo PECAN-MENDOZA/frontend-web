@@ -3,7 +3,9 @@ import { onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
+import ConfirmDialog from 'primevue/confirmdialog'
 import Tag from 'primevue/tag'
+import Toast from 'primevue/toast'
 import { useAuthStore } from '@/features/auth/store/auth.store'
 import { APP_NAME } from '@/shared/constants/app'
 
@@ -11,7 +13,10 @@ const router = useRouter()
 const authStore = useAuthStore()
 const isNavigationOpen = ref(false)
 
-const navigationItems = [{ label: 'Resumen', icon: 'pi pi-chart-bar', to: '/research' }]
+const navigationItems = [
+  { label: 'Resumen', icon: 'pi pi-chart-bar', to: '/research' },
+  { label: 'Estudio', icon: 'pi pi-book', to: '/research/study' },
+]
 
 function closeNavigation() {
   isNavigationOpen.value = false
@@ -50,11 +55,14 @@ onUnmounted(() => window.removeEventListener('auth:unauthorized', handleUnauthor
 
       <nav class="sidebar__navigation" aria-label="Navegación principal">
         <span class="sidebar__section-label">Datos seudonimizados</span>
+        <!-- "/research" es prefijo de todas las rutas: solo la coincidencia exacta se marca activa. -->
         <RouterLink
           v-for="item in navigationItems"
           :key="item.label"
           :to="item.to"
           class="sidebar__link"
+          active-class="sidebar__link--section"
+          exact-active-class="router-link-active"
           @click="closeNavigation"
         >
           <i :class="item.icon"></i>
@@ -108,5 +116,8 @@ onUnmounted(() => window.removeEventListener('auth:unauthorized', handleUnauthor
         <RouterView />
       </main>
     </section>
+
+    <Toast position="bottom-right" />
+    <ConfirmDialog class="research-confirm" />
   </div>
 </template>

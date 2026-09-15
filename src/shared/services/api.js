@@ -27,7 +27,10 @@ export async function request(path, options = {}) {
     const error = await response
       .json()
       .catch(() => ({ message: 'Ocurrió un error inesperado en la solicitud.' }))
-    throw new Error(error.message ?? 'Ocurrió un error inesperado en la solicitud.')
+    const requestError = new Error(error.message ?? 'Ocurrió un error inesperado en la solicitud.')
+
+    requestError.status = response.status
+    throw requestError
   }
 
   if (responseType === 'blob') {
@@ -49,6 +52,7 @@ export const api = {
     return request(path, { ...options, method: 'GET' })
   },
   post(path, body, options) {
+    // JSON.stringify(undefined) devuelve undefined: fetch envía la petición sin cuerpo.
     return request(path, { ...options, method: 'POST', body: JSON.stringify(body) })
   },
   patch(path, body, options) {

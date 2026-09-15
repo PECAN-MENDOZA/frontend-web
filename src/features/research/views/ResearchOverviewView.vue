@@ -2,10 +2,10 @@
 import { onMounted } from 'vue'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
-import Select from 'primevue/select'
 import Skeleton from 'primevue/skeleton'
 import PageHeader from '@/shared/components/PageHeader.vue'
 import PairedProgressTable from '@/features/research/components/PairedProgressTable.vue'
+import StudySelector from '@/features/research/components/StudySelector.vue'
 import { useResearchStore } from '@/features/research/store/research.store'
 
 const researchStore = useResearchStore()
@@ -25,13 +25,10 @@ onMounted(() => {
       description="Datos seudonimizados de los participantes del estudio."
     >
       <template #actions>
-        <Select
+        <StudySelector
           v-if="researchStore.studies.length"
+          :studies="researchStore.studies"
           :model-value="researchStore.selectedStudyId"
-          :options="researchStore.studies"
-          option-label="code"
-          option-value="id"
-          aria-label="Seleccionar estudio"
           @update:model-value="researchStore.selectStudy"
         />
         <Button
@@ -67,6 +64,17 @@ onMounted(() => {
         Crea un estudio desde <strong>Estudio</strong> para comenzar a reunir participantes y
         ejecuciones.
       </p>
+      <Button
+        label="Ir a Estudio"
+        icon="pi pi-book"
+        @click="$router.push({ name: 'research-study' })"
+      />
+    </div>
+
+    <div v-else-if="!researchStore.selectedStudy" class="panel research-empty-state">
+      <i class="pi pi-compass research-empty-state__icon"></i>
+      <h2>Elige un estudio</h2>
+      <p>Selecciona un estudio arriba para ver su progreso.</p>
     </div>
 
     <template v-else>
