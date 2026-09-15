@@ -2,12 +2,14 @@
 import { computed, reactive, ref, watch } from 'vue'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
+import Skeleton from 'primevue/skeleton'
 import Tag from 'primevue/tag'
 import Textarea from 'primevue/textarea'
 import { useConfirm } from 'primevue/useconfirm'
 import {
   PROMPT_MAX_LENGTH,
   formatDate,
+  matchesPendingAction,
   protocolFormErrors,
   protocolStatusLabel,
   protocolStatusSeverity,
@@ -22,9 +24,17 @@ const props = defineProps({
     type: Object,
     default: null,
   },
-  isSaving: {
+  isLoading: {
     type: Boolean,
     required: true,
+  },
+  isBusy: {
+    type: Boolean,
+    required: true,
+  },
+  pendingAction: {
+    type: Object,
+    default: null,
   },
 })
 
@@ -35,6 +45,11 @@ const showErrors = ref(false)
 const isEditing = ref(false)
 
 const isClosed = computed(() => props.study?.status === 'CLOSED')
+// Mientras llega el protocolo del estudio recién elegido no se muestra un editor vacío.
+const showSkeleton = computed(() => props.isLoading && props.protocols.length === 0)
+const isSaving = computed(() => matchesPendingAction(props.pendingAction, 'save'))
+const isActivating = computed(() => matchesPendingAction(props.pendingAction, 'activate'))
+const isLocked = computed(() => props.isBusy || props.isLoading)
 const latestProtocol = computed(() => props.protocols[0] ?? null)
 const activeProtocol = computed(
   () => props.protocols.find((protocol) => protocol.status === 'ACTIVE') ?? null,
@@ -56,11 +71,17 @@ const isDirty = computed(() => {
 
   return form.taskAPrompt !== base.taskAPrompt || form.taskBPrompt !== base.taskBPrompt
 })
-const canSave = computed(() => isValid.value && isDirty.value)
-const canActivate = computed(() => Boolean(draftProtocol.value) && !isDirty.value)
+const canSave = computed(() => isValid.value && isDirty.value && !isLocked.value)
+const canActivate = computed(
+  () => Boolean(draftProtocol.value) && !isDirty.value && !isLocked.value,
+)
+const canCancel = computed(
+  () => (isEditing.value && Boolean(activeProtocol.value)) || isDirty.value,
+)
 
+// Cambiar de estudio (aunque ninguno tenga protocolos) o de versión descarta lo escrito.
 watch(
-  () => [draftProtocol.value?.id, activeProtocol.value?.id],
+  () => [props.study?.id, draftProtocol.value?.id, activeProtocol.value?.id],
   () => {
     isEditing.value = false
     resetForm(draftProtocol.value)
@@ -87,7 +108,7 @@ function cancelEditing() {
 function saveDraft() {
   showErrors.value = true
 
-  if (!isValid.value) return
+  if (!isValid.value || isLocked.value) return
 
   emit('save', { taskAPrompt: form.taskAPrompt, taskBPrompt: form.taskBPrompt })
 }
@@ -128,6 +149,7 @@ function requestActivation() {
           severity="secondary"
           outlined
           size="small"
+          :disabled="isLocked"
           @click="startNewVersion"
         />
       </div>
@@ -138,7 +160,14 @@ function requestActivation() {
         El estudio está cerrado: el protocolo se conserva solo para consulta.
       </Message>
 
-      <template v-if="showEditor">
+      <div v-if="showSkeleton" class="research-protocol__skeleton" aria-busy="true">
+        <Skeleton height="1rem" width="30%" />
+        <Skeleton height="6rem" />
+        <Skeleton height="1rem" width="30%" />
+        <Skeleton height="6rem" />
+      </div>
+
+      <template v-else-if="showEditor">
         <p v-if="activeProtocol" class="research-protocol__hint">
           <i class="pi pi-info-circle"></i>
           La versión v{{ activeProtocol.version }} sigue activa hasta que actives esta nueva
@@ -161,7 +190,7 @@ function requestActivation() {
               placeholder="Ej. Cuenta qué hiciste el fin de semana."
               :maxlength="PROMPT_MAX_LENGTH"
               :invalid="showErrors && Boolean(errors.taskAPrompt)"
-              :disabled="isSaving"
+              :disabled="isLocked"
             />
             <small v-if="showErrors && errors.taskAPrompt" class="research-form__error">
               {{ errors.taskAPrompt }}
@@ -182,7 +211,7 @@ function requestActivation() {
               placeholder="Ej. Describe tu lugar favorito."
               :maxlength="PROMPT_MAX_LENGTH"
               :invalid="showErrors && Boolean(errors.taskBPrompt)"
-              :disabled="isSaving"
+              :disabled="isLocked"
             />
             <small v-if="showErrors && errors.taskBPrompt" class="research-form__error">
               {{ errors.taskBPrompt }}
@@ -192,11 +221,11 @@ function requestActivation() {
 
         <div class="research-protocol__actions">
           <Button
-            v-if="isEditing && activeProtocol"
+            v-if="canCancel"
             label="Cancelar"
             severity="secondary"
             text
-            :disabled="isSaving"
+            :disabled="isLocked"
             @click="cancelEditing"
           />
           <Button
@@ -212,7 +241,8 @@ function requestActivation() {
             v-if="draftProtocol"
             label="Activar"
             icon="pi pi-play"
-            :disabled="!canActivate || isSaving"
+            :loading="isActivating"
+            :disabled="!canActivate"
             @click="requestActivation"
           />
           <small v-if="draftProtocol && isDirty" class="research-protocol__note">

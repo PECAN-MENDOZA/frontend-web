@@ -133,6 +133,37 @@ export function canGenerateCode(participant, study) {
   )
 }
 
+// Motivo por el que "Generar código" está deshabilitado ('' cuando sí se puede).
+export function generateCodeHint(participant, study) {
+  if (study?.status === 'CLOSED') return 'El estudio está cerrado.'
+  if (study?.status !== 'ACTIVE') return 'Activa un protocolo primero.'
+  if (participant?.protocolCompleted) return 'El participante completó ambas condiciones.'
+  if (participant?.hasOpenRun) return 'El participante tiene una sesión abierta.'
+
+  return ''
+}
+
+// Mientras exista un PENDING (vigente o vencido en el cliente) la vía correcta es
+// Regenerar/Revocar; "Generar código" solo se ofrece cuando no hay código abierto.
+export function participantActions(participant, codeState, study) {
+  const pendingRunId = codeState?.pendingRunId ?? null
+
+  return {
+    showGenerate: !pendingRunId,
+    canGenerate: canGenerateCode(participant, study),
+    generateHint: generateCodeHint(participant, study),
+    showRegenerate: Boolean(pendingRunId),
+    showRevoke: Boolean(pendingRunId),
+    pendingRunId,
+  }
+}
+
+export function matchesPendingAction(pendingAction, kind, participantId = null) {
+  if (!pendingAction || pendingAction.kind !== kind) return false
+
+  return participantId === null || pendingAction.participantId === participantId
+}
+
 export function sequenceLabel(sequence) {
   return SEQUENCE_LABELS[sequence] ?? sequence
 }

@@ -29,6 +29,7 @@ onMounted(() => {
           v-if="researchStore.studies.length"
           :studies="researchStore.studies"
           :model-value="researchStore.selectedStudyId"
+          :disabled="researchStore.isMutating"
           @update:model-value="researchStore.selectStudy"
         />
         <Button
@@ -37,8 +38,8 @@ onMounted(() => {
           severity="secondary"
           outlined
           :loading="researchStore.isLoading"
-          :disabled="!researchStore.selectedStudyId"
-          @click="researchStore.loadOverview"
+          :disabled="!researchStore.selectedStudyId || researchStore.isMutating"
+          @click="researchStore.refreshAll"
         />
       </template>
     </PageHeader>
@@ -64,11 +65,13 @@ onMounted(() => {
         Crea un estudio desde <strong>Estudio</strong> para comenzar a reunir participantes y
         ejecuciones.
       </p>
-      <Button
-        label="Ir a Estudio"
-        icon="pi pi-book"
-        @click="$router.push({ name: 'research-study' })"
-      />
+      <RouterLink
+        :to="{ name: 'research-study' }"
+        class="p-button p-component research-link-button"
+      >
+        <i class="pi pi-book p-button-icon p-button-icon-left" aria-hidden="true"></i>
+        <span class="p-button-label">Ir a Estudio</span>
+      </RouterLink>
     </div>
 
     <div v-else-if="!researchStore.selectedStudy" class="panel research-empty-state">

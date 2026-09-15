@@ -13,10 +13,21 @@ import {
   listStudies,
   revokeAccessCode as revokeAccessCodeRequest,
 } from '@/features/research/services/research.service'
+import { requestErrorMessage } from '@/features/research/utils/errors'
+import {
+  StudyChangedError,
+  createPendingCounter,
+  createRequestGuard,
+  issueThenRefresh,
+} from '@/features/research/utils/mutations'
 import { overviewCounts, pairRows, versionStrip } from '@/features/research/utils/overview'
 
 const SELECTED_STUDY_KEY = 'florisboard_research_study'
 const GENERIC_ACTION_ERROR = 'No pudimos completar la acción. Inténtalo nuevamente.'
+const GENERIC_STUDIES_ERROR = 'No pudimos cargar tus estudios. Inténtalo nuevamente.'
+const GENERIC_OVERVIEW_ERROR = 'No pudimos cargar el resumen del estudio. Inténtalo nuevamente.'
+const GENERIC_REFRESH_ERROR =
+  'No pudimos actualizar la lista de estudios. Usa Actualizar para reintentar.'
 
 export const useResearchStore = defineStore('research', () => {
   const studies = ref([])
@@ -26,12 +37,20 @@ export const useResearchStore = defineStore('research', () => {
   const batches = ref([])
   const protocols = ref([])
   const isLoading = ref(false)
-  const isMutating = ref(false)
+  const pendingOperations = ref(0)
   const error = ref('')
+
+  // Descarta respuestas de una selección anterior (A → B con A resolviendo al final).
+  const overviewGuard = createRequestGuard(() => selectedStudyId.value)
+  // isMutating cubre el POST y la recarga posterior, incluso con operaciones solapadas.
+  const pendingCounter = createPendingCounter((pending) => {
+    pendingOperations.value = pending
+  })
 
   const selectedStudy = computed(
     () => studies.value.find((study) => study.id === selectedStudyId.value) ?? null,
   )
+  const isMutating = computed(() => pendingOperations.value > 0)
   const rows = computed(() => pairRows(participants.value, runs.value))
   const counts = computed(() => overviewCounts(rows.value, runs.value, batches.value))
   const versions = computed(() => versionStrip(selectedStudy.value, runs.value))
@@ -47,7 +66,10 @@ export const useResearchStore = defineStore('research', () => {
     try {
       studies.value = await listStudies()
 
-      if (selectedStudyId.value && !studies.value.some((study) => study.id === selectedStudyId.value)) {
+      if (
+        selectedStudyId.value &&
+        !studies.value.some((study) => study.id === selectedStudyId.value)
+      ) {
         persistSelection(null)
       }
 
@@ -56,10 +78,10 @@ export const useResearchStore = defineStore('research', () => {
       }
 
       if (selectedStudyId.value) {
-        await loadOverview()
+        await loadOverview(selectedStudyId.value)
       }
-    } catch {
-      error.value = 'No pudimos cargar tus estudios. Inténtalo nuevamente.'
+    } catch (requestError) {
+      error.value = requestErrorMessage(requestError, GENERIC_STUDIES_ERROR)
     } finally {
       isLoading.value = false
     }
@@ -68,115 +90,190 @@ export const useResearchStore = defineStore('research', () => {
   function selectStudy(studyId) {
     persistSelection(studyId)
     clearStudyData()
-    loadOverview()
+
+    return loadOverview(studyId)
   }
 
-  async function loadOverview() {
-    if (!selectedStudyId.value) return
+  async function loadOverview(studyId = selectedStudyId.value) {
+    if (!studyId) return
+
+    const generation = overviewGuard.begin()
 
     isLoading.value = true
     error.value = ''
 
     try {
       const [participantsData, runsData, batchesData, protocolsData] = await Promise.all([
-        listParticipants(selectedStudyId.value),
-        listRuns(selectedStudyId.value),
-        listAnnotationBatches(selectedStudyId.value),
-        listProtocols(selectedStudyId.value),
+        listParticipants(studyId),
+        listRuns(studyId),
+        listAnnotationBatches(studyId),
+        listProtocols(studyId),
       ])
+
+      // Una selección o recarga más reciente ya reemplazó a esta petición.
+      if (!overviewGuard.isCurrent(generation, studyId)) return
 
       participants.value = participantsData
       runs.value = runsData
       batches.value = batchesData
       protocols.value = protocolsData
-    } catch {
-      error.value = 'No pudimos cargar el resumen del estudio. Inténtalo nuevamente.'
+    } catch (requestError) {
+      if (overviewGuard.isCurrent(generation, studyId)) {
+        error.value = requestErrorMessage(requestError, GENERIC_OVERVIEW_ERROR)
+      }
     } finally {
-      isLoading.value = false
+      // Solo la petición más reciente apaga la carga (aunque la selección haya quedado vacía).
+      if (overviewGuard.isLatest(generation)) {
+        isLoading.value = false
+      }
     }
   }
 
-  async function addStudy({ code, title }) {
-    const study = await runAction(
-      () => createStudyRequest({ code, title }),
-      (requestError) =>
-        requestError.status === 409 ? 'Ya existe un estudio con ese código' : requestError.message,
-    )
-
-    studies.value = [study, ...studies.value]
-    selectStudy(study.id)
-
-    return study
+  // "Actualizar": recarga la lista de estudios (estado, versión activa) y el resumen.
+  function refreshAll() {
+    return Promise.all([refreshStudies(), loadOverview(selectedStudyId.value)])
   }
 
-  async function saveProtocolDraft({ taskAPrompt, taskBPrompt }) {
-    const protocol = await runAction(() =>
-      createProtocolRequest(selectedStudyId.value, { taskAPrompt, taskBPrompt }),
-    )
+  function addStudy({ code, title }) {
+    return pendingCounter.track(async () => {
+      const study = await post(
+        () => createStudyRequest({ code, title }),
+        (requestError) =>
+          requestError.status === 409 ? 'Ya existe un estudio con ese código' : null,
+      )
 
-    await loadOverview()
+      studies.value = [study, ...studies.value]
+      await selectStudy(study.id)
 
-    return protocol
+      return study
+    })
   }
 
-  async function activateStudyProtocol(protocolId) {
-    const protocol = await runAction(() =>
-      activateProtocolRequest(selectedStudyId.value, protocolId),
-    )
+  function saveProtocolDraft({ taskAPrompt, taskBPrompt }) {
+    const studyId = selectedStudyId.value
 
-    await Promise.all([refreshStudies(), loadOverview()])
+    return pendingCounter.track(async () => {
+      const protocol = await post(() =>
+        createProtocolRequest(studyId, { taskAPrompt, taskBPrompt }),
+      )
 
-    return protocol
+      await refreshAfterMutation(studyId)
+
+      return protocol
+    })
   }
 
-  async function addParticipant() {
-    const participant = await runAction(() => createParticipantRequest(selectedStudyId.value))
+  function activateStudyProtocol(protocolId) {
+    const studyId = selectedStudyId.value
 
-    await loadOverview()
+    return pendingCounter.track(async () => {
+      const protocol = await post(() => activateProtocolRequest(studyId, protocolId))
 
-    return participant
+      // Activar un protocolo activa el estudio: reflejarlo aunque la recarga de la lista falle.
+      studies.value = studies.value.map((study) =>
+        study.id === studyId
+          ? { ...study, status: 'ACTIVE', activeProtocolVersion: protocol.version }
+          : study,
+      )
+      await refreshAfterMutation(studyId, { includeStudies: true })
+
+      return protocol
+    })
   }
 
-  // Devuelve el código en claro al llamador: nunca se conserva en el store.
-  async function issueAccessCode(participantId) {
-    const credential = await runAction(() =>
-      generateAccessCodeRequest(selectedStudyId.value, participantId),
-    )
+  function addParticipant() {
+    const studyId = selectedStudyId.value
 
-    await loadOverview()
+    return pendingCounter.track(async () => {
+      const participant = await post(() => createParticipantRequest(studyId))
 
-    return credential
+      await refreshAfterMutation(studyId)
+
+      return participant
+    })
   }
 
-  async function revokeParticipantCode(runId) {
-    await runAction(() => revokeAccessCodeRequest(selectedStudyId.value, runId))
-    await loadOverview()
+  // El código en claro se entrega por callback en cuanto el POST resuelve y nunca se conserva
+  // en el store ni se devuelve como resultado de la acción.
+  function issueAccessCode(participantId, onCredential) {
+    const studyId = selectedStudyId.value
+    const studyCode = selectedStudy.value?.code ?? null
+
+    return pendingCounter.track(async () => {
+      await issueThenRefresh(
+        () => issueCredential(studyId, studyCode, participantId),
+        () => refreshAfterMutation(studyId),
+        onCredential,
+      )
+    })
   }
 
-  // Regenerar = revocar el código pendiente y, solo si eso funciona, emitir uno nuevo.
-  async function reissueAccessCode(participantId, runId) {
-    await runAction(() => revokeAccessCodeRequest(selectedStudyId.value, runId))
+  function revokeParticipantCode(runId) {
+    const studyId = selectedStudyId.value
 
-    return issueAccessCode(participantId)
+    return pendingCounter.track(async () => {
+      await post(() => revokeAccessCodeRequest(studyId, runId))
+      await refreshAfterMutation(studyId)
+    })
   }
 
-  async function runAction(requestFn, mapError = (requestError) => requestError.message) {
-    isMutating.value = true
+  // Regenerar = revocar el pendiente y, solo si eso funciona, emitir uno nuevo; todo con los
+  // identificadores capturados al inicio, aunque la selección cambie mientras tanto.
+  function reissueAccessCode(participantId, runId, onCredential) {
+    const studyId = selectedStudyId.value
+    const studyCode = selectedStudy.value?.code ?? null
 
+    return pendingCounter.track(async () => {
+      await post(() => revokeAccessCodeRequest(studyId, runId))
+      await issueThenRefresh(
+        () => issueCredential(studyId, studyCode, participantId),
+        () => refreshAfterMutation(studyId),
+        onCredential,
+      )
+    })
+  }
+
+  async function issueCredential(studyId, studyCode, participantId) {
+    const credential = await post(() => generateAccessCodeRequest(studyId, participantId))
+
+    return { ...credential, studyId, studyCode }
+  }
+
+  async function post(requestFn, mapError = () => null) {
     try {
       return await requestFn()
     } catch (requestError) {
-      throw new Error(mapError(requestError) || GENERIC_ACTION_ERROR, { cause: requestError })
-    } finally {
-      isMutating.value = false
+      throw new Error(
+        mapError(requestError) || requestErrorMessage(requestError, GENERIC_ACTION_ERROR),
+        { cause: requestError },
+      )
+    }
+  }
+
+  // Recarga solo el estudio de origen; si la selección cambió, el resultado se ignora.
+  async function refreshAfterMutation(studyId, { includeStudies = false } = {}) {
+    const refreshes = []
+
+    if (includeStudies) {
+      refreshes.push(refreshStudies())
+    }
+
+    if (selectedStudyId.value === studyId) {
+      refreshes.push(loadOverview(studyId))
+    }
+
+    await Promise.all(refreshes)
+
+    if (selectedStudyId.value !== studyId) {
+      throw new StudyChangedError()
     }
   }
 
   async function refreshStudies() {
     try {
       studies.value = await listStudies()
-    } catch {
-      // El estudio seleccionado conserva sus datos; el estado se actualizará en la próxima carga.
+    } catch (requestError) {
+      error.value = requestErrorMessage(requestError, GENERIC_REFRESH_ERROR)
     }
   }
 
@@ -216,6 +313,7 @@ export const useResearchStore = defineStore('research', () => {
     loadStudies,
     selectStudy,
     loadOverview,
+    refreshAll,
     addStudy,
     saveProtocolDraft,
     activateStudyProtocol,

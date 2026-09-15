@@ -5,7 +5,10 @@ import {
   accessCodeState,
   canGenerateCode,
   formatTime,
+  generateCodeHint,
+  matchesPendingAction,
   nextSessionLabel,
+  participantActions,
   protocolFormErrors,
   sequenceLabel,
   studyFormErrors,
@@ -172,4 +175,93 @@ test('sequence and next session labels are Spanish and never expose identity', (
     'Tarea B · Sin asistencia',
   )
   assert.equal(nextSessionLabel(null), 'Protocolo completo')
+})
+
+test('generateCodeHint explains why a code cannot be generated', () => {
+  const activeStudy = { id: 's1', status: 'ACTIVE' }
+
+  assert.equal(generateCodeHint(participant, activeStudy), '')
+  assert.equal(
+    generateCodeHint({ ...participant, hasOpenRun: true }, activeStudy),
+    'El participante tiene una sesión abierta.',
+  )
+  assert.equal(
+    generateCodeHint({ ...participant, protocolCompleted: true }, activeStudy),
+    'El participante completó ambas condiciones.',
+  )
+  assert.equal(
+    generateCodeHint(participant, { id: 's1', status: 'DRAFT' }),
+    'Activa un protocolo primero.',
+  )
+  assert.equal(
+    generateCodeHint(participant, { id: 's1', status: 'CLOSED' }),
+    'El estudio está cerrado.',
+  )
+})
+
+test('participantActions offers regenerate and revoke instead of generate while a code is open', () => {
+  const activeStudy = { id: 's1', status: 'ACTIVE' }
+  const issued = { kind: 'ISSUED', pendingRunId: 'r1' }
+  const expiredPending = { kind: 'EXPIRED', pendingRunId: 'r1' }
+  const expiredBackend = { kind: 'EXPIRED', pendingRunId: null }
+  const none = { kind: 'NONE', pendingRunId: null }
+
+  assert.deepEqual(participantActions({ ...participant, hasOpenRun: true }, issued, activeStudy), {
+    showGenerate: false,
+    canGenerate: false,
+    generateHint: 'El participante tiene una sesión abierta.',
+    showRegenerate: true,
+    showRevoke: true,
+    pendingRunId: 'r1',
+  })
+  assert.deepEqual(participantActions(participant, expiredPending, activeStudy), {
+    showGenerate: false,
+    canGenerate: true,
+    generateHint: '',
+    showRegenerate: true,
+    showRevoke: true,
+    pendingRunId: 'r1',
+  })
+  assert.deepEqual(participantActions(participant, expiredBackend, activeStudy), {
+    showGenerate: true,
+    canGenerate: true,
+    generateHint: '',
+    showRegenerate: false,
+    showRevoke: false,
+    pendingRunId: null,
+  })
+  assert.deepEqual(
+    participantActions(
+      { ...participant, hasOpenRun: true },
+      { kind: 'ACTIVE', pendingRunId: null },
+      activeStudy,
+    ),
+    {
+      showGenerate: true,
+      canGenerate: false,
+      generateHint: 'El participante tiene una sesión abierta.',
+      showRegenerate: false,
+      showRevoke: false,
+      pendingRunId: null,
+    },
+  )
+  assert.deepEqual(participantActions(participant, none, { id: 's1', status: 'CLOSED' }), {
+    showGenerate: true,
+    canGenerate: false,
+    generateHint: 'El estudio está cerrado.',
+    showRegenerate: false,
+    showRevoke: false,
+    pendingRunId: null,
+  })
+})
+
+test('matchesPendingAction only matches the row and kind being mutated', () => {
+  const pending = { kind: 'generate', participantId: 'p1' }
+
+  assert.equal(matchesPendingAction(pending, 'generate', 'p1'), true)
+  assert.equal(matchesPendingAction(pending, 'generate', 'p2'), false)
+  assert.equal(matchesPendingAction(pending, 'revoke', 'p1'), false)
+  assert.equal(matchesPendingAction({ kind: 'add' }, 'add'), true)
+  assert.equal(matchesPendingAction({ kind: 'add' }, 'generate', 'p1'), false)
+  assert.equal(matchesPendingAction(null, 'add'), false)
 })

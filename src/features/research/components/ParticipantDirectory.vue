@@ -7,8 +7,9 @@ import Skeleton from 'primevue/skeleton'
 import Tag from 'primevue/tag'
 import {
   accessCodeState,
-  canGenerateCode,
+  matchesPendingAction,
   nextSessionLabel,
+  participantActions,
   sequenceLabel,
 } from '@/features/research/utils/study'
 
@@ -33,6 +34,10 @@ const props = defineProps({
     type: Boolean,
     required: true,
   },
+  pendingAction: {
+    type: Object,
+    default: null,
+  },
 })
 
 defineEmits(['add', 'generate', 'revoke', 'regenerate'])
@@ -43,6 +48,9 @@ let clock = null
 
 const isStudyActive = computed(() => props.study?.status === 'ACTIVE')
 const isStudyClosed = computed(() => props.study?.status === 'CLOSED')
+// Ninguna acción mientras haya una mutación en curso o el estudio aún esté cargando.
+const isLocked = computed(() => props.isBusy || props.isLoading)
+const isAdding = computed(() => matchesPendingAction(props.pendingAction, 'add'))
 const addHint = computed(() => {
   if (isStudyClosed.value) return 'El estudio está cerrado'
   if (!isStudyActive.value) return 'Activa un protocolo primero'
@@ -50,17 +58,25 @@ const addHint = computed(() => {
 })
 
 const rows = computed(() =>
-  props.participants.map((participant) => ({
-    id: participant.id,
-    pseudonym: participant.pseudonym,
-    sequence: sequenceLabel(participant.sequence),
-    completed: `${participant.completedRuns ?? 0} / 2`,
-    nextSession: nextSessionLabel(participant.nextSession),
-    code: accessCodeState(participant, props.runs, now.value),
-    canGenerate: canGenerateCode(participant, props.study),
-    participant,
-  })),
+  props.participants.map((participant) => {
+    const code = accessCodeState(participant, props.runs, now.value)
+
+    return {
+      id: participant.id,
+      pseudonym: participant.pseudonym,
+      sequence: sequenceLabel(participant.sequence),
+      completed: `${participant.completedRuns ?? 0} / 2`,
+      nextSession: nextSessionLabel(participant.nextSession),
+      code,
+      actions: participantActions(participant, code, props.study),
+      participant,
+    }
+  }),
 )
+
+function isRowPending(kind, participantId) {
+  return matchesPendingAction(props.pendingAction, kind, participantId)
+}
 
 onMounted(() => {
   clock = window.setInterval(() => {
@@ -82,14 +98,14 @@ onUnmounted(() => window.clearInterval(clock))
         <Button
           label="Añadir participante"
           icon="pi pi-plus"
-          :disabled="!isStudyActive || isBusy"
-          :loading="isBusy"
+          :disabled="!isStudyActive || isLocked"
+          :loading="isAdding"
           @click="$emit('add')"
         />
       </span>
     </div>
 
-    <div v-if="isLoading && !participants.length" class="directory-loading">
+    <div v-if="isLoading && !participants.length" class="directory-loading" aria-busy="true">
       <Skeleton v-for="item in 4" :key="item" height="3.6rem" />
     </div>
     <p v-else-if="!participants.length" class="research-table-empty">
@@ -122,35 +138,44 @@ onUnmounted(() => window.clearInterval(clock))
       <Column header="Acciones">
         <template #body="{ data }">
           <div class="research-directory__actions">
-            <Button
-              label="Generar código"
-              icon="pi pi-key"
-              size="small"
-              severity="secondary"
-              outlined
-              :disabled="!data.canGenerate || isBusy"
-              @click="$emit('generate', data.participant)"
-            />
-            <template v-if="data.code.pendingRunId">
+            <span
+              v-if="data.actions.showGenerate"
+              v-tooltip.bottom="data.actions.generateHint || undefined"
+              class="research-directory__action"
+            >
               <Button
-                label="Regenerar"
-                icon="pi pi-refresh"
+                label="Generar código"
+                icon="pi pi-key"
                 size="small"
                 severity="secondary"
-                text
-                :disabled="isBusy || isStudyClosed"
-                @click="$emit('regenerate', data.participant, data.code.pendingRunId)"
+                outlined
+                :disabled="!data.actions.canGenerate || isLocked"
+                :loading="isRowPending('generate', data.id)"
+                @click="$emit('generate', data.participant)"
               />
-              <Button
-                label="Revocar"
-                icon="pi pi-ban"
-                size="small"
-                severity="danger"
-                text
-                :disabled="isBusy || isStudyClosed"
-                @click="$emit('revoke', data.participant, data.code.pendingRunId)"
-              />
-            </template>
+            </span>
+            <Button
+              v-if="data.actions.showRegenerate"
+              label="Regenerar"
+              icon="pi pi-refresh"
+              size="small"
+              severity="secondary"
+              text
+              :disabled="isLocked || isStudyClosed"
+              :loading="isRowPending('regenerate', data.id)"
+              @click="$emit('regenerate', data.participant, data.actions.pendingRunId)"
+            />
+            <Button
+              v-if="data.actions.showRevoke"
+              label="Revocar"
+              icon="pi pi-ban"
+              size="small"
+              severity="danger"
+              text
+              :disabled="isLocked || isStudyClosed"
+              :loading="isRowPending('revoke', data.id)"
+              @click="$emit('revoke', data.participant, data.actions.pendingRunId)"
+            />
           </div>
         </template>
       </Column>

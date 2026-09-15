@@ -1,10 +1,13 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { onUnmounted, ref, watch } from 'vue'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
 import Message from 'primevue/message'
 import Tag from 'primevue/tag'
+import { copyText } from '@/features/research/utils/clipboard'
 import { conditionLabel, formatDateTime, taskLabel } from '@/features/research/utils/study'
+
+const COPIED_FEEDBACK_MS = 1800
 
 const props = defineProps({
   credential: {
@@ -25,39 +28,24 @@ watch(
   },
 )
 
+onUnmounted(() => window.clearTimeout(copiedTimer))
+
 async function copyCode() {
   const code = props.credential?.code
 
   if (!code) return
 
-  try {
-    await navigator.clipboard.writeText(code)
-  } catch {
-    copyWithFallback(code)
-  }
+  // "Copiado" solo cuando el portapapeles confirmó la copia; si falla, el código sigue
+  // visible para copiarlo a mano.
+  const didCopy = await copyText(code)
+
+  if (!didCopy) return
 
   isCopied.value = true
   window.clearTimeout(copiedTimer)
   copiedTimer = window.setTimeout(() => {
     isCopied.value = false
-  }, 1800)
-}
-
-function copyWithFallback(value) {
-  try {
-    const field = document.createElement('textarea')
-
-    field.value = value
-    field.setAttribute('readonly', '')
-    field.style.position = 'fixed'
-    field.style.opacity = '0'
-    document.body.appendChild(field)
-    field.select()
-    document.execCommand('copy')
-    field.remove()
-  } catch {
-    // Sin portapapeles disponible: el código sigue visible para copiarlo a mano.
-  }
+  }, COPIED_FEEDBACK_MS)
 }
 </script>
 
@@ -92,6 +80,9 @@ function copyWithFallback(value) {
             aria-label="Copiar código de acceso"
             @click="copyCode"
           />
+          <span class="research-live-region" aria-live="polite">
+            {{ isCopied ? 'Código copiado al portapapeles' : '' }}
+          </span>
         </div>
         <dl class="research-code-sheet__meta">
           <div>
@@ -102,12 +93,16 @@ function copyWithFallback(value) {
             <dt>Participante</dt>
             <dd>{{ credential.pseudonym }}</dd>
           </div>
+          <div v-if="credential.studyCode">
+            <dt>Estudio</dt>
+            <dd>{{ credential.studyCode }}</dd>
+          </div>
         </dl>
       </div>
     </div>
 
     <template #footer>
-      <Button label="Ya entregué el código" icon="pi pi-check" @click="emit('close')" />
+      <Button label="Ya entregué el código" icon="pi pi-check" autofocus @click="emit('close')" />
     </template>
   </Dialog>
 </template>

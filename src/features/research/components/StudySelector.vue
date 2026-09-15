@@ -10,6 +10,10 @@ defineProps({
     type: String,
     default: null,
   },
+  disabled: {
+    type: Boolean,
+    default: false,
+  },
 })
 
 defineEmits(['update:modelValue'])
@@ -23,6 +27,7 @@ defineEmits(['update:modelValue'])
     option-value="id"
     placeholder="Elige un estudio"
     aria-label="Seleccionar estudio"
+    :disabled="disabled"
     class="research-study-selector"
     @update:model-value="$emit('update:modelValue', $event)"
   >

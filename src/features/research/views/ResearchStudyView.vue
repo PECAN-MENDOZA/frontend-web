@@ -13,6 +13,7 @@ import ParticipantDirectory from '@/features/research/components/ParticipantDire
 import ProtocolEditor from '@/features/research/components/ProtocolEditor.vue'
 import StudySelector from '@/features/research/components/StudySelector.vue'
 import { useResearchStore } from '@/features/research/store/research.store'
+import { StudyChangedError } from '@/features/research/utils/mutations'
 import { studyStatusLabel } from '@/features/research/utils/study'
 
 const STUDY_STATUS_SEVERITIES = { DRAFT: 'info', ACTIVE: 'success', CLOSED: 'secondary' }
@@ -25,6 +26,8 @@ const isCreateDialogVisible = ref(false)
 const createErrorMessage = ref('')
 // El código en claro vive solo aquí, mientras el diálogo está abierto.
 const issuedCredential = ref(null)
+// Qué acción (y de qué fila) está en curso: solo ese botón muestra el spinner.
+const pendingAction = ref(null)
 
 const study = computed(() => researchStore.selectedStudy)
 const isClosed = computed(() => study.value?.status === 'CLOSED')
@@ -53,50 +56,59 @@ async function createStudy(payload) {
   }
 }
 
-async function saveDraft(form) {
-  try {
-    const protocol = await researchStore.saveProtocolDraft(form)
+function saveDraft(form) {
+  return runPending({ kind: 'save' }, async () => {
+    try {
+      const protocol = await researchStore.saveProtocolDraft(form)
 
-    notify('success', 'Borrador guardado', `Protocolo v${protocol.version} listo para activar.`)
-  } catch (error) {
-    notify('error', 'No pudimos guardar el borrador', error.message)
-  }
+      notify('success', 'Borrador guardado', `Protocolo v${protocol.version} listo para activar.`)
+    } catch (error) {
+      notifyFailure(error, 'No pudimos guardar el borrador')
+    }
+  })
 }
 
-async function activateProtocol(protocolId) {
-  try {
-    const protocol = await researchStore.activateStudyProtocol(protocolId)
+function activateProtocol(protocolId) {
+  return runPending({ kind: 'activate' }, async () => {
+    try {
+      const protocol = await researchStore.activateStudyProtocol(protocolId)
 
-    notify(
-      'success',
-      `Protocolo v${protocol.version} activado`,
-      'El estudio ya acepta participantes.',
-    )
-  } catch (error) {
-    notify('error', 'No pudimos activar el protocolo', error.message)
-  }
+      notify(
+        'success',
+        `Protocolo v${protocol.version} activado`,
+        'El estudio ya acepta participantes.',
+      )
+    } catch (error) {
+      notifyFailure(error, 'No pudimos activar el protocolo')
+    }
+  })
 }
 
-async function addParticipant() {
-  try {
-    const participant = await researchStore.addParticipant()
+function addParticipant() {
+  return runPending({ kind: 'add' }, async () => {
+    try {
+      const participant = await researchStore.addParticipant()
 
-    notify(
-      'success',
-      'Participante añadido',
-      `${participant.pseudonym} ya puede recibir un código.`,
-    )
-  } catch (error) {
-    notify('error', 'No pudimos añadir el participante', error.message)
-  }
+      notify(
+        'success',
+        'Participante añadido',
+        `${participant.pseudonym} ya puede recibir un código.`,
+      )
+    } catch (error) {
+      notifyFailure(error, 'No pudimos añadir el participante')
+    }
+  })
 }
 
-async function generateCode(participant) {
-  try {
-    issuedCredential.value = await researchStore.issueAccessCode(participant.id)
-  } catch (error) {
-    notify('error', `No pudimos generar el código de ${participant.pseudonym}`, error.message)
-  }
+function generateCode(participant) {
+  return runPending({ kind: 'generate', participantId: participant.id }, async () => {
+    try {
+      // El diálogo se abre en cuanto el POST resuelve; la recarga sigue en segundo plano.
+      await researchStore.issueAccessCode(participant.id, revealCredential)
+    } catch (error) {
+      notifyFailure(error, `No pudimos generar el código de ${participant.pseudonym}`)
+    }
+  })
 }
 
 function revokeCode(participant, runId) {
@@ -108,14 +120,19 @@ function revokeCode(participant, runId) {
     rejectLabel: 'Cancelar',
     acceptProps: { severity: 'danger' },
     rejectProps: { severity: 'secondary', text: true },
-    accept: async () => {
-      try {
-        await researchStore.revokeParticipantCode(runId)
-        notify('success', 'Código revocado', `${participant.pseudonym} ya no tiene código vigente.`)
-      } catch (error) {
-        notify('error', 'No pudimos revocar el código', error.message)
-      }
-    },
+    accept: () =>
+      runPending({ kind: 'revoke', participantId: participant.id }, async () => {
+        try {
+          await researchStore.revokeParticipantCode(runId)
+          notify(
+            'success',
+            'Código revocado',
+            `${participant.pseudonym} ya no tiene código vigente.`,
+          )
+        } catch (error) {
+          notifyFailure(error, 'No pudimos revocar el código')
+        }
+      }),
   })
 }
 
@@ -127,18 +144,43 @@ function regenerateCode(participant, runId) {
     acceptLabel: 'Regenerar',
     rejectLabel: 'Cancelar',
     rejectProps: { severity: 'secondary', text: true },
-    accept: async () => {
-      try {
-        issuedCredential.value = await researchStore.reissueAccessCode(participant.id, runId)
-      } catch (error) {
-        notify('error', 'No pudimos regenerar el código', error.message)
-      }
-    },
+    accept: () =>
+      runPending({ kind: 'regenerate', participantId: participant.id }, async () => {
+        try {
+          await researchStore.reissueAccessCode(participant.id, runId, revealCredential)
+        } catch (error) {
+          notifyFailure(error, 'No pudimos regenerar el código')
+        }
+      }),
   })
+}
+
+function revealCredential(credential) {
+  issuedCredential.value = credential
 }
 
 function closeCredential() {
   issuedCredential.value = null
+}
+
+async function runPending(action, operation) {
+  pendingAction.value = action
+
+  try {
+    await operation()
+  } finally {
+    pendingAction.value = null
+  }
+}
+
+// Cambiar de estudio durante una operación no es un fallo: el backend ya la aplicó.
+function notifyFailure(error, summary) {
+  if (error instanceof StudyChangedError) {
+    notify('info', 'Estudio cambiado', error.message)
+    return
+  }
+
+  notify('error', summary, error.message)
 }
 
 function notify(severity, summary, detail) {
@@ -158,17 +200,23 @@ function notify(severity, summary, detail) {
           v-if="researchStore.studies.length"
           :studies="researchStore.studies"
           :model-value="researchStore.selectedStudyId"
+          :disabled="researchStore.isMutating"
           @update:model-value="researchStore.selectStudy"
         />
-        <Button label="Nuevo estudio" icon="pi pi-plus" @click="openCreateStudy" />
+        <Button
+          label="Nuevo estudio"
+          icon="pi pi-plus"
+          :disabled="researchStore.isMutating"
+          @click="openCreateStudy"
+        />
         <Button
           label="Actualizar"
           icon="pi pi-refresh"
           severity="secondary"
           outlined
           :loading="researchStore.isLoading"
-          :disabled="!researchStore.selectedStudyId"
-          @click="researchStore.loadOverview"
+          :disabled="!researchStore.selectedStudyId || researchStore.isMutating"
+          @click="researchStore.refreshAll"
         />
       </template>
     </PageHeader>
@@ -226,7 +274,9 @@ function notify(severity, summary, detail) {
       <ProtocolEditor
         :protocols="researchStore.protocols"
         :study="study"
-        :is-saving="researchStore.isMutating"
+        :is-loading="researchStore.isLoading"
+        :is-busy="researchStore.isMutating"
+        :pending-action="pendingAction"
         @save="saveDraft"
         @activate="activateProtocol"
       />
@@ -237,6 +287,7 @@ function notify(severity, summary, detail) {
         :study="study"
         :is-loading="researchStore.isLoading"
         :is-busy="researchStore.isMutating"
+        :pending-action="pendingAction"
         @add="addParticipant"
         @generate="generateCode"
         @revoke="revokeCode"

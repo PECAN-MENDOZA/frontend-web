@@ -1448,6 +1448,11 @@ h2 {
   gap: 1rem;
 }
 
+.research-protocol__skeleton {
+  display: grid;
+  gap: 0.6rem;
+}
+
 .research-protocol__hint,
 .research-protocol__note {
   display: flex;
@@ -1569,6 +1574,32 @@ h2 {
   display: flex;
   flex-wrap: wrap;
   gap: 0.35rem;
+}
+
+.research-directory__action {
+  display: inline-flex;
+}
+
+.research-link-button {
+  text-decoration: none;
+}
+
+.research-link-button:hover,
+.research-link-button:focus-visible {
+  text-decoration: none;
+}
+
+/* Región solo para lectores de pantalla (anuncio "Copiado"). */
+.research-live-region {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .research-directory-table .p-datatable-tbody > tr > td {
