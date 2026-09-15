@@ -1,12 +1,18 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import AppLayout from '@/app/layouts/AppLayout.vue'
 import AuthLayout from '@/app/layouts/AuthLayout.vue'
+import ResearchLayout from '@/app/layouts/ResearchLayout.vue'
 import { useAuthStore } from '@/features/auth/store/auth.store'
+import { canAccessRoute, homeForRole } from '@/features/auth/utils/access'
 
 const routes = [
   {
     path: '/',
-    redirect: { name: 'dashboard' },
+    redirect: () => {
+      const authStore = useAuthStore()
+
+      return authStore.isAuthenticated ? homeForRole(authStore.user?.role) : { name: 'login' }
+    },
   },
   {
     path: '/auth',
@@ -23,7 +29,7 @@ const routes = [
   {
     path: '/',
     component: AppLayout,
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: true, roles: ['TEACHER'] },
     children: [
       {
         path: 'dashboard',
@@ -43,8 +49,39 @@ const routes = [
     ],
   },
   {
+    path: '/research',
+    component: ResearchLayout,
+    meta: { requiresAuth: true, roles: ['RESEARCHER'] },
+    children: [
+      {
+        path: '',
+        name: 'research-overview',
+        component: () => import('@/features/research/views/ResearchOverviewView.vue'),
+      },
+      {
+        path: 'study',
+        name: 'research-study',
+        component: () => import('@/features/research/views/ResearchStudyView.vue'),
+      },
+      {
+        path: 'sessions',
+        name: 'research-sessions',
+        component: () => import('@/features/research/views/ResearchSessionsView.vue'),
+      },
+      {
+        path: 'results',
+        name: 'research-results',
+        component: () => import('@/features/research/views/ResearchResultsView.vue'),
+      },
+    ],
+  },
+  {
     path: '/:pathMatch(.*)*',
-    redirect: { name: 'dashboard' },
+    redirect: () => {
+      const authStore = useAuthStore()
+
+      return authStore.isAuthenticated ? homeForRole(authStore.user?.role) : { name: 'dashboard' }
+    },
   },
 ]
 
@@ -57,12 +94,20 @@ const router = createRouter({
 router.beforeEach((to) => {
   const authStore = useAuthStore()
 
-  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    return { name: 'login', query: { redirect: to.fullPath } }
+  if (to.meta.requiresAuth) {
+    if (!authStore.isAuthenticated) {
+      return { name: 'login', query: { redirect: to.fullPath } }
+    }
+
+    const allowedRoles = to.matched.flatMap((record) => record.meta.roles ?? [])
+
+    if (!canAccessRoute(authStore.user?.role, allowedRoles)) {
+      return homeForRole(authStore.user?.role)
+    }
   }
 
   if (to.meta.guestOnly && authStore.isAuthenticated) {
-    return { name: 'dashboard' }
+    return homeForRole(authStore.user?.role)
   }
 })
 

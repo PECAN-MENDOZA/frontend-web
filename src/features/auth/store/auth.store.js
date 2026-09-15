@@ -36,9 +36,12 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  // Cerrar sesión avisa a los demás stores (síncrono) para que descarten los datos de la cuenta
+  // sin acoplar este store a las features que los cargan.
   function signOut() {
     clearSession()
     user.value = null
+    window.dispatchEvent(new CustomEvent('auth:signed-out'))
   }
 
   window.addEventListener('auth:unauthorized', signOut)

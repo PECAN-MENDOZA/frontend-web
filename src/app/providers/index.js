@@ -1,4 +1,7 @@
 import PrimeVue from 'primevue/config'
+import ConfirmationService from 'primevue/confirmationservice'
+import ToastService from 'primevue/toastservice'
+import Tooltip from 'primevue/tooltip'
 import Aura from '@primeuix/themes/aura'
 
 const PRIMEVUE_LOCALE = {
@@ -108,4 +111,7 @@ export function registerAppProviders(app) {
       },
     },
   })
+  app.use(ConfirmationService)
+  app.use(ToastService)
+  app.directive('tooltip', Tooltip)
 }
