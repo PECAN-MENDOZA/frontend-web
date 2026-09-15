@@ -17,6 +17,7 @@ const navigationItems = [
   { label: 'Resumen', icon: 'pi pi-chart-bar', to: '/research' },
   { label: 'Estudio', icon: 'pi pi-book', to: '/research/study' },
   { label: 'Sesiones', icon: 'pi pi-list', to: '/research/sessions' },
+  { label: 'Resultados', icon: 'pi pi-chart-line', to: '/research/results' },
 ]
 
 function closeNavigation() {

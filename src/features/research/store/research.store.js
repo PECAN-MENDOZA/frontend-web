@@ -3,17 +3,24 @@ import { defineStore } from 'pinia'
 import {
   activateProtocol as activateProtocolRequest,
   cancelRun as cancelRunRequest,
+  createAnnotationBatch as createAnnotationBatchRequest,
   createParticipant as createParticipantRequest,
   createProtocol as createProtocolRequest,
   createStudy as createStudyRequest,
+  createTechnicalEvaluation as createTechnicalEvaluationRequest,
+  downloadAnalysisCsv as downloadAnalysisCsvRequest,
+  downloadAnnotationExport as downloadAnnotationExportRequest,
   excludeRun as excludeRunRequest,
   failRunTechnically as failRunTechnicallyRequest,
   generateAccessCode as generateAccessCodeRequest,
+  getStudyResults,
+  importAnnotation as importAnnotationRequest,
   listAnnotationBatches,
   listParticipants,
   listProtocols,
   listRuns,
   listStudies,
+  listTechnicalEvaluations,
   revokeAccessCode as revokeAccessCodeRequest,
 } from '@/features/research/services/research.service'
 import { requestErrorMessage } from '@/features/research/utils/errors'
@@ -31,6 +38,10 @@ const GENERIC_STUDIES_ERROR = 'No pudimos cargar tus estudios. Inténtalo nuevam
 const GENERIC_OVERVIEW_ERROR = 'No pudimos cargar el resumen del estudio. Inténtalo nuevamente.'
 const GENERIC_REFRESH_ERROR =
   'No pudimos actualizar la lista de estudios. Usa Actualizar para reintentar.'
+const GENERIC_RESULTS_ERROR = 'No pudimos cargar los resultados del estudio. Inténtalo nuevamente.'
+const GENERIC_EVALUATIONS_ERROR =
+  'No pudimos cargar las evaluaciones técnicas. Inténtalo nuevamente.'
+const GENERIC_DOWNLOAD_ERROR = 'No pudimos descargar el archivo. Inténtalo nuevamente.'
 
 export const useResearchStore = defineStore('research', () => {
   const studies = ref([])
@@ -39,12 +50,21 @@ export const useResearchStore = defineStore('research', () => {
   const runs = ref([])
   const batches = ref([])
   const protocols = ref([])
+  const results = ref(null)
+  const technicalEvaluations = ref([])
   const isLoading = ref(false)
+  const isLoadingResults = ref(false)
+  const isLoadingEvaluations = ref(false)
   const pendingOperations = ref(0)
   const error = ref('')
+  const resultsError = ref('')
+  const evaluationsError = ref('')
+  // Estudio cuyos resultados se pidieron: solo ese se recarga tras una mutación o "Actualizar".
+  let resultsStudyId = null
 
   // Descarta respuestas de una selección anterior (A → B con A resolviendo al final).
   const overviewGuard = createRequestGuard(() => selectedStudyId.value)
+  const resultsGuard = createRequestGuard(() => selectedStudyId.value)
   // isMutating cubre el POST y la recarga posterior, incluso con operaciones solapadas.
   const pendingCounter = createPendingCounter((pending) => {
     pendingOperations.value = pending
@@ -132,9 +152,58 @@ export const useResearchStore = defineStore('research', () => {
     }
   }
 
-  // "Actualizar": recarga la lista de estudios (estado, versión activa) y el resumen.
+  // Resultados del estudio (PEO, PPM, TAS, anotación, procedencia): se piden aparte del resumen
+  // porque solo la vista de resultados los necesita.
+  async function loadResults(studyId = selectedStudyId.value) {
+    if (!studyId) return
+
+    const generation = resultsGuard.begin()
+
+    resultsStudyId = studyId
+    isLoadingResults.value = true
+    resultsError.value = ''
+
+    try {
+      const data = await getStudyResults(studyId)
+
+      if (!resultsGuard.isCurrent(generation, studyId)) return
+
+      results.value = data
+    } catch (requestError) {
+      if (resultsGuard.isCurrent(generation, studyId)) {
+        resultsError.value = requestErrorMessage(requestError, GENERIC_RESULTS_ERROR)
+      }
+    } finally {
+      if (resultsGuard.isLatest(generation)) {
+        isLoadingResults.value = false
+      }
+    }
+  }
+
+  async function loadTechnicalEvaluations() {
+    isLoadingEvaluations.value = true
+    evaluationsError.value = ''
+
+    try {
+      technicalEvaluations.value = await listTechnicalEvaluations()
+    } catch (requestError) {
+      evaluationsError.value = requestErrorMessage(requestError, GENERIC_EVALUATIONS_ERROR)
+    } finally {
+      isLoadingEvaluations.value = false
+    }
+  }
+
+  // "Actualizar": recarga la lista de estudios (estado, versión activa), el resumen y, si la
+  // vista de resultados ya los pidió, los resultados.
   function refreshAll() {
-    return Promise.all([refreshStudies(), loadOverview(selectedStudyId.value)])
+    const studyId = selectedStudyId.value
+    const refreshes = [refreshStudies(), loadOverview(studyId)]
+
+    if (studyId && resultsStudyId === studyId) {
+      refreshes.push(loadResults(studyId))
+    }
+
+    return Promise.all(refreshes)
   }
 
   function addStudy({ code, title }) {
@@ -261,6 +330,62 @@ export const useResearchStore = defineStore('research', () => {
     })
   }
 
+  // Anotación ciega: crear un lote congela las ejecuciones completadas de este momento.
+  function createBatch(kind) {
+    const studyId = selectedStudyId.value
+
+    return pendingCounter.track(async () => {
+      const batch = await post(() => createAnnotationBatchRequest(studyId, kind))
+
+      await refreshAfterMutation(studyId, { includeResults: true })
+
+      return batch
+    })
+  }
+
+  function importAnnotationFile(batchId, { slot, rater, file }) {
+    const studyId = selectedStudyId.value
+
+    return pendingCounter.track(async () => {
+      const summary = await post(() =>
+        importAnnotationRequest(studyId, batchId, { slot, rater: rater.trim(), file }),
+      )
+
+      await refreshAfterMutation(studyId, { includeResults: true })
+
+      return summary
+    })
+  }
+
+  // Descargas: devuelven { blob, filename } para que la vista las entregue al navegador.
+  function downloadExport(batchId) {
+    const studyId = selectedStudyId.value
+
+    return post(() => downloadAnnotationExportRequest(studyId, batchId), downloadError)
+  }
+
+  function downloadAnalysis() {
+    const studyId = selectedStudyId.value
+
+    return post(() => downloadAnalysisCsvRequest(studyId), downloadError)
+  }
+
+  // Evaluación técnica del modelo: independiente del estudio seleccionado.
+  function recordTechnicalEvaluation(payload) {
+    return pendingCounter.track(async () => {
+      const evaluation = await post(() => createTechnicalEvaluationRequest(payload))
+
+      technicalEvaluations.value = [evaluation, ...technicalEvaluations.value]
+      await loadTechnicalEvaluations()
+
+      return evaluation
+    })
+  }
+
+  function downloadError(requestError) {
+    return typeof requestError?.status === 'number' ? null : GENERIC_DOWNLOAD_ERROR
+  }
+
   async function issueCredential(studyId, studyCode, participantId) {
     const credential = await post(() => generateAccessCodeRequest(studyId, participantId))
 
@@ -279,7 +404,10 @@ export const useResearchStore = defineStore('research', () => {
   }
 
   // Recarga solo el estudio de origen; si la selección cambió, el resultado se ignora.
-  async function refreshAfterMutation(studyId, { includeStudies = false } = {}) {
+  async function refreshAfterMutation(
+    studyId,
+    { includeStudies = false, includeResults = false } = {},
+  ) {
     const refreshes = []
 
     if (includeStudies) {
@@ -288,6 +416,10 @@ export const useResearchStore = defineStore('research', () => {
 
     if (selectedStudyId.value === studyId) {
       refreshes.push(loadOverview(studyId))
+
+      if (includeResults) {
+        refreshes.push(loadResults(studyId))
+      }
     }
 
     await Promise.all(refreshes)
@@ -310,6 +442,9 @@ export const useResearchStore = defineStore('research', () => {
     runs.value = []
     batches.value = []
     protocols.value = []
+    results.value = null
+    resultsError.value = ''
+    resultsStudyId = null
   }
 
   function persistSelection(studyId) {
@@ -330,17 +465,25 @@ export const useResearchStore = defineStore('research', () => {
     runs,
     batches,
     protocols,
+    results,
+    technicalEvaluations,
     activeProtocol,
     latestProtocol,
     isLoading,
+    isLoadingResults,
+    isLoadingEvaluations,
     isMutating,
     error,
+    resultsError,
+    evaluationsError,
     rows,
     counts,
     versions,
     loadStudies,
     selectStudy,
     loadOverview,
+    loadResults,
+    loadTechnicalEvaluations,
     refreshAll,
     addStudy,
     saveProtocolDraft,
@@ -352,5 +495,10 @@ export const useResearchStore = defineStore('research', () => {
     cancelRun,
     failRunTechnically,
     excludeRun,
+    createBatch,
+    importAnnotationFile,
+    downloadExport,
+    downloadAnalysis,
+    recordTechnicalEvaluation,
   }
 })

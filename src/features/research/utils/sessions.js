@@ -1,3 +1,5 @@
+import { translateBackendMessage } from './errors.js'
+
 export const REASON_MIN_LENGTH = 10
 export const REASON_MAX_LENGTH = 500
 
@@ -123,8 +125,12 @@ export function annotationState(run, batches) {
   return isFrozen ? 'En lote' : 'Sin lote'
 }
 
+// El motivo puede ser texto libre del investigador, un código de incidencia o un mensaje fijo
+// del teclado del alumno: los dos últimos se muestran en español.
 export function runReason(run) {
-  return run.exclusionReason || run.failureReason || ''
+  const reason = run.exclusionReason || run.failureReason || ''
+
+  return translateBackendMessage(incidentLabel(reason))
 }
 
 export function truncateText(text, maxLength) {

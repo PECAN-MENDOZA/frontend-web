@@ -223,6 +223,23 @@ test('runReason prefers the exclusion reason over the failure reason', () => {
   )
 })
 
+test('runReason shows incident codes and student cancellations in Spanish', () => {
+  assert.equal(runReason(run({ failureReason: 'AI_REQUEST_FAILED' })), 'IA sin respuesta')
+  assert.equal(runReason(run({ failureReason: 'TECHNICAL_FAILURE' })), 'Fallo técnico')
+  assert.equal(
+    runReason(run({ failureReason: 'Cancelled by the student: interrupted' })),
+    'Cancelada por el alumno: interrupción',
+  )
+  assert.equal(
+    runReason(run({ failureReason: 'Cancelled by the student: abandoned the task' })),
+    'Cancelada por el alumno: ya no quiso seguir',
+  )
+  assert.equal(
+    runReason(run({ failureReason: 'Cancelled by the student: technical problem' })),
+    'Cancelada por el alumno: problema técnico',
+  )
+})
+
 test('truncateText shortens long text with an ellipsis', () => {
   assert.equal(truncateText('', 10), '')
   assert.equal(truncateText('corto', 10), 'corto')
