@@ -47,3 +47,16 @@ export function listRuns(studyId) {
 export function listAnnotationBatches(studyId) {
   return api.get(`/research/studies/${studyId}/annotation-batches`)
 }
+
+// Decisiones sobre ejecuciones: el motivo viaja en el cuerpo, nunca en la ruta.
+export function cancelRun(studyId, runId, reason) {
+  return api.post(`/research/studies/${studyId}/runs/${runId}/cancel`, { reason })
+}
+
+export function failRunTechnically(studyId, runId, reason) {
+  return api.post(`/research/studies/${studyId}/runs/${runId}/technical-failure`, { reason })
+}
+
+export function excludeRun(studyId, runId, reason) {
+  return api.post(`/research/studies/${studyId}/runs/${runId}/exclude`, { reason })
+}

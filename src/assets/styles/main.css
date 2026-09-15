@@ -1723,6 +1723,125 @@ h2 {
   font-weight: 600;
 }
 
+/* Sesiones: filtros en cliente y tabla densa de control de calidad */
+.research-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  padding: 0.9rem 1.1rem;
+  gap: 0.75rem 1rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: rgba(255, 253, 248, 0.84);
+  box-shadow: var(--shadow-card);
+}
+
+.research-filters__field {
+  display: grid;
+  min-width: 11rem;
+  gap: 0.35rem;
+}
+
+.research-filters__field > span {
+  color: var(--color-ink-soft);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.research-filters__summary {
+  margin-left: auto;
+  padding-bottom: 0.45rem;
+  color: var(--color-ink-soft);
+  font-size: 0.74rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.research-sessions__count {
+  color: var(--color-ink-soft);
+  font-size: 0.74rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.research-table-empty p {
+  margin: 0 0 0.5rem;
+}
+
+.research-session-table .p-datatable-tbody > tr > td {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  font-size: 0.74rem;
+  font-variant-numeric: tabular-nums;
+  vertical-align: middle;
+}
+
+.research-session-table .p-tag {
+  white-space: nowrap;
+}
+
+.research-session-table__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.research-session-table__number {
+  display: inline-block;
+  min-width: 2.5rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.research-session-table__number--alert {
+  color: #b8412b;
+}
+
+.research-session-table__versions {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.research-session-table__muted {
+  color: var(--color-ink-soft);
+}
+
+.research-session-table__reason {
+  display: inline-block;
+  max-width: 16rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+
+/* Las filas excluidas siguen en la tabla, atenuadas: nada se borra del registro. */
+.research-session-table .p-datatable-tbody > tr.research-session-row--excluded > td {
+  color: var(--color-ink-soft);
+  background: rgba(184, 65, 43, 0.04);
+}
+
+.research-session-table .p-datatable-tbody > tr.research-session-row--excluded .research-pseudonym,
+.research-session-table .p-datatable-tbody > tr.research-session-row--excluded .research-session-table__number {
+  opacity: 0.7;
+}
+
+.research-dialog--reason {
+  width: min(92vw, 32rem);
+}
+
+.research-dialog__icon--danger {
+  background: #b8412b;
+  box-shadow: 0 10px 18px rgba(184, 65, 43, 0.22);
+}
+
+.research-form__help {
+  color: var(--color-ink-soft);
+  font-size: 0.68rem;
+}
+
 @keyframes rise-in {
   from {
     opacity: 0;
@@ -1877,8 +1996,17 @@ h2 {
   .words-table,
   .student-directory-table,
   .paired-progress-table,
-  .research-directory-table {
+  .research-directory-table,
+  .research-session-table {
     overflow-x: auto;
+  }
+
+  .research-filters__field {
+    min-width: 100%;
+  }
+
+  .research-filters__summary {
+    margin-left: 0;
   }
 
   .directory-panel__toolbar,

@@ -2,9 +2,12 @@ import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import {
   activateProtocol as activateProtocolRequest,
+  cancelRun as cancelRunRequest,
   createParticipant as createParticipantRequest,
   createProtocol as createProtocolRequest,
   createStudy as createStudyRequest,
+  excludeRun as excludeRunRequest,
+  failRunTechnically as failRunTechnicallyRequest,
   generateAccessCode as generateAccessCodeRequest,
   listAnnotationBatches,
   listParticipants,
@@ -233,6 +236,31 @@ export const useResearchStore = defineStore('research', () => {
     })
   }
 
+  // Decisiones analíticas sobre una ejecución: motivo obligatorio, ligadas al estudio de origen.
+  function cancelRun(runId, reason) {
+    return applyRunDecision((studyId) => cancelRunRequest(studyId, runId, reason))
+  }
+
+  function failRunTechnically(runId, reason) {
+    return applyRunDecision((studyId) => failRunTechnicallyRequest(studyId, runId, reason))
+  }
+
+  function excludeRun(runId, reason) {
+    return applyRunDecision((studyId) => excludeRunRequest(studyId, runId, reason))
+  }
+
+  function applyRunDecision(requestFn) {
+    const studyId = selectedStudyId.value
+
+    return pendingCounter.track(async () => {
+      const run = await post(() => requestFn(studyId))
+
+      await refreshAfterMutation(studyId)
+
+      return run
+    })
+  }
+
   async function issueCredential(studyId, studyCode, participantId) {
     const credential = await post(() => generateAccessCodeRequest(studyId, participantId))
 
@@ -321,5 +349,8 @@ export const useResearchStore = defineStore('research', () => {
     issueAccessCode,
     revokeParticipantCode,
     reissueAccessCode,
+    cancelRun,
+    failRunTechnically,
+    excludeRun,
   }
 })

@@ -63,6 +63,11 @@ const routes = [
         name: 'research-study',
         component: () => import('@/features/research/views/ResearchStudyView.vue'),
       },
+      {
+        path: 'sessions',
+        name: 'research-sessions',
+        component: () => import('@/features/research/views/ResearchSessionsView.vue'),
+      },
     ],
   },
   {
