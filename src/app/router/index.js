@@ -99,6 +99,7 @@ const routes = [
       {
         path: 'tests/:testId/results',
         name: 'research-results',
+        component: () => import('@/features/tests/views/TestResultsView.vue'),
       },
       {
         path: 'teachers',

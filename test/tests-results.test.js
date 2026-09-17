@@ -2,9 +2,14 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   conditionRows,
+  formatAcceptance,
   formatDelta,
   formatInterval,
+  formatMean,
+  formatPairedStats,
+  formatSeconds,
   resultsBanners,
+  resultsJsonFilename,
   sentenceRows,
 } from '../src/features/tests/utils/results.js'
 
@@ -52,9 +57,9 @@ test('conditionRows maps condition metrics into table-ready rows', () => {
       participants: 8,
       errorsPer100Words: { mean: 2, lower: 1, upper: 3 },
       wordsPerMinute: { mean: 22, lower: 20, upper: 24 },
-      acceptance: { mean: 75, lower: 70, upper: 80 },
+      acceptanceRate: { accepted: 3, offered: 4, ratePct: 75, wilsonLower: 70, wilsonUpper: 80 },
     },
-    OTHER: { participants: 0, errorsPer100Words: null, wordsPerMinute: null, acceptance: null },
+    OTHER: { participants: 0, errorsPer100Words: null, wordsPerMinute: null, acceptanceRate: null },
   }
 
   assert.deepEqual(conditionRows({ conditions }), [
@@ -64,7 +69,7 @@ test('conditionRows maps condition metrics into table-ready rows', () => {
       participants: 8,
       errors: { mean: 2, lower: 1, upper: 3 },
       ppm: { mean: 22, lower: 20, upper: 24 },
-      acceptance: { mean: 75, lower: 70, upper: 80 },
+      acceptance: { accepted: 3, offered: 4, ratePct: 75, wilsonLower: 70, wilsonUpper: 80 },
     },
     {
       condition: 'OTHER',
@@ -86,8 +91,8 @@ test('sentenceRows keeps the sentence metrics needed by the results table', () =
       assistance: 'UNASSISTED',
       n: 8,
       meanErrors: 1.25,
-      meanDuration: 8300,
-      skipped: 2,
+      meanDurationFirstKeyMs: 8300,
+      skippedCount: 2,
       internal: 'ignored',
     },
   ]
@@ -104,4 +109,39 @@ test('sentenceRows keeps the sentence metrics needed by the results table', () =
     },
   ])
   assert.deepEqual(sentenceRows({}), [])
+})
+
+test('formatAcceptance shows accepted over offered with the Wilson interval', () => {
+  assert.equal(
+    formatAcceptance({ accepted: 2, offered: 5, ratePct: 40, wilsonLower: 11.76, wilsonUpper: 76.93 }),
+    '2/5 (40,0 %, IC Wilson 11,8–76,9)',
+  )
+  assert.equal(
+    formatAcceptance({ accepted: 1, offered: 1, ratePct: 100, wilsonLower: null, wilsonUpper: null }),
+    '1/1 (100,0 %)',
+  )
+  assert.equal(formatAcceptance(null), '—')
+})
+
+test('formatPairedStats reports t, p and dz only when the backend computed them', () => {
+  assert.equal(
+    formatPairedStats({ t: 0.2201, p: 0.86202, dz: 0.1556 }),
+    't = 0,22; p = 0,862; dz = 0,16',
+  )
+  assert.equal(formatPairedStats({ t: null, p: null, dz: null }), '')
+  assert.equal(formatPairedStats(undefined), '')
+})
+
+test('formatSeconds and formatMean use es-PE decimals and a dash for missing values', () => {
+  assert.equal(formatSeconds(5700), '5,7 s')
+  assert.equal(formatSeconds(null), '—')
+  assert.equal(formatMean(1.25), '1,25')
+  assert.equal(formatMean(0.5, 1), '0,5')
+  assert.equal(formatMean(undefined), '—')
+})
+
+test('resultsJsonFilename uses the test code and falls back to the id', () => {
+  assert.equal(resultsJsonFilename({ code: 'DRYRUN-02' }), 'test-DRYRUN-02-results.json')
+  assert.equal(resultsJsonFilename({ testId: 'abc' }), 'test-abc-results.json')
+  assert.equal(resultsJsonFilename(null), 'test-prueba-results.json')
 })

@@ -14,7 +14,7 @@ import {
   exclusionLabel,
   responseRowsFor,
 } from '@/features/tests/utils/attempts'
-import { formatDateTime } from '@/features/research/utils/study'
+import { formatDateTime } from '@/features/research/utils/dates'
 
 const STATUS_SEVERITIES = {
   PENDING: 'secondary',

@@ -1,14 +1,12 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
 import ConfirmDialog from 'primevue/confirmdialog'
-import Tag from 'primevue/tag'
 import Toast from 'primevue/toast'
 import { useAuthStore } from '@/features/auth/store/auth.store'
 import { useResearchStore } from '@/features/research/store/research.store'
-import { refreshStatusLabel } from '@/features/research/utils/study'
 import { APP_NAME } from '@/shared/constants/app'
 
 const router = useRouter()
@@ -20,15 +18,6 @@ const navigationItems = [
   { label: 'Pruebas', icon: 'pi pi-list-check', to: '/research/tests' },
   { label: 'Docentes', icon: 'pi pi-id-card', to: '/research/teachers' },
 ]
-
-// Solo afirma una actualización que ocurrió: hora de la última recarga completa exitosa, y
-// nada mientras haya una carga o un error en pantalla.
-const refreshStatus = computed(() =>
-  refreshStatusLabel(researchStore.lastRefreshAt, {
-    isLoading: researchStore.isLoading || researchStore.isLoadingResults,
-    hasError: Boolean(researchStore.error || researchStore.resultsError),
-  }),
-)
 
 function closeNavigation() {
   isNavigationOpen.value = false
@@ -122,7 +111,6 @@ onUnmounted(() => {
         </div>
 
         <div class="topbar__actions">
-          <Tag v-if="refreshStatus" :value="refreshStatus" severity="secondary" rounded />
           <div class="topbar__profile">
             <Avatar :label="authStore.userInitials" shape="circle" />
             <div>

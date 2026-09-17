@@ -3013,6 +3013,81 @@ h2 {
   font-weight: 700;
 }
 
+/* Resultados de una prueba: métricas por condición, diferencia pareada y procedencia */
+.results-page .page-header__actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.results-page .page-header__actions .p-button {
+  white-space: nowrap;
+}
+
+.results-table {
+  min-width: 52rem;
+}
+
+.results-table tbody th {
+  padding: 0.8rem 0.65rem;
+  border-top: 1px solid var(--color-line);
+  color: var(--color-ink);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-align: left;
+}
+
+.results-paired {
+  padding: 1rem 1.25rem 1.25rem;
+  border-top: 1px solid var(--color-line);
+}
+
+.results-paired__list {
+  display: grid;
+  margin: 0.6rem 0 0;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 0.55rem;
+}
+
+.results-paired__list div {
+  min-width: 0;
+  padding: 0.7rem 0.8rem;
+  border-radius: 0.8rem;
+  background: rgba(238, 244, 239, 0.72);
+}
+
+.results-paired__list dt {
+  color: var(--color-ink-soft);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.results-paired__list dd {
+  display: grid;
+  margin: 0.25rem 0 0;
+  gap: 0.15rem;
+  color: var(--color-ink);
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.results-paired__list small {
+  color: var(--color-ink-soft);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.results-provenance__hash {
+  grid-column: 1 / -1;
+}
+
+.results-hash {
+  font-family: ui-monospace, 'Cascadia Mono', 'Consolas', monospace;
+  font-size: 0.72rem;
+  overflow-wrap: anywhere;
+}
+
 @keyframes rise-in {
   from {
     opacity: 0;

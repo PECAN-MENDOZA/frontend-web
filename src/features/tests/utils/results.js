@@ -26,6 +26,36 @@ export function formatDelta(delta) {
   return `${mean} (${interval}; n = ${delta.n})`
 }
 
+// Aceptación de sugerencias: "aceptadas/ofrecidas (p %, IC Wilson a–b)"; solo existe en ASSISTED.
+export function formatAcceptance(acceptance) {
+  if (acceptance?.ratePct == null) return '—'
+
+  const rate = formatNumber(acceptance.ratePct, 1)
+  const interval =
+    acceptance.wilsonLower == null || acceptance.wilsonUpper == null
+      ? ''
+      : `, IC Wilson ${formatNumber(acceptance.wilsonLower, 1)}–${formatNumber(acceptance.wilsonUpper, 1)}`
+
+  return `${acceptance.accepted}/${acceptance.offered} (${rate} %${interval})`
+}
+
+// Estadísticos de la prueba t pareada (t, p, dz) cuando el backend los calcula (n ≥ 2).
+export function formatPairedStats(delta) {
+  if (delta?.t == null || delta?.p == null || delta?.dz == null) return ''
+
+  return `t = ${formatNumber(delta.t, 2)}; p = ${formatNumber(delta.p, 3)}; dz = ${formatNumber(delta.dz, 2)}`
+}
+
+export function formatSeconds(milliseconds) {
+  if (milliseconds == null) return '—'
+
+  return `${formatNumber(milliseconds / 1000, 1)} s`
+}
+
+export function formatMean(value, digits = 2) {
+  return value == null ? '—' : formatNumber(value, digits)
+}
+
 export function resultsBanners(results) {
   const banners = []
 
@@ -53,20 +83,24 @@ export function conditionRows(results) {
     participants: metrics.participants,
     errors: metrics.errorsPer100Words,
     ppm: metrics.wordsPerMinute,
-    acceptance: metrics.acceptance,
+    acceptance: metrics.acceptanceRate,
   }))
 }
 
 export function sentenceRows(results) {
   return (results?.sentences ?? []).map(
-    ({ position, kind, assistance, n, meanErrors, meanDuration, skipped }) => ({
+    ({ position, kind, assistance, n, meanErrors, meanDurationFirstKeyMs, skippedCount }) => ({
       position,
       kind,
       assistance,
       n,
       meanErrors,
-      meanDuration,
-      skipped,
+      meanDuration: meanDurationFirstKeyMs,
+      skipped: skippedCount,
     }),
   )
+}
+
+export function resultsJsonFilename(results) {
+  return `test-${results?.code || results?.testId || 'prueba'}-results.json`
 }

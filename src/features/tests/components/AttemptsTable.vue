@@ -5,7 +5,7 @@ import Column from 'primevue/column'
 import DataTable from 'primevue/datatable'
 import Tag from 'primevue/tag'
 import { assignmentStatusLabel } from '@/features/tests/utils/attempts'
-import { formatDateTime } from '@/features/research/utils/study'
+import { formatDateTime } from '@/features/research/utils/dates'
 
 const props = defineProps({
   rows: { type: Array, required: true },

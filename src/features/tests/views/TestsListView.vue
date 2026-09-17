@@ -10,7 +10,7 @@ import Tag from 'primevue/tag'
 import CreateTestDialog from '@/features/tests/components/CreateTestDialog.vue'
 import { useTestsStore } from '@/features/tests/store/tests.store'
 import { STATUS_LABELS } from '@/features/tests/utils/sentences'
-import { formatDate } from '@/features/research/utils/study'
+import { formatDate } from '@/features/research/utils/dates'
 import PageHeader from '@/shared/components/PageHeader.vue'
 
 const STATUS_SEVERITIES = { DRAFT: 'secondary', ACTIVE: 'success', CLOSED: 'contrast' }
