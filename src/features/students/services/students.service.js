@@ -7,10 +7,6 @@ export async function getStudents(month) {
   return Promise.all(links.map((link) => getStudentListItem(link, month)))
 }
 
-export function createStudentAccount(student) {
-  return api.post('/teachers/students/accounts', student)
-}
-
 export function resetStudentPin(studentId) {
   return api.post(`/teachers/students/${studentId}/reset-pin`)
 }
@@ -91,6 +87,8 @@ function mapStudentSummary(link, summary) {
     alias: link?.studentUsername ?? '',
     initials: getInitials(name),
     notes: link?.notes ?? '',
+    classroomId: link?.classroomId ?? null,
+    classroomName: link?.classroomName ?? '',
     createdAt: link?.createdAt ?? null,
     lastAccessAt: link?.lastAccessAt ?? null,
     acceptanceRate,

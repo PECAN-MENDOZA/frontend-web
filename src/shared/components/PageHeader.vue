@@ -10,7 +10,7 @@ defineProps({
   },
   description: {
     type: String,
-    required: true,
+    default: '',
   },
 })
 </script>
@@ -20,7 +20,7 @@ defineProps({
     <div>
       <p class="overline">{{ eyebrow }}</p>
       <h1>{{ title }}</h1>
-      <p>{{ description }}</p>
+      <p><slot name="description">{{ description }}</slot></p>
     </div>
     <div class="page-header__actions">
       <slot name="actions"></slot>

@@ -23,6 +23,12 @@ import {
   listTechnicalEvaluations,
   revokeAccessCode as revokeAccessCodeRequest,
 } from '@/features/research/services/research.service'
+import {
+  createTeacher as createTeacherRequest,
+  listClassroomDirectory,
+  listTeachers,
+  resetTeacherPassword as resetTeacherPasswordRequest,
+} from '@/features/research/services/teachers.service'
 import { useAuthStore } from '@/features/auth/store/auth.store'
 import { requestErrorMessage } from '@/features/research/utils/errors'
 import {
@@ -46,6 +52,9 @@ const GENERIC_RESULTS_ERROR = 'No pudimos cargar los resultados del estudio. Int
 const GENERIC_EVALUATIONS_ERROR =
   'No pudimos cargar las evaluaciones técnicas. Inténtalo nuevamente.'
 const GENERIC_DOWNLOAD_ERROR = 'No pudimos descargar el archivo. Inténtalo nuevamente.'
+const GENERIC_TEACHERS_ERROR = 'No pudimos cargar los docentes. Inténtalo nuevamente.'
+const GENERIC_CLASSROOM_DIRECTORY_ERROR = 'No pudimos cargar los salones. Inténtalo nuevamente.'
+const TEACHER_EMAIL_IN_USE_ERROR = 'Ese correo ya está en uso.'
 
 export const useResearchStore = defineStore('research', () => {
   const authStore = useAuthStore()
@@ -61,15 +70,23 @@ export const useResearchStore = defineStore('research', () => {
   const protocols = ref([])
   const results = ref(null)
   const technicalEvaluations = ref([])
+  const teachers = ref([])
+  const classroomDirectory = ref([])
+  // Contraseña temporal en claro (creación o reinicio): solo mientras el diálogo está abierto.
+  const temporaryPassword = ref(null)
   // Cada carga tiene su propio indicador: ninguna apaga una carga que no inició.
   const isLoadingStudies = ref(false)
   const isLoadingOverview = ref(false)
   const isLoadingResults = ref(false)
   const isLoadingEvaluations = ref(false)
+  const isTeachersLoading = ref(false)
+  const isClassroomDirectoryLoading = ref(false)
   const pendingOperations = ref(0)
   const error = ref('')
   const resultsError = ref('')
   const evaluationsError = ref('')
+  const teachersError = ref('')
+  const classroomDirectoryError = ref('')
   // Estudio cuyos resultados se pidieron: solo ese se recarga tras una mutación o "Actualizar".
   let resultsStudyId = null
 
@@ -107,6 +124,22 @@ export const useResearchStore = defineStore('research', () => {
     },
     setError: (message) => {
       evaluationsError.value = message
+    },
+  })
+  const teachersLoader = createGuardedLoader({
+    setLoading: (value) => {
+      isTeachersLoading.value = value
+    },
+    setError: (message) => {
+      teachersError.value = message
+    },
+  })
+  const classroomDirectoryLoader = createGuardedLoader({
+    setLoading: (value) => {
+      isClassroomDirectoryLoading.value = value
+    },
+    setError: (message) => {
+      classroomDirectoryError.value = message
     },
   })
   // isMutating cubre el POST y la recarga posterior, incluso con operaciones solapadas.
@@ -223,6 +256,73 @@ export const useResearchStore = defineStore('research', () => {
         technicalEvaluations.value = data
       },
     })
+  }
+
+  // Cuentas de docentes creadas por el investigador (research-api.md, Task 3).
+  function loadTeachers() {
+    return teachersLoader.load({
+      fallback: GENERIC_TEACHERS_ERROR,
+      request: listTeachers,
+      apply: (data) => {
+        teachers.value = data
+      },
+    })
+  }
+
+  // Directorio de salones de todos los docentes, solo lectura: sirve para asignar pruebas
+  // (plan 2) y nunca expone nombres reales, solo los usernames que ya seudonimiza el backend.
+  function loadClassroomDirectory() {
+    return classroomDirectoryLoader.load({
+      fallback: GENERIC_CLASSROOM_DIRECTORY_ERROR,
+      request: listClassroomDirectory,
+      apply: (data) => {
+        classroomDirectory.value = data
+      },
+    })
+  }
+
+  // La contraseña temporal se entrega en claro solo en la respuesta del POST: se guarda aquí
+  // para el diálogo y se recarga la lista para reflejar mustChangePassword y los conteos.
+  function createTeacher(body) {
+    return pendingCounter.track(async () => {
+      const created = await post(
+        () => createTeacherRequest(body),
+        (requestError) => (requestError.status === 409 ? TEACHER_EMAIL_IN_USE_ERROR : null),
+      )
+
+      temporaryPassword.value = {
+        teacher: {
+          id: created.id,
+          username: created.username,
+          email: created.email,
+          institution: created.institution,
+        },
+        password: created.temporaryPassword,
+      }
+      await loadTeachers()
+
+      return created
+    })
+  }
+
+  // La respuesta del backend no repite el correo del docente: se toma del que ya está en
+  // memoria para que el aviso de contraseña temporal siga mostrando "Usuario: <email>".
+  function resetTeacherPassword(id) {
+    return pendingCounter.track(async () => {
+      const teacher = teachers.value.find((item) => item.id === id) ?? null
+      const result = await post(() => resetTeacherPasswordRequest(id))
+
+      temporaryPassword.value = { teacher, password: result.temporaryPassword }
+      // El reinicio vuelve a exigir el cambio de contraseña: la lista se recarga para que
+      // la columna "Estado" no quede desactualizada.
+      await loadTeachers()
+
+      return result
+    })
+  }
+
+  function clearTemporaryPassword() {
+    temporaryPassword.value = null
   }
 
   // "Actualizar": recarga la lista de estudios (estado, versión activa), el resumen y, si la
@@ -514,8 +614,13 @@ export const useResearchStore = defineStore('research', () => {
     studies.value = []
     clearStudyData()
     technicalEvaluations.value = []
+    teachers.value = []
+    classroomDirectory.value = []
+    temporaryPassword.value = null
     error.value = ''
     evaluationsError.value = ''
+    teachersError.value = ''
+    classroomDirectoryError.value = ''
     lastRefreshAt.value = null
     persistSelection(null)
     persistOwner(null)
@@ -523,6 +628,8 @@ export const useResearchStore = defineStore('research', () => {
     overviewLoader.invalidate()
     resultsLoader.invalidate()
     evaluationsLoader.invalidate()
+    teachersLoader.invalidate()
+    classroomDirectoryLoader.invalidate()
   }
 
   function currentUserId() {
@@ -559,16 +666,23 @@ export const useResearchStore = defineStore('research', () => {
     protocols,
     results,
     technicalEvaluations,
+    teachers,
+    classroomDirectory,
+    temporaryPassword,
     lastRefreshAt,
     isLoading,
     isLoadingStudies,
     isLoadingOverview,
     isLoadingResults,
     isLoadingEvaluations,
+    isTeachersLoading,
+    isClassroomDirectoryLoading,
     isMutating,
     error,
     resultsError,
     evaluationsError,
+    teachersError,
+    classroomDirectoryError,
     rows,
     counts,
     versions,
@@ -578,6 +692,11 @@ export const useResearchStore = defineStore('research', () => {
     loadOverview,
     loadResults,
     loadTechnicalEvaluations,
+    loadTeachers,
+    loadClassroomDirectory,
+    createTeacher,
+    resetTeacherPassword,
+    clearTemporaryPassword,
     refreshAll,
     refreshStudyResults,
     reset,

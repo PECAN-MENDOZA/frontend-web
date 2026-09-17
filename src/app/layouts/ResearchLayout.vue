@@ -18,6 +18,7 @@ const isNavigationOpen = ref(false)
 
 const navigationItems = [
   { label: 'Resumen', icon: 'pi pi-chart-bar', to: '/research' },
+  { label: 'Docentes', icon: 'pi pi-id-card', to: '/research/teachers' },
   { label: 'Estudio', icon: 'pi pi-book', to: '/research/study' },
   { label: 'Sesiones', icon: 'pi pi-list', to: '/research/sessions' },
   { label: 'Resultados', icon: 'pi pi-chart-line', to: '/research/results' },

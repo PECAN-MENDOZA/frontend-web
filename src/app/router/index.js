@@ -3,7 +3,7 @@ import AppLayout from '@/app/layouts/AppLayout.vue'
 import AuthLayout from '@/app/layouts/AuthLayout.vue'
 import ResearchLayout from '@/app/layouts/ResearchLayout.vue'
 import { useAuthStore } from '@/features/auth/store/auth.store'
-import { canAccessRoute, homeForRole } from '@/features/auth/utils/access'
+import { canAccessRoute, homeForRole, requiresPasswordChange } from '@/features/auth/utils/access'
 
 const routes = [
   {
@@ -27,6 +27,20 @@ const routes = [
     ],
   },
   {
+    // Ruta de nivel superior (no hija de /auth) para que meta.guestOnly del padre /auth
+    // no se herede en to.meta y bloquee a un docente ya autenticado.
+    path: '/change-password',
+    component: AuthLayout,
+    meta: { requiresAuth: true, roles: ['TEACHER'] },
+    children: [
+      {
+        path: '',
+        name: 'change-password',
+        component: () => import('@/features/auth/views/ChangePasswordView.vue'),
+      },
+    ],
+  },
+  {
     path: '/',
     component: AppLayout,
     meta: { requiresAuth: true, roles: ['TEACHER'] },
@@ -35,6 +49,16 @@ const routes = [
         path: 'dashboard',
         name: 'dashboard',
         component: () => import('@/features/dashboard/views/DashboardView.vue'),
+      },
+      {
+        path: 'classrooms',
+        name: 'classrooms',
+        component: () => import('@/features/classrooms/views/ClassroomsView.vue'),
+      },
+      {
+        path: 'classrooms/:classroomId',
+        name: 'classroom-detail',
+        component: () => import('@/features/classrooms/views/ClassroomDetailView.vue'),
       },
       {
         path: 'students',
@@ -57,6 +81,11 @@ const routes = [
         path: '',
         name: 'research-overview',
         component: () => import('@/features/research/views/ResearchOverviewView.vue'),
+      },
+      {
+        path: 'teachers',
+        name: 'research-teachers',
+        component: () => import('@/features/research/views/ResearchTeachersView.vue'),
       },
       {
         path: 'study',
@@ -103,6 +132,10 @@ router.beforeEach((to) => {
 
     if (!canAccessRoute(authStore.user?.role, allowedRoles)) {
       return homeForRole(authStore.user?.role)
+    }
+
+    if (requiresPasswordChange(authStore.user, to.name)) {
+      return { name: 'change-password' }
     }
   }
 

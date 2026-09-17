@@ -36,6 +36,11 @@ defineEmits(['select'])
         </div>
       </template>
     </Column>
+    <Column header="Salón">
+      <template #body="{ data }">
+        <span :class="{ 'signal-label': !data.classroomName }">{{ data.classroomName || 'Sin salón' }}</span>
+      </template>
+    </Column>
     <Column header="Aceptación">
       <template #body="{ data }">
         <Tag :value="formatPercentage(data.acceptanceRate)" :severity="getRateSeverity(data.acceptanceRate)" />

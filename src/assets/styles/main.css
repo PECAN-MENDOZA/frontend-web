@@ -340,6 +340,15 @@ h2 {
   text-align: center;
 }
 
+.change-password-page {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  min-height: 100vh;
+  padding: 3rem;
+  place-items: center;
+}
+
 /* App layout */
 .app-shell {
   display: grid;
@@ -549,7 +558,9 @@ h2 {
 }
 
 .students-page,
-.student-detail-page {
+.student-detail-page,
+.classrooms-page,
+.classroom-detail-page {
   display: grid;
   gap: 1.35rem;
 }
@@ -1013,6 +1024,110 @@ h2 {
 .student-directory-table .p-paginator {
   border-top: 1px solid var(--color-line);
   background: rgba(238, 244, 239, 0.42);
+}
+
+/* Salones */
+.table-empty {
+  padding: 2.25rem;
+  color: var(--color-ink-soft);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.classroom-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.classroom-cell strong {
+  color: var(--color-ink);
+}
+
+.classrooms-table .p-datatable-tbody > tr.classrooms-table__row--archived .classroom-cell strong {
+  color: var(--color-ink-soft);
+}
+
+.row-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.15rem;
+}
+
+.inline-edit {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.inline-edit .p-inputtext {
+  min-width: 11rem;
+}
+
+.classroom-name--empty,
+.classroom-notes {
+  color: var(--color-ink-soft);
+}
+
+.classroom-notes {
+  display: inline-block;
+  max-width: 16rem;
+  overflow: hidden;
+  font-size: 0.82rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.classroom-username {
+  font-family: ui-monospace, 'Cascadia Mono', 'Consolas', monospace;
+  font-size: 0.85em;
+}
+
+.classroom-students-table .p-paginator {
+  border-top: 1px solid var(--color-line);
+  background: rgba(238, 244, 239, 0.42);
+}
+
+/* Docentes */
+.classroom-directory-students {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--color-ink-soft);
+  font-size: 0.82rem;
+}
+
+.credentials-sheet {
+  margin: 0;
+  padding: 0.9rem 1rem;
+  overflow: auto;
+  border: 1px dashed var(--color-line);
+  border-radius: 0.75rem;
+  background: rgba(238, 244, 239, 0.42);
+  color: var(--color-ink);
+  font-family: ui-monospace, 'Cascadia Mono', 'Consolas', monospace;
+  font-size: 0.86rem;
+  line-height: 1.7;
+}
+
+.credentials-copy-status {
+  margin-right: auto;
+  color: var(--color-ink-soft);
+  font-size: 0.78rem;
+}
+
+.student-account-form .form-error {
+  margin-left: 0;
+  color: #b8412b;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.student-account-form .form-help {
+  margin-left: 0;
+  font-size: 0.68rem;
 }
 
 .student-account-dialog {
@@ -2616,6 +2731,8 @@ h2 {
   .student-table,
   .words-table,
   .student-directory-table,
+  .classrooms-table,
+  .classroom-students-table,
   .paired-progress-table,
   .research-directory-table,
   .research-session-table,
