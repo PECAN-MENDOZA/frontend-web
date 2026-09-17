@@ -3,7 +3,7 @@ import AppLayout from '@/app/layouts/AppLayout.vue'
 import AuthLayout from '@/app/layouts/AuthLayout.vue'
 import ResearchLayout from '@/app/layouts/ResearchLayout.vue'
 import { useAuthStore } from '@/features/auth/store/auth.store'
-import { canAccessRoute, homeForRole } from '@/features/auth/utils/access'
+import { canAccessRoute, homeForRole, requiresPasswordChange } from '@/features/auth/utils/access'
 
 const routes = [
   {
@@ -23,6 +23,20 @@ const routes = [
         path: 'login',
         name: 'login',
         component: () => import('@/features/auth/views/LoginView.vue'),
+      },
+    ],
+  },
+  {
+    // Ruta de nivel superior (no hija de /auth) para que meta.guestOnly del padre /auth
+    // no se herede en to.meta y bloquee a un docente ya autenticado.
+    path: '/change-password',
+    component: AuthLayout,
+    meta: { requiresAuth: true, roles: ['TEACHER'] },
+    children: [
+      {
+        path: '',
+        name: 'change-password',
+        component: () => import('@/features/auth/views/ChangePasswordView.vue'),
       },
     ],
   },
@@ -103,6 +117,10 @@ router.beforeEach((to) => {
 
     if (!canAccessRoute(authStore.user?.role, allowedRoles)) {
       return homeForRole(authStore.user?.role)
+    }
+
+    if (requiresPasswordChange(authStore.user, to.name)) {
+      return { name: 'change-password' }
     }
   }
 

@@ -1,7 +1,9 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import {
+  changePassword as changePasswordRequest,
   clearSession,
+  markPasswordChanged,
   restoreSession,
   signIn as signInRequest,
 } from '@/features/auth/services/auth.service'
@@ -36,6 +38,21 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function changePassword(payload) {
+    isLoading.value = true
+    errorMessage.value = ''
+    try {
+      await changePasswordRequest(payload)
+      user.value = markPasswordChanged(user.value)
+      return true
+    } catch {
+      errorMessage.value = 'No pudimos cambiar la contraseña. Verifica la contraseña actual.'
+      return false
+    } finally {
+      isLoading.value = false
+    }
+  }
+
   // Cerrar sesión avisa a los demás stores (síncrono) para que descarten los datos de la cuenta
   // sin acoplar este store a las features que los cargan.
   function signOut() {
@@ -53,6 +70,7 @@ export const useAuthStore = defineStore('auth', () => {
     isAuthenticated,
     userInitials,
     signIn,
+    changePassword,
     signOut,
   }
 })

@@ -1,7 +1,7 @@
 import { reactive } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/features/auth/store/auth.store'
-import { canAccessRoute, homeForRole } from '@/features/auth/utils/access'
+import { canAccessRoute, homeForRole, requiresPasswordChange } from '@/features/auth/utils/access'
 
 export function useAuth() {
   const route = useRoute()
@@ -23,6 +23,11 @@ export function useAuth() {
 
   function resolveDestination(redirect) {
     const role = authStore.user?.role
+
+    if (requiresPasswordChange(authStore.user, null)) {
+      return { name: 'change-password' }
+    }
+
     const home = homeForRole(role)
 
     if (!redirect) return home

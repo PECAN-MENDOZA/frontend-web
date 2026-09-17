@@ -340,6 +340,15 @@ h2 {
   text-align: center;
 }
 
+.change-password-page {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  min-height: 100vh;
+  padding: 3rem;
+  place-items: center;
+}
+
 /* App layout */
 .app-shell {
   display: grid;
