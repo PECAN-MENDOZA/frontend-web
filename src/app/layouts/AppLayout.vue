@@ -3,6 +3,7 @@ import { onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
+import ConfirmDialog from 'primevue/confirmdialog'
 import Tag from 'primevue/tag'
 import { useAuthStore } from '@/features/auth/store/auth.store'
 import { APP_NAME } from '@/shared/constants/app'
@@ -13,6 +14,7 @@ const isNavigationOpen = ref(false)
 
 const navigationItems = [
   { label: 'Resumen', icon: 'pi pi-chart-bar', to: '/dashboard' },
+  { label: 'Salones', icon: 'pi pi-th-large', to: '/classrooms' },
   { label: 'Estudiantes', icon: 'pi pi-users', to: '/students' },
 ]
 
@@ -111,5 +113,7 @@ onUnmounted(() => window.removeEventListener('auth:unauthorized', handleUnauthor
         <RouterView />
       </main>
     </section>
+
+    <ConfirmDialog />
   </div>
 </template>

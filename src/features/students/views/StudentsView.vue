@@ -5,9 +5,7 @@ import InputText from 'primevue/inputtext'
 import Message from 'primevue/message'
 import Select from 'primevue/select'
 import Skeleton from 'primevue/skeleton'
-import CreateStudentAccountDialog from '@/features/students/components/CreateStudentAccountDialog.vue'
 import StudentsTable from '@/features/students/components/StudentsTable.vue'
-import { useCreateStudentAccount } from '@/features/students/composables/useCreateStudentAccount'
 import { useStudents } from '@/features/students/composables/useStudents'
 import PageHeader from '@/shared/components/PageHeader.vue'
 import MetricCard from '@/shared/components/insights/MetricCard.vue'
@@ -22,7 +20,6 @@ const {
   averageAcceptance,
   monthOptions,
 } = useStudents()
-const { isDialogVisible, openCreateStudent, createStudent } = useCreateStudentAccount(selectedMonth)
 
 function openStudent(studentId) {
   router.push({ name: 'student-detail', params: { studentId } })
@@ -31,13 +28,12 @@ function openStudent(studentId) {
 
 <template>
   <div class="students-page">
-    <PageHeader
-      eyebrow="Directorio del aula"
-      title="Tus estudiantes."
-      description="Gestiona cuentas con PIN y revisa el progreso individual desde los datos mensuales del teclado."
-    >
+    <PageHeader eyebrow="Directorio del aula" title="Tus estudiantes.">
+      <template #description>
+        Revisa el progreso individual desde los datos mensuales del teclado. Las cuentas se crean
+        desde cada salón: <RouterLink to="/classrooms">ir a tus salones</RouterLink>.
+      </template>
       <template #actions>
-        <Button label="Crear estudiante" icon="pi pi-user-plus" @click="openCreateStudent" />
         <Select
           v-model="selectedMonth"
           :options="monthOptions"
@@ -101,14 +97,5 @@ function openStudent(studentId) {
       </div>
       <StudentsTable v-else :students="filteredStudents" @select="openStudent" />
     </section>
-
-    <CreateStudentAccountDialog
-      v-model:visible="isDialogVisible"
-      :is-saving="studentsStore.isCreating"
-      :error-message="studentsStore.creationErrorMessage"
-      :created-account="studentsStore.createdStudentAccount"
-      @submit="createStudent"
-      @close-credentials="studentsStore.clearCreatedStudentAccount"
-    />
   </div>
 </template>

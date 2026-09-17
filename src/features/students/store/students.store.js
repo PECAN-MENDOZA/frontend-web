@@ -1,7 +1,6 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import {
-  createStudentAccount as createStudentAccountRequest,
   getAcceptanceTrend,
   getErrorTypes,
   getStudentDetail,
@@ -18,12 +17,9 @@ export const useStudentsStore = defineStore('students', () => {
   const isLoading = ref(false)
   const isDetailLoading = ref(false)
   const isInsightsLoading = ref(false)
-  const isCreating = ref(false)
   const isResettingPin = ref(false)
   const errorMessage = ref('')
-  const creationErrorMessage = ref('')
   const resetPinErrorMessage = ref('')
-  const createdStudentAccount = ref(null)
   const resetPinCredentials = ref(null)
 
   async function loadStudents(month) {
@@ -71,22 +67,6 @@ export const useStudentsStore = defineStore('students', () => {
     isInsightsLoading.value = false
   }
 
-  async function createStudentAccount(student, month) {
-    isCreating.value = true
-    creationErrorMessage.value = ''
-
-    try {
-      createdStudentAccount.value = await createStudentAccountRequest(student)
-      await loadStudents(month)
-      return true
-    } catch {
-      creationErrorMessage.value = 'No pudimos crear la cuenta del estudiante. Inténtalo nuevamente.'
-      return false
-    } finally {
-      isCreating.value = false
-    }
-  }
-
   async function resetStudentPin(studentId) {
     isResettingPin.value = true
     resetPinErrorMessage.value = ''
@@ -100,11 +80,6 @@ export const useStudentsStore = defineStore('students', () => {
     } finally {
       isResettingPin.value = false
     }
-  }
-
-  function clearCreatedStudentAccount() {
-    createdStudentAccount.value = null
-    creationErrorMessage.value = ''
   }
 
   function clearResetPinCredentials() {
@@ -127,18 +102,13 @@ export const useStudentsStore = defineStore('students', () => {
     isLoading,
     isDetailLoading,
     isInsightsLoading,
-    isCreating,
     isResettingPin,
     errorMessage,
-    creationErrorMessage,
     resetPinErrorMessage,
-    createdStudentAccount,
     resetPinCredentials,
     loadStudents,
     loadStudent,
-    createStudentAccount,
     resetStudentPin,
-    clearCreatedStudentAccount,
     clearResetPinCredentials,
     clearSelectedStudent,
   }
