@@ -37,12 +37,13 @@ export function formatDuration(ms) {
   if (ms == null) return '—'
 
   const seconds = ms / 1000
-  if (seconds < 60) {
+  const roundedSeconds = Math.round(seconds)
+  if (seconds < 60 && roundedSeconds < 60) {
     return `${Number(seconds.toFixed(1)).toString().replace('.', ',')} s`
   }
 
-  const minutes = Math.floor(seconds / 60)
-  return `${minutes} min ${Math.round(seconds % 60)} s`
+  const minutes = Math.floor(roundedSeconds / 60)
+  return `${minutes} min ${roundedSeconds % 60} s`
 }
 
 export function editDetail(detailJson) {

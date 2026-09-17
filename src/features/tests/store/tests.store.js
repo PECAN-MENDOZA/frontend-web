@@ -17,9 +17,14 @@ import {
 } from '@/features/tests/services/tests.service'
 import { hasAttemptsInProgress } from '@/features/tests/utils/attempts'
 import { saveBlob } from '@/features/research/utils/download'
+import {
+  createGuardedLoader,
+  createPendingCounter,
+} from '@/features/research/utils/mutations'
 
 const GENERIC_ERROR = 'No pudimos completar la acción. Inténtalo nuevamente.'
 const DUPLICATE_CODE_ERROR = 'Ese código ya existe.'
+const PARTIAL_REFRESH_MESSAGE = 'No pudimos actualizar los datos. Usa Actualizar para reintentar.'
 
 export const useTestsStore = defineStore('tests', () => {
   const tests = ref([])
@@ -32,20 +37,59 @@ export const useTestsStore = defineStore('tests', () => {
   const isMutating = ref(false)
   const errorMessage = ref('')
   const mutationMessage = ref('')
+  const loadingStates = {
+    tests: false,
+    test: false,
+    assignments: false,
+    attempt: false,
+    results: false,
+  }
   let assignmentsPolling = null
+  let pollingRequest = null
+  let selectedTestId = null
+  let assignmentsTestId = null
+  let selectedAttemptKey = null
+  let resultsTestId = null
+  let storeGeneration = 0
+  let latestMutation = 0
+  let mutationCounter = newMutationCounter(storeGeneration)
 
-  async function load(action, apply, failureMessage) {
-    isLoading.value = true
-    errorMessage.value = ''
-    try {
-      apply(await action())
-      return true
-    } catch {
-      errorMessage.value = failureMessage
-      return false
-    } finally {
-      isLoading.value = false
-    }
+  function setLoading(name, value) {
+    loadingStates[name] = value
+    isLoading.value = Object.values(loadingStates).some(Boolean)
+  }
+
+  function newMutationCounter(generation) {
+    return createPendingCounter((pending) => {
+      if (generation === storeGeneration) isMutating.value = pending > 0
+    })
+  }
+
+  function loader(name, getSelectedId) {
+    return createGuardedLoader({
+      getSelectedStudyId: getSelectedId,
+      setLoading: (value) => setLoading(name, value),
+      setError: (message) => {
+        errorMessage.value = message
+      },
+      toMessage: (_error, fallback) => fallback,
+    })
+  }
+
+  const testsLoader = loader('tests')
+  const testLoader = loader('test', () => selectedTestId)
+  const assignmentsLoader = loader('assignments', () => assignmentsTestId)
+  const attemptLoader = loader('attempt', () => selectedAttemptKey)
+  const resultsLoader = loader('results', () => resultsTestId)
+  const loaders = [testsLoader, testLoader, assignmentsLoader, attemptLoader, resultsLoader]
+
+  async function runLoad(selectedLoader, options) {
+    const outcome = await selectedLoader.load(options)
+    return outcome.ok
+  }
+
+  function isStoreCurrent(generation) {
+    return generation === storeGeneration
   }
 
   async function mutate(
@@ -54,18 +98,40 @@ export const useTestsStore = defineStore('tests', () => {
     failureMessage = GENERIC_ERROR,
     conflictMessage = failureMessage,
   ) {
-    isMutating.value = true
-    mutationMessage.value = ''
-    try {
-      await action()
-      mutationMessage.value = successMessage
-      return true
-    } catch (error) {
-      mutationMessage.value = error?.status === 409 ? conflictMessage : failureMessage
-      return false
-    } finally {
-      isMutating.value = false
+    const generation = storeGeneration
+    const operation = ++latestMutation
+    const counter = mutationCounter
+    const isCurrent = () => isStoreCurrent(generation)
+    const isLatest = () => isCurrent() && operation === latestMutation
+
+    if (isLatest()) mutationMessage.value = ''
+
+    return counter.track(async () => {
+      try {
+        const outcome = await action(isCurrent)
+
+        if (isLatest()) {
+          mutationMessage.value =
+            outcome?.refreshOk === false
+              ? `${successMessage} ${PARTIAL_REFRESH_MESSAGE}`
+              : successMessage
+        }
+        return true
+      } catch (error) {
+        if (isLatest()) {
+          mutationMessage.value = error?.status === 409 ? conflictMessage : failureMessage
+        }
+        return false
+      }
+    })
+  }
+
+  function invalidateLoads() {
+    for (const selectedLoader of loaders) selectedLoader.invalidate()
+    for (const name of Object.keys(loadingStates)) {
+      loadingStates[name] = false
     }
+    isLoading.value = false
   }
 
   function replaceTest(test) {
@@ -75,18 +141,24 @@ export const useTestsStore = defineStore('tests', () => {
   }
 
   function loadTests() {
-    return load(
-      listTests,
-      (data) => {
+    return runLoad(testsLoader, {
+      request: listTests,
+      apply: (data) => {
         tests.value = data
       },
-      'No pudimos cargar las pruebas. Inténtalo nuevamente.',
-    )
+      fallback: 'No pudimos cargar las pruebas. Inténtalo nuevamente.',
+    })
   }
 
   function createTest(body) {
     return mutate(
-      async () => replaceTest(await createTestRequest(body)),
+      async (isCurrent) => {
+        const created = await createTestRequest(body)
+        if (isCurrent()) {
+          testsLoader.invalidate()
+          replaceTest(created)
+        }
+      },
       'Prueba creada.',
       'No pudimos crear la prueba. Inténtalo nuevamente.',
       DUPLICATE_CODE_ERROR,
@@ -94,24 +166,47 @@ export const useTestsStore = defineStore('tests', () => {
   }
 
   function loadTest(id) {
-    return load(
-      () => getTest(id),
-      (data) => {
+    if (selectedTestId !== id) {
+      stopAssignmentsPolling()
+      assignmentsLoader.invalidate()
+      attemptLoader.invalidate()
+      resultsLoader.invalidate()
+      assignmentsTestId = null
+      selectedAttemptKey = null
+      resultsTestId = null
+      selectedTest.value = null
+      draftSentences.value = []
+      assignments.value = []
+      selectedAttempt.value = null
+      results.value = null
+    }
+    selectedTestId = id
+    return runLoad(testLoader, {
+      studyId: id,
+      request: () => getTest(id),
+      apply: (data) => {
         selectedTest.value = data
         draftSentences.value = (data.sentences ?? []).map((sentence) => ({ ...sentence }))
       },
-      'No pudimos cargar la prueba. Inténtalo nuevamente.',
-    )
+      fallback: 'No pudimos cargar la prueba. Inténtalo nuevamente.',
+    })
   }
 
   function saveTest(id) {
     return mutate(
-      async () => {
+      async (isCurrent) => {
         const saved = await saveTestRequest(id, {
           title: selectedTest.value.title,
           notes: selectedTest.value.notes,
-          sentences: draftSentences.value,
+          sentences: draftSentences.value.map(({ kind, referenceText, assistance }) => ({
+            kind,
+            referenceText,
+            assistance,
+          })),
         })
+        if (!isCurrent() || selectedTestId !== id) return
+        testsLoader.invalidate()
+        testLoader.invalidate()
         selectedTest.value = saved
         draftSentences.value = (saved.sentences ?? []).map((sentence) => ({ ...sentence }))
         replaceTest(saved)
@@ -123,7 +218,14 @@ export const useTestsStore = defineStore('tests', () => {
 
   function activateTest(id) {
     return mutate(
-      async () => replaceTest(await activateTestRequest(id)),
+      async (isCurrent) => {
+        const activated = await activateTestRequest(id)
+        if (isCurrent()) {
+          testsLoader.invalidate()
+          testLoader.invalidate()
+          replaceTest(activated)
+        }
+      },
       'Prueba activada.',
       'No pudimos activar la prueba. Revisa las oraciones e inténtalo nuevamente.',
     )
@@ -131,7 +233,14 @@ export const useTestsStore = defineStore('tests', () => {
 
   function closeTest(id) {
     return mutate(
-      async () => replaceTest(await closeTestRequest(id)),
+      async (isCurrent) => {
+        const closed = await closeTestRequest(id)
+        if (isCurrent()) {
+          testsLoader.invalidate()
+          testLoader.invalidate()
+          replaceTest(closed)
+        }
+      },
       'Prueba cerrada.',
       'No pudimos cerrar la prueba. Inténtalo nuevamente.',
     )
@@ -147,8 +256,12 @@ export const useTestsStore = defineStore('tests', () => {
 
   function assign(id, body) {
     return mutate(
-      async () => {
-        assignments.value = await assignTest(id, body)
+      async (isCurrent) => {
+        const assigned = await assignTest(id, body)
+        if (isCurrent() && assignmentsTestId === id) {
+          assignmentsLoader.invalidate()
+          assignments.value = assigned
+        }
       },
       'Prueba asignada.',
       'No pudimos asignar la prueba. Inténtalo nuevamente.',
@@ -156,32 +269,45 @@ export const useTestsStore = defineStore('tests', () => {
   }
 
   function loadAssignments(id) {
-    return load(
-      () => listAssignments(id),
-      (data) => {
+    if (assignmentsTestId !== id) {
+      stopAssignmentsPolling()
+      assignmentsTestId = id
+      assignments.value = []
+    }
+    return runLoad(assignmentsLoader, {
+      studyId: id,
+      request: () => listAssignments(id),
+      apply: (data) => {
         assignments.value = data
         if (!hasAttemptsInProgress(data)) stopAssignmentsPolling()
       },
-      'No pudimos cargar las asignaciones. Inténtalo nuevamente.',
-    )
+      fallback: 'No pudimos cargar las asignaciones. Inténtalo nuevamente.',
+    })
   }
 
   function loadAttempt(id, attemptId) {
-    return load(
-      () => getAttempt(id, attemptId),
-      (data) => {
+    selectedAttemptKey = `${id}:${attemptId}`
+    return runLoad(attemptLoader, {
+      studyId: selectedAttemptKey,
+      request: () => getAttempt(id, attemptId),
+      apply: (data) => {
         selectedAttempt.value = data
       },
-      'No pudimos cargar el intento. Inténtalo nuevamente.',
-    )
+      fallback: 'No pudimos cargar el intento. Inténtalo nuevamente.',
+    })
   }
 
   function excludeAttempt(id, attemptId, reason) {
     return mutate(
-      async () => {
-        selectedAttempt.value = await excludeAttemptRequest(id, attemptId, reason)
-        assignments.value = await listAssignments(id)
-        if (results.value?.testId === id) results.value = await getResults(id)
+      async (isCurrent) => {
+        const excluded = await excludeAttemptRequest(id, attemptId, reason)
+        if (!isCurrent()) return
+
+        selectedAttempt.value = excluded
+        const refreshes = [loadAssignments(id)]
+        if (results.value?.testId === id) refreshes.push(loadResults(id))
+        const outcomes = await Promise.all(refreshes)
+        return { refreshOk: outcomes.every(Boolean) }
       },
       'Intento excluido.',
       'No pudimos excluir el intento. Inténtalo nuevamente.',
@@ -190,9 +316,12 @@ export const useTestsStore = defineStore('tests', () => {
 
   function annotate(responseId, errorCount) {
     return mutate(
-      async () => {
+      async (isCurrent) => {
         const annotated = await annotateResponse(responseId, errorCount)
+        if (!isCurrent()) return
+
         if (selectedAttempt.value) {
+          attemptLoader.invalidate()
           selectedAttempt.value = {
             ...selectedAttempt.value,
             responses: selectedAttempt.value.responses.map((response) =>
@@ -200,7 +329,9 @@ export const useTestsStore = defineStore('tests', () => {
             ),
           }
         }
-        if (results.value) results.value = await getResults(results.value.testId)
+        const resultsId = results.value?.testId
+        const refreshOk = resultsId ? await loadResults(resultsId) : true
+        return { refreshOk }
       },
       'Anotación guardada.',
       'No pudimos guardar la anotación. Inténtalo nuevamente.',
@@ -208,18 +339,23 @@ export const useTestsStore = defineStore('tests', () => {
   }
 
   function loadResults(id) {
-    return load(
-      () => getResults(id),
-      (data) => {
+    resultsTestId = id
+    return runLoad(resultsLoader, {
+      studyId: id,
+      request: () => getResults(id),
+      apply: (data) => {
         results.value = data
       },
-      'No pudimos cargar los resultados. Inténtalo nuevamente.',
-    )
+      fallback: 'No pudimos cargar los resultados. Inténtalo nuevamente.',
+    })
   }
 
   function downloadExport(id) {
     return mutate(
-      async () => saveBlob(await downloadExportRequest(id), `prueba-${id}.csv`),
+      async (isCurrent) => {
+        const download = await downloadExportRequest(id)
+        if (isCurrent()) saveBlob(download, `prueba-${id}.csv`)
+      },
       'Archivo descargado.',
       'No pudimos descargar el archivo. Inténtalo nuevamente.',
     )
@@ -227,17 +363,34 @@ export const useTestsStore = defineStore('tests', () => {
 
   function startAssignmentsPolling(id) {
     stopAssignmentsPolling()
-    if (!hasAttemptsInProgress(assignments.value)) return
-    assignmentsPolling = window.setInterval(() => loadAssignments(id), 5000)
+    if (assignmentsTestId !== id || !hasAttemptsInProgress(assignments.value)) return
+    assignmentsPolling = window.setInterval(() => {
+      if (pollingRequest) return pollingRequest
+
+      const request = loadAssignments(id)
+      pollingRequest = request
+      return request.finally(() => {
+        if (pollingRequest === request) pollingRequest = null
+      })
+    }, 5000)
   }
 
   function stopAssignmentsPolling() {
     if (assignmentsPolling !== null) window.clearInterval(assignmentsPolling)
     assignmentsPolling = null
+    pollingRequest = null
   }
 
   function reset() {
+    storeGeneration += 1
+    latestMutation += 1
+    mutationCounter = newMutationCounter(storeGeneration)
     stopAssignmentsPolling()
+    selectedTestId = null
+    assignmentsTestId = null
+    selectedAttemptKey = null
+    resultsTestId = null
+    invalidateLoads()
     tests.value = []
     selectedTest.value = null
     draftSentences.value = []

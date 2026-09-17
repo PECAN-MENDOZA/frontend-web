@@ -51,6 +51,8 @@ test('formatDuration formats seconds and minutes with es-PE decimals', () => {
   assert.equal(formatDuration(null), '—')
   assert.equal(formatDuration(7500), '7,5 s')
   assert.equal(formatDuration(65000), '1 min 5 s')
+  assert.equal(formatDuration(59999), '1 min 0 s')
+  assert.equal(formatDuration(119999), '2 min 0 s')
   assert.equal(formatDuration(0), '0 s')
 })
 
