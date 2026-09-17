@@ -17,11 +17,8 @@ const researchStore = useResearchStore()
 const isNavigationOpen = ref(false)
 
 const navigationItems = [
-  { label: 'Resumen', icon: 'pi pi-chart-bar', to: '/research' },
+  { label: 'Pruebas', icon: 'pi pi-list-check', to: '/research/tests' },
   { label: 'Docentes', icon: 'pi pi-id-card', to: '/research/teachers' },
-  { label: 'Estudio', icon: 'pi pi-book', to: '/research/study' },
-  { label: 'Sesiones', icon: 'pi pi-list', to: '/research/sessions' },
-  { label: 'Resultados', icon: 'pi pi-chart-line', to: '/research/results' },
 ]
 
 // Solo afirma una actualización que ocurrió: hora de la última recarga completa exitosa, y
@@ -82,7 +79,6 @@ onUnmounted(() => {
 
       <nav class="sidebar__navigation" aria-label="Navegación principal">
         <span class="sidebar__section-label">Datos seudonimizados</span>
-        <!-- "/research" es prefijo de todas las rutas: solo la coincidencia exacta se marca activa. -->
         <RouterLink
           v-for="item in navigationItems"
           :key="item.label"
