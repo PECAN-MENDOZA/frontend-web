@@ -83,6 +83,11 @@ const routes = [
         component: () => import('@/features/research/views/ResearchOverviewView.vue'),
       },
       {
+        path: 'teachers',
+        name: 'research-teachers',
+        component: () => import('@/features/research/views/ResearchTeachersView.vue'),
+      },
+      {
         path: 'study',
         name: 'research-study',
         component: () => import('@/features/research/views/ResearchStudyView.vue'),

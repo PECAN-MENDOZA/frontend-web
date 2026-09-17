@@ -1089,6 +1089,16 @@ h2 {
   background: rgba(238, 244, 239, 0.42);
 }
 
+/* Docentes */
+.classroom-directory-students {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--color-ink-soft);
+  font-size: 0.82rem;
+}
+
 .credentials-sheet {
   margin: 0;
   padding: 0.9rem 1rem;
