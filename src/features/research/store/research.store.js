@@ -313,6 +313,9 @@ export const useResearchStore = defineStore('research', () => {
       const result = await post(() => resetTeacherPasswordRequest(id))
 
       temporaryPassword.value = { teacher, password: result.temporaryPassword }
+      // El reinicio vuelve a exigir el cambio de contraseña: la lista se recarga para que
+      // la columna "Estado" no quede desactualizada.
+      await loadTeachers()
 
       return result
     })

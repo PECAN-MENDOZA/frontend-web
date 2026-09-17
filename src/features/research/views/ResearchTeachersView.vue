@@ -233,8 +233,8 @@ function closePasswordDialog() {
       <div v-if="passwordDialogTeacher" class="credential-reveal">
         <div class="credential-reveal__heading">
           <Tag value="Entrega única" severity="warn" />
-          <h3>La cuenta de {{ passwordDialogTeacher.username }} está lista.</h3>
-          <p>Entrega esta contraseña temporal al docente para su primer ingreso.</p>
+          <h3>Contraseña temporal de {{ passwordDialogTeacher.username }}</h3>
+          <p>Entrega esta contraseña al docente; deberá cambiarla al entrar.</p>
         </div>
 
         <Message severity="warn" :closable="false"> Solo se muestra una vez. </Message>
