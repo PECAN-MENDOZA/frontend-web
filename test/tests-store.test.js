@@ -202,6 +202,50 @@ test('excludeAttempt keeps remote success when refreshing assignments fails', as
   assert.match(testsStore.mutationMessage, /No pudimos actualizar/)
 })
 
+test('a late exclusion from test A cannot overwrite the selected attempt or assignments of B', async () => {
+  const exclusionA = deferred()
+  globalThis.fetch = (url, options) => {
+    const pathname = new URL(url).pathname
+
+    if (options.method === 'POST' && pathname.includes('/tests/a/attempts/attempt-a/exclude')) {
+      return exclusionA.promise
+    }
+    if (pathname.endsWith('/tests/a')) return Promise.resolve(json(detail('a')))
+    if (pathname.endsWith('/tests/b')) return Promise.resolve(json(detail('b')))
+    if (pathname.endsWith('/tests/a/assignments')) {
+      return Promise.resolve(
+        json([{ studentId: 'student-a', attemptStatus: 'COMPLETED', excluded: false }]),
+      )
+    }
+    if (pathname.endsWith('/tests/b/assignments')) {
+      return Promise.resolve(
+        json([{ studentId: 'student-b', attemptStatus: 'IN_PROGRESS', excluded: false }]),
+      )
+    }
+    if (pathname.endsWith('/tests/b/attempts/attempt-b')) {
+      return Promise.resolve(json({ attemptId: 'attempt-b', responses: [] }))
+    }
+    throw new Error(`Unexpected request: ${options.method} ${pathname}`)
+  }
+  const testsStore = store()
+
+  await testsStore.loadTest('a')
+  await testsStore.loadAssignments('a')
+  const exclusion = testsStore.excludeAttempt('a', 'attempt-a', 'Motivo suficiente')
+
+  await testsStore.loadTest('b')
+  await testsStore.loadAssignments('b')
+  await testsStore.loadAttempt('b', 'attempt-b')
+
+  exclusionA.resolve(
+    json({ attemptId: 'attempt-a', excludedAt: '2026-09-17T20:00:00Z', responses: [] }),
+  )
+  assert.equal(await exclusion, true, 'the remote exclusion still succeeded')
+  assert.equal(testsStore.selectedTest.id, 'b')
+  assert.equal(testsStore.selectedAttempt.attemptId, 'attempt-b')
+  assert.equal(testsStore.assignments[0].studentId, 'student-b')
+})
+
 test('annotate keeps the updated row when refreshing loaded results fails', async () => {
   const annotated = {
     responseId: 'response-1',

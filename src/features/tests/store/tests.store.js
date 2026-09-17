@@ -298,10 +298,19 @@ export const useTestsStore = defineStore('tests', () => {
   }
 
   function excludeAttempt(id, attemptId, reason) {
+    const context = { selectedTestId, assignmentsTestId, selectedAttemptKey }
+
     return mutate(
       async (isCurrent) => {
         const excluded = await excludeAttemptRequest(id, attemptId, reason)
-        if (!isCurrent()) return
+        if (
+          !isCurrent() ||
+          selectedTestId !== context.selectedTestId ||
+          assignmentsTestId !== context.assignmentsTestId ||
+          selectedAttemptKey !== context.selectedAttemptKey
+        ) {
+          return
+        }
 
         selectedAttempt.value = excluded
         const refreshes = [loadAssignments(id)]
