@@ -196,6 +196,17 @@ export const useClassroomsStore = defineStore('classrooms', () => {
     clearResetPinCredentials()
   }
 
+  // Al cerrar sesión se descartan los datos del docente anterior para que no asomen al reingresar.
+  window.addEventListener('auth:signed-out', () => {
+    classrooms.value = []
+    selectedClassroom.value = null
+    students.value = []
+    createdCredentials.value = []
+    resetPinCredentials.value = null
+    errorMessage.value = ''
+    mutationErrorMessage.value = ''
+  })
+
   return {
     classrooms,
     selectedClassroom,

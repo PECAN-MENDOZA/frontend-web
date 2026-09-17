@@ -48,6 +48,13 @@ async function submitChangePassword() {
     router.push(homeForRole(authStore.user?.role))
   }
 }
+
+// Salida explícita: sin ella, el docente quedaría atrapado en esta pantalla hasta que
+// venciera el token si no recuerda la contraseña temporal o quiere cambiar de cuenta.
+function signOut() {
+  authStore.signOut()
+  router.push({ name: 'login' })
+}
 </script>
 
 <template>
@@ -112,6 +119,17 @@ async function submitChangePassword() {
         icon-pos="right"
         :loading="authStore.isLoading"
         fluid
+      />
+
+      <Button
+        type="button"
+        label="Cerrar sesión"
+        icon="pi pi-sign-out"
+        severity="secondary"
+        text
+        fluid
+        :disabled="authStore.isLoading"
+        @click="signOut"
       />
     </form>
   </section>
