@@ -36,6 +36,7 @@ const exclusionErrorMessage = ref('')
 const pendingAction = ref(null)
 const actionMessage = ref('')
 const actionSeverity = ref('success')
+const draftTitle = ref('')
 
 const testId = computed(() => String(route.params.testId ?? ''))
 const test = computed(() => testsStore.selectedTest)
@@ -44,7 +45,7 @@ const isActive = computed(() => test.value?.status === 'ACTIVE')
 const isClosed = computed(() => test.value?.status === 'CLOSED')
 const hasInProgress = computed(() => hasAttemptsInProgress(testsStore.assignments))
 const titleError = computed(
-  () => testFormErrors({ code: test.value?.code, title: test.value?.title }).title ?? '',
+  () => testFormErrors({ code: test.value?.code, title: draftTitle.value }).title ?? '',
 )
 const hasSentenceErrors = computed(() => sentenceErrors(testsStore.draftSentences).length > 0)
 const canSave = computed(() => isDraft.value && !titleError.value && !hasSentenceErrors.value)
@@ -56,6 +57,13 @@ onMounted(loadPage)
 onUnmounted(() => testsStore.stopAssignmentsPolling())
 
 watch(testId, loadPage)
+watch(
+  () => test.value?.title,
+  (title) => {
+    draftTitle.value = title ?? ''
+  },
+  { immediate: true },
+)
 watch(hasInProgress, (isInProgress) => {
   if (isInProgress) testsStore.startAssignmentsPolling(testId.value)
   else testsStore.stopAssignmentsPolling()
@@ -102,7 +110,7 @@ async function runAction(kind, action) {
 
 function saveTest() {
   if (!canSave.value) return Promise.resolve(false)
-  return runAction('save', () => testsStore.saveTest(testId.value))
+  return runAction('save', () => testsStore.saveTest(testId.value, draftTitle.value))
 }
 
 function confirmActivation() {
@@ -225,7 +233,7 @@ function openResults() {
           <h1>
             <InputText
               v-if="isDraft"
-              v-model="test.title"
+              v-model="draftTitle"
               class="test-title-input"
               maxlength="120"
               aria-label="Título de la prueba"

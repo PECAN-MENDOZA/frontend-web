@@ -82,12 +82,12 @@ test('saveTest projects sentences to the exact PUT contract', async () => {
   const testsStore = store()
 
   await testsStore.loadTest('a')
-  assert.equal(await testsStore.saveTest('a'), true)
+  assert.equal(await testsStore.saveTest('a', 'Título editado'), true)
 
   const put = calls.find((call) => call.options.method === 'PUT')
-  assert.deepEqual(JSON.parse(put.options.body).sentences, [
-    { kind: 'FREE', referenceText: 'Texto', assistance: 'ASSISTED' },
-  ])
+  const body = JSON.parse(put.options.body)
+  assert.equal(body.title, 'Título editado')
+  assert.deepEqual(body.sentences, [{ kind: 'FREE', referenceText: 'Texto', assistance: 'ASSISTED' }])
 })
 
 test('a stale assignments response cannot replace another test or repopulate reset state', async () => {

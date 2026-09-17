@@ -94,6 +94,7 @@ const routes = [
       {
         path: 'tests/:testId/attempts/:attemptId',
         name: 'research-attempt',
+        component: () => import('@/features/tests/views/AttemptResponsesView.vue'),
       },
       {
         path: 'tests/:testId/results',

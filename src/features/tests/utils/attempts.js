@@ -1,3 +1,5 @@
+import { ASSISTANCE_LABELS, KIND_LABELS } from './sentences.js'
+
 export const ATTEMPT_STATUS_LABELS = {
   PENDING: 'Pendiente',
   IN_PROGRESS: 'En curso',
@@ -64,4 +66,48 @@ export function editLabel(edit) {
     return `${edit.written} → ${edit.expected}`
   }
   return ''
+}
+
+export const BLANK_RESPONSE_TEXT = '— en blanco —'
+export const ANNOTATION_HINT = 'Se anota al terminar el intento'
+
+export function canAnnotate(attempt) {
+  return attempt?.status === 'COMPLETED'
+}
+
+export function exclusionLabel(attempt) {
+  if (!attempt?.excludedAt) return ''
+  const reason = attempt.exclusionReason?.trim()
+  return reason ? `Excluido · ${reason}` : 'Excluido'
+}
+
+// Proyección de cada respuesta a lo que muestra la fila: etiquetas ya resueltas, duraciones
+// formateadas y la lista de ediciones automáticas (solo dictadas) lista para desplegar.
+export function responseRowsFor(attempt) {
+  return [...(attempt?.responses ?? [])]
+    .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+    .map((response) => ({
+      responseId: response.responseId,
+      position: response.position,
+      isDictated: response.kind === 'DICTATED',
+      kindLabel: KIND_LABELS[response.kind] ?? response.kind ?? '—',
+      assistanceLabel: ASSISTANCE_LABELS[response.assistance] ?? response.assistance ?? '—',
+      referenceText: response.referenceText ?? '',
+      skipped: Boolean(response.skipped),
+      finalText: response.skipped ? BLANK_RESPONSE_TEXT : (response.finalText ?? ''),
+      wordCount: response.wordCount ?? null,
+      durationLabel: formatDuration(response.durationFromFirstKeyMs),
+      durationFromStartLabel: formatDuration(response.durationFromStartMs),
+      errorCount: response.effectiveErrorCount ?? null,
+      annotatedErrorCount: response.annotatedErrorCount ?? null,
+      editLabels: editDetail(response.autoErrorDetail).map(editLabel).filter(Boolean),
+      errorSource: response.errorSource ?? null,
+      sourceLabel: errorSourceLabel(response),
+      suggestions: {
+        offered: response.suggestionsOffered ?? 0,
+        accepted: response.suggestionsAccepted ?? 0,
+        rejected: response.suggestionsRejected ?? 0,
+        undone: response.suggestionsUndone ?? 0,
+      },
+    }))
 }

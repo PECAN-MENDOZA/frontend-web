@@ -192,11 +192,11 @@ export const useTestsStore = defineStore('tests', () => {
     })
   }
 
-  function saveTest(id) {
+  function saveTest(id, title) {
     return mutate(
       async (isCurrent) => {
         const saved = await saveTestRequest(id, {
-          title: selectedTest.value.title,
+          title,
           notes: selectedTest.value.notes,
           sentences: draftSentences.value.map(({ kind, referenceText, assistance }) => ({
             kind,
