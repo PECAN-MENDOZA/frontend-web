@@ -7,6 +7,7 @@ import {
   restoreSession,
   signIn as signInRequest,
 } from '@/features/auth/services/auth.service'
+import { changePasswordErrorMessage } from '@/features/auth/utils/access'
 
 export const useAuthStore = defineStore('auth', () => {
   const session = restoreSession()
@@ -45,8 +46,8 @@ export const useAuthStore = defineStore('auth', () => {
       await changePasswordRequest(payload)
       user.value = markPasswordChanged(user.value)
       return true
-    } catch {
-      errorMessage.value = 'No pudimos cambiar la contraseña. Verifica la contraseña actual.'
+    } catch (error) {
+      errorMessage.value = changePasswordErrorMessage(error.status)
       return false
     } finally {
       isLoading.value = false

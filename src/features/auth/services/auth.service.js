@@ -73,7 +73,13 @@ export function clearSession() {
 }
 
 export function changePassword({ currentPassword, newPassword }) {
-  return api.post('/auth/teachers/change-password', { currentPassword, newPassword })
+  // Un 401 aquí es "contraseña actual incorrecta", no una sesión vencida: no debe disparar
+  // auth:unauthorized (y con ello signOut()), o dejaríamos al docente fuera sin poder reintentar.
+  return api.post(
+    '/auth/teachers/change-password',
+    { currentPassword, newPassword },
+    { skipUnauthorizedEvent: true },
+  )
 }
 
 export function markPasswordChanged(user) {

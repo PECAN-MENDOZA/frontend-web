@@ -19,6 +19,10 @@ const form = reactive({
 const validationError = ref('')
 
 function validate() {
+  if (!form.currentPassword) {
+    return 'Escribe tu contraseña actual.'
+  }
+
   if (form.newPassword.length < 8) {
     return 'La nueva contraseña debe tener al menos 8 caracteres.'
   }
