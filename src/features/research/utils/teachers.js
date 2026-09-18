@@ -12,6 +12,11 @@ export function teacherStatusLabel(teacher) {
   return teacher?.mustChangePassword ? 'Contraseña temporal' : 'Activo'
 }
 
+// El backend puede omitir fullName en cuentas antiguas: la columna muestra un guion en su lugar.
+export function teacherDisplayName(teacher) {
+  return (teacher?.fullName ?? '').trim() || '—'
+}
+
 export function temporaryPasswordNotice(teacher, password) {
   return `Usuario: ${teacher.email}\nContraseña temporal: ${password}\nDeberá cambiarla al entrar.`
 }

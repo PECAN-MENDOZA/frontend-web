@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
+  teacherDisplayName,
   teacherFormErrors,
   teacherStatusLabel,
   temporaryPasswordNotice,
@@ -28,4 +29,11 @@ test('temporaryPasswordNotice is ready to paste', () => {
     temporaryPasswordNotice({ email: 'ana@colegio.edu.pe' }, 'Abc23456xy'),
     'Usuario: ana@colegio.edu.pe\nContraseña temporal: Abc23456xy\nDeberá cambiarla al entrar.',
   )
+})
+
+test('teacherDisplayName tolerates a missing fullName', () => {
+  assert.equal(teacherDisplayName({ fullName: 'Ana Pérez' }), 'Ana Pérez')
+  assert.equal(teacherDisplayName({ fullName: null }), '—')
+  assert.equal(teacherDisplayName({ fullName: '   ' }), '—')
+  assert.equal(teacherDisplayName(undefined), '—')
 })

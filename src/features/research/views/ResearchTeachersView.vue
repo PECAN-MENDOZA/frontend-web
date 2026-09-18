@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import Button from 'primevue/button'
 import Column from 'primevue/column'
 import DataTable from 'primevue/datatable'
@@ -10,7 +10,11 @@ import Tag from 'primevue/tag'
 import CreateTeacherDialog from '@/features/research/components/CreateTeacherDialog.vue'
 import { useResearchStore } from '@/features/research/store/research.store'
 import { copyText } from '@/features/research/utils/clipboard'
-import { teacherStatusLabel, temporaryPasswordNotice } from '@/features/research/utils/teachers'
+import {
+  teacherDisplayName,
+  teacherStatusLabel,
+  temporaryPasswordNotice,
+} from '@/features/research/utils/teachers'
 import PageHeader from '@/shared/components/PageHeader.vue'
 
 const TEACHER_STATUS_SEVERITIES = { 'Contraseña temporal': 'warn', Activo: 'success' }
@@ -30,10 +34,15 @@ const passwordDialogNotice = computed(() => {
   return state ? temporaryPasswordNotice(state.teacher, state.password) : ''
 })
 
-onMounted(() => {
+onMounted(reload)
+// La contraseña temporal "solo se muestra una vez": si el investigador sale de la vista sin
+// pulsar Listo, el diálogo no debe reaparecer al volver.
+onUnmounted(() => researchStore.clearTemporaryPassword())
+
+function reload() {
   researchStore.loadTeachers()
   researchStore.loadClassroomDirectory()
-})
+}
 
 function openCreateTeacher() {
   createErrorMessage.value = ''
@@ -93,8 +102,8 @@ function closePasswordDialog() {
           icon="pi pi-refresh"
           severity="secondary"
           outlined
-          :loading="researchStore.isTeachersLoading"
-          @click="researchStore.loadTeachers"
+          :loading="researchStore.isTeachersLoading || researchStore.isClassroomDirectoryLoading"
+          @click="reload"
         />
       </template>
     </PageHeader>
@@ -126,6 +135,11 @@ function closePasswordDialog() {
             Aún no hay docentes. Crea la primera cuenta para que empiece a registrar salones.
           </p>
         </template>
+        <Column header="Nombre">
+          <template #body="{ data }">
+            {{ teacherDisplayName(data) }}
+          </template>
+        </Column>
         <Column field="username" header="Usuario" />
         <Column field="email" header="Correo" />
         <Column field="institution" header="Institución" />

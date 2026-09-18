@@ -24,8 +24,9 @@ export function useAuth() {
   function resolveDestination(redirect) {
     const role = authStore.user?.role
 
+    // El enlace profundo se conserva en la query para retomarlo tras cambiar la contraseña.
     if (requiresPasswordChange(authStore.user, null)) {
-      return { name: 'change-password' }
+      return { name: 'change-password', query: redirect ? { redirect } : {} }
     }
 
     const home = homeForRole(role)
