@@ -2,11 +2,14 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   PRESETS,
+  formatClock,
   formatRelative,
+  fromIsoDate,
   periodErrors,
   periodLabel,
   periodQuery,
   presetRange,
+  toIsoDate,
   todayLima,
 } from '../src/features/insights/utils/period.js'
 
@@ -49,6 +52,13 @@ test('periodLabel formats a single day and a range in es-PE', () => {
   )
 })
 
+test('periodLabel repeats the year of "from" when the range crosses a year boundary', () => {
+  assert.equal(
+    periodLabel({ from: '2025-12-28', to: '2026-01-03' }),
+    '28 de diciembre de 2025 – 3 de enero de 2026',
+  )
+})
+
 test('periodErrors flags an inverted range, one over 92 days, and accepts a valid one', () => {
   assert.equal(periodErrors({ from: '2026-09-10', to: '2026-09-17' }), '')
   assert.equal(
@@ -67,4 +77,27 @@ test('formatRelative renders minutes, hours, "ayer", an absolute date, and a das
   assert.equal(formatRelative('2026-09-10T20:00:00Z', now), '10/09/2026')
   assert.equal(formatRelative(null, now), '—')
   assert.equal(formatRelative('not a date', now), '—')
+})
+
+test('toIsoDate and fromIsoDate convert between DatePicker dates and YYYY-MM-DD', () => {
+  // DatePicker entrega medianoche local del día elegido: se usan los campos locales, no UTC.
+  assert.equal(toIsoDate(new Date(2026, 8, 7)), '2026-09-07')
+  assert.equal(toIsoDate(null), '')
+  assert.equal(toIsoDate(new Date('not a date')), '')
+
+  const date = fromIsoDate('2026-09-07')
+  assert.deepEqual([date.getFullYear(), date.getMonth(), date.getDate()], [2026, 8, 7])
+  assert.equal(fromIsoDate(''), null)
+  assert.equal(fromIsoDate(null), null)
+  assert.equal(toIsoDate(fromIsoDate('2026-01-31')), '2026-01-31')
+})
+
+test('formatClock shows the Lima time, with the day when it is not today, and a dash for null', () => {
+  const now = new Date('2026-09-17T20:00:00Z') // 15:00 en Lima, 2026-09-17
+
+  assert.equal(formatClock('2026-09-17T14:05:00Z', now), '09:05')
+  assert.equal(formatClock('2026-09-18T03:30:00Z', now), '22:30') // 17 de septiembre en Lima
+  assert.equal(formatClock('2026-09-10T20:07:00Z', now), '10/09 15:07')
+  assert.equal(formatClock(null, now), '—')
+  assert.equal(formatClock('not a date', now), '—')
 })

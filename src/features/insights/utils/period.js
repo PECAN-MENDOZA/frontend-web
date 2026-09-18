@@ -104,7 +104,10 @@ export function periodLabel({ from, to }) {
 
   if (sameMonth) return `${fromDate.getUTCDate()} – ${dayMonthYearLabel(toDate)}`
 
-  return `${dayMonthLabel(fromDate)} – ${dayMonthYearLabel(toDate)}`
+  const sameYear = fromDate.getUTCFullYear() === toDate.getUTCFullYear()
+  const fromLabel = sameYear ? dayMonthLabel(fromDate) : dayMonthYearLabel(fromDate)
+
+  return `${fromLabel} – ${dayMonthYearLabel(toDate)}`
 }
 
 /** Mensaje de validación del periodo, o '' si es válido. Refleja las reglas del backend. */
@@ -120,6 +123,44 @@ export function periodErrors({ from, to }) {
   if (days > MAX_DAYS) return 'Máximo 92 días.'
 
   return ''
+}
+
+// Conversión con el DatePicker de PrimeVue, que entrega y espera medianoche local del día
+// elegido: se leen y construyen los campos locales para no correr el día al cambiar de huso.
+const pad2 = (value) => String(value).padStart(2, '0')
+
+/** Date local → 'YYYY-MM-DD'; '' si es nula o inválida. */
+export function toIsoDate(date) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return ''
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`
+}
+
+/** 'YYYY-MM-DD' → Date a medianoche local; null si está vacía. */
+export function fromIsoDate(iso) {
+  if (!iso) return null
+  const [year, month, day] = iso.split('-').map(Number)
+  return new Date(year, month - 1, day)
+}
+
+const limaClockFormatter = new Intl.DateTimeFormat('en-GB', {
+  timeZone: LIMA_ZONE,
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+})
+
+/** '14:32' si fue hoy (en Lima); '10/09 14:32' si fue otro día; '—' si instant es nulo o inválido. */
+export function formatClock(instant, now = new Date()) {
+  if (!instant) return '—'
+
+  const date = new Date(instant)
+  if (Number.isNaN(date.getTime())) return '—'
+
+  const clock = limaClockFormatter.format(date)
+  if (todayLima(date) === todayLima(now)) return clock
+
+  const [, month, day] = limaDateFormatter.format(date).split('-')
+  return `${day}/${month} ${clock}`
 }
 
 /** '10/09/2026' en Lima, a partir de una fecha o instante cualquiera. */

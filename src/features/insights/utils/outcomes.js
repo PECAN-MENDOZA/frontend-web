@@ -40,6 +40,24 @@ export function outcomeSummary(help) {
   })
 }
 
+/**
+ * Etiquetas para las tarjetas del salón a partir de los conteos de desenlaces
+ * (ClassroomActivityResponse.students[].outcomes): solo los que ocurrieron, en el orden fijo.
+ */
+export function outcomeTags(outcomes) {
+  return OUTCOME_ORDER.flatMap((key) => {
+    const count = outcomes?.[COUNT_FIELD[key]] ?? 0
+    if (count === 0) return []
+    return [{ key, label: OUTCOME_LABELS[key], count, severity: OUTCOME_SEVERITIES[key] }]
+  })
+}
+
+/** 'Sin correcciones' | '1 corrección' | '7 correcciones'. */
+export function correctionsLabel(count) {
+  if (!count) return 'Sin correcciones'
+  return count === 1 ? '1 corrección' : `${count} correcciones`
+}
+
 function words(text) {
   return (text ?? '').trim().split(/\s+/).filter(Boolean)
 }

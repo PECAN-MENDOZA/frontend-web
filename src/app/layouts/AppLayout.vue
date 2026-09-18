@@ -13,7 +13,7 @@ const authStore = useAuthStore()
 const isNavigationOpen = ref(false)
 
 const navigationItems = [
-  { label: 'Resumen', icon: 'pi pi-chart-bar', to: '/dashboard' },
+  { label: 'Salón hoy', icon: 'pi pi-sun', to: '/dashboard' },
   { label: 'Salones', icon: 'pi pi-th-large', to: '/classrooms' },
   { label: 'Estudiantes', icon: 'pi pi-users', to: '/students' },
 ]

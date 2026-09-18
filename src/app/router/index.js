@@ -48,7 +48,7 @@ const routes = [
       {
         path: 'dashboard',
         name: 'dashboard',
-        component: () => import('@/features/dashboard/views/DashboardView.vue'),
+        component: () => import('@/features/insights/views/ClassroomTodayView.vue'),
       },
       {
         path: 'classrooms',

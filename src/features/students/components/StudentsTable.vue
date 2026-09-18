@@ -4,7 +4,7 @@ import Button from 'primevue/button'
 import Column from 'primevue/column'
 import DataTable from 'primevue/datatable'
 import Tag from 'primevue/tag'
-import { formatPercentage, getRateSeverity, getStatusSeverity } from '@/features/dashboard/utils/formatters'
+import { formatPercentage, getRateSeverity, getStatusSeverity } from '@/features/students/utils/formatters'
 
 defineProps({
   students: {
