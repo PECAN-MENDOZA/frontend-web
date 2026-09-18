@@ -10,7 +10,7 @@ import ErrorTypesBreakdown from '@/features/insights/components/ErrorTypesBreakd
 import PeriodPicker from '@/features/insights/components/PeriodPicker.vue'
 import RecentCorrectionsList from '@/features/insights/components/RecentCorrectionsList.vue'
 import { useInsightsStore } from '@/features/insights/store/insights.store.js'
-import { periodErrors, periodLabel, presetRange } from '@/features/insights/utils/period.js'
+import { periodErrors, periodLabel } from '@/features/insights/utils/period.js'
 import PageHeader from '@/shared/components/PageHeader.vue'
 
 const router = useRouter()
@@ -42,14 +42,6 @@ async function loadClassroom() {
   await insightsStore.loadClassroomToday()
 }
 
-// Los presets guardados se recalculan al abrir: "Hoy" persistido ayer debe seguir siendo hoy.
-function refreshPreset() {
-  const { preset } = insightsStore.period
-  if (preset && preset !== 'custom') {
-    insightsStore.setPeriod({ ...presetRange(preset), preset })
-  }
-}
-
 async function ensureClassrooms() {
   if (!hasClassrooms.value && !(await insightsStore.loadClassrooms())) return false
 
@@ -77,7 +69,7 @@ function openStudent(studentId) {
 }
 
 onMounted(async () => {
-  refreshPreset()
+  insightsStore.refreshPreset()
   if (await ensureClassrooms()) await loadClassroom()
 })
 </script>

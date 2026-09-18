@@ -48,7 +48,7 @@ function defaultPeriod() {
 }
 
 function emptyStudent() {
-  return { errors: null, help: null, writings: [], tests: [] }
+  return { id: null, errors: null, help: null, writings: [], tests: [] }
 }
 
 export const useInsightsStore = defineStore('insights', () => {
@@ -61,10 +61,12 @@ export const useInsightsStore = defineStore('insights', () => {
   const student = ref(emptyStudent())
   const live = ref([])
   const isLoading = ref(false)
+  const isLiveLoading = ref(false)
   const isDownloading = ref(false)
   const errorMessage = ref('')
+  const liveError = ref('')
   const downloadMessage = ref('')
-  const loadingStates = { classrooms: false, classroom: false, student: false, live: false }
+  const loadingStates = { classrooms: false, classroom: false, student: false }
   let livePolling = null
   let livePollingRequest = null
 
@@ -87,11 +89,26 @@ export const useInsightsStore = defineStore('insights', () => {
   const classroomLoader = loader('classroom', () => selectedClassroomId.value)
   let studentLoaderId = null
   const studentLoader = loader('student', () => studentLoaderId)
-  const liveLoader = loader('live')
+  // El sondeo de /tests/live tiene sus propias banderas: un fallo del sondeo no borra el error de
+  // otra carga, ni su carga enciende el indicador general del panel.
+  const liveLoader = createGuardedLoader({
+    setLoading: (value) => {
+      isLiveLoading.value = value
+    },
+    setError: (message) => {
+      liveError.value = message
+    },
+  })
 
   function setPeriod(nextPeriod) {
     period.value = nextPeriod
     writeStored(PERIOD_KEY, nextPeriod)
+  }
+
+  // Los presets guardados se recalculan al abrir una vista: "Hoy" persistido ayer sigue siendo hoy.
+  function refreshPreset() {
+    const { preset } = period.value
+    if (preset && preset !== 'custom') setPeriod({ ...presetRange(preset), preset })
   }
 
   function selectClassroom(classroomId) {
@@ -151,7 +168,7 @@ export const useInsightsStore = defineStore('insights', () => {
           getStudentTests(studentId),
         ]),
       apply: ([errors, help, writings, tests]) => {
-        student.value = { errors, help, writings, tests }
+        student.value = { id: studentId, errors, help, writings, tests }
       },
       fallback: 'No pudimos cargar la ficha del alumno. Inténtalo nuevamente.',
     })
@@ -222,8 +239,10 @@ export const useInsightsStore = defineStore('insights', () => {
     student.value = emptyStudent()
     live.value = []
     isLoading.value = false
+    isLiveLoading.value = false
     isDownloading.value = false
     errorMessage.value = ''
+    liveError.value = ''
     downloadMessage.value = ''
     // El salón elegido es de este docente; el periodo es solo preferencia de UI y se conserva.
     writeStored(CLASSROOM_KEY, null)
@@ -241,10 +260,13 @@ export const useInsightsStore = defineStore('insights', () => {
     student,
     live,
     isLoading,
+    isLiveLoading,
     isDownloading,
     errorMessage,
+    liveError,
     downloadMessage,
     setPeriod,
+    refreshPreset,
     selectClassroom,
     loadClassrooms,
     loadClassroomToday,

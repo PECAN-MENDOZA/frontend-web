@@ -68,7 +68,12 @@ const routes = [
       {
         path: 'students/:studentId',
         name: 'student-detail',
-        component: () => import('@/features/students/views/StudentDetailView.vue'),
+        component: () => import('@/features/insights/views/StudentTodayView.vue'),
+      },
+      {
+        path: 'tests/live',
+        name: 'tests-live',
+        component: () => import('@/features/insights/views/LiveTestsView.vue'),
       },
     ],
   },
