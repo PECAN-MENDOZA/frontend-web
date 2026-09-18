@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
 import ConfirmDialog from 'primevue/confirmdialog'
@@ -9,6 +9,7 @@ import { useAuthStore } from '@/features/auth/store/auth.store'
 import { useInsightsStore } from '@/features/insights/store/insights.store.js'
 import { APP_NAME } from '@/shared/constants/app'
 
+const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const insightsStore = useInsightsStore()
@@ -40,7 +41,8 @@ function handleUnauthorized() {
 
 onMounted(() => {
   window.addEventListener('auth:unauthorized', handleUnauthorized)
-  insightsStore.loadLive()
+  // Al entrar directamente a /tests/live la propia vista ya consulta; evitar la doble carga.
+  if (route.name !== 'tests-live') insightsStore.loadLive()
 })
 onUnmounted(() => window.removeEventListener('auth:unauthorized', handleUnauthorized))
 </script>
