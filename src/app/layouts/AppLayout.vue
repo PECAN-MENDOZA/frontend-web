@@ -1,21 +1,28 @@
 <script setup>
-import { onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
 import ConfirmDialog from 'primevue/confirmdialog'
 import Tag from 'primevue/tag'
 import { useAuthStore } from '@/features/auth/store/auth.store'
+import { useInsightsStore } from '@/features/insights/store/insights.store.js'
 import { APP_NAME } from '@/shared/constants/app'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const insightsStore = useInsightsStore()
 const isNavigationOpen = ref(false)
 
+// El punto de "Prueba en curso" refleja la última consulta a /tests/live (una al entrar al
+// panel y las de la propia vista); el sondeo solo corre dentro de esa vista.
+const hasLiveTests = computed(() => insightsStore.live.length > 0)
+
 const navigationItems = [
-  { label: 'Resumen', icon: 'pi pi-chart-bar', to: '/dashboard' },
+  { label: 'Salón hoy', icon: 'pi pi-sun', to: '/dashboard' },
   { label: 'Salones', icon: 'pi pi-th-large', to: '/classrooms' },
   { label: 'Estudiantes', icon: 'pi pi-users', to: '/students' },
+  { label: 'Prueba en curso', icon: 'pi pi-clock', to: '/tests/live', live: true },
 ]
 
 function closeNavigation() {
@@ -31,7 +38,10 @@ function handleUnauthorized() {
   router.push({ name: 'login' })
 }
 
-onMounted(() => window.addEventListener('auth:unauthorized', handleUnauthorized))
+onMounted(() => {
+  window.addEventListener('auth:unauthorized', handleUnauthorized)
+  insightsStore.loadLive()
+})
 onUnmounted(() => window.removeEventListener('auth:unauthorized', handleUnauthorized))
 </script>
 
@@ -64,6 +74,12 @@ onUnmounted(() => window.removeEventListener('auth:unauthorized', handleUnauthor
         >
           <i :class="item.icon"></i>
           <span>{{ item.label }}</span>
+          <span
+            v-if="item.live && hasLiveTests"
+            class="sidebar__dot"
+            role="img"
+            aria-label="Hay estudiantes en una prueba"
+          ></span>
         </RouterLink>
       </nav>
 

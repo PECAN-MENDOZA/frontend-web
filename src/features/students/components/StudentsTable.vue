@@ -1,12 +1,12 @@
 <script setup>
-import Avatar from 'primevue/avatar'
+import { computed } from 'vue'
 import Button from 'primevue/button'
 import Column from 'primevue/column'
 import DataTable from 'primevue/datatable'
-import Tag from 'primevue/tag'
-import { formatPercentage, getRateSeverity, getStatusSeverity } from '@/features/dashboard/utils/formatters'
+import { formatRelative } from '@/features/insights/utils/period.js'
 
-defineProps({
+// Directorio simple: quién es, en qué salón está y cuándo usó el teclado por última vez.
+const props = defineProps({
   students: {
     type: Array,
     required: true,
@@ -14,54 +14,55 @@ defineProps({
 })
 
 defineEmits(['select'])
+
+const rows = computed(() => {
+  const now = new Date()
+
+  return props.students.map((student) => ({
+    ...student,
+    lastAccessLabel: formatRelative(student.lastAccessAt, now),
+  }))
+})
 </script>
 
 <template>
   <DataTable
-    :value="students"
+    :value="rows"
     class="student-directory-table"
     paginator
     :rows="8"
     :rows-per-page-options="[8, 15]"
-    table-style="min-width: 58rem"
+    table-style="min-width: 40rem"
   >
-    <Column header="Estudiante">
+    <Column header="Nombre">
       <template #body="{ data }">
-        <div class="student-cell">
-          <Avatar :label="data.initials" shape="circle" />
-          <div>
-            <strong>{{ data.name }}</strong>
-            <span>{{ data.alias }}</span>
-          </div>
-        </div>
+        <strong>{{ data.realName }}</strong>
+      </template>
+    </Column>
+    <Column header="Usuario">
+      <template #body="{ data }">
+        <span class="classroom-username">{{ data.username }}</span>
       </template>
     </Column>
     <Column header="Salón">
       <template #body="{ data }">
-        <span :class="{ 'signal-label': !data.classroomName }">{{ data.classroomName || 'Sin salón' }}</span>
+        <span :class="{ 'table-muted': !data.classroomName }">
+          {{ data.classroomName || 'Sin salón' }}
+        </span>
       </template>
     </Column>
-    <Column header="Aceptación">
+    <Column header="Última actividad">
       <template #body="{ data }">
-        <Tag :value="formatPercentage(data.acceptanceRate)" :severity="getRateSeverity(data.acceptanceRate)" />
+        <time v-if="data.lastAccessAt" :datetime="data.lastAccessAt">
+          {{ data.lastAccessLabel }}
+        </time>
+        <span v-else class="table-muted">Sin actividad</span>
       </template>
     </Column>
-    <Column field="totalSubmissions" header="Envíos" />
-    <Column field="recurringWords" header="Palabras" />
-    <Column header="Palabra recurrente">
-      <template #body="{ data }">
-        <span class="signal-label">{{ data.primarySignal }}</span>
-      </template>
-    </Column>
-    <Column header="Estado">
-      <template #body="{ data }">
-        <Tag :value="data.status" :severity="getStatusSeverity(data.status)" rounded />
-      </template>
-    </Column>
-    <Column header="Perfil">
+    <Column header="Ficha">
       <template #body="{ data }">
         <Button
-          label="Ver"
+          label="Ver ficha"
           icon="pi pi-arrow-right"
           icon-pos="right"
           text

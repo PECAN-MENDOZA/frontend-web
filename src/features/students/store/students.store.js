@@ -1,70 +1,31 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import {
-  getAcceptanceTrend,
-  getErrorTypes,
-  getStudentDetail,
   getStudents,
   resetStudentPin as resetStudentPinRequest,
 } from '@/features/students/services/students.service'
-import { getMonthRange } from '@/shared/utils/month'
 
 export const useStudentsStore = defineStore('students', () => {
   const students = ref([])
-  const selectedStudent = ref(null)
-  const acceptanceTrend = ref(null)
-  const errorTypes = ref(null)
   const isLoading = ref(false)
-  const isDetailLoading = ref(false)
-  const isInsightsLoading = ref(false)
   const isResettingPin = ref(false)
   const errorMessage = ref('')
   const resetPinErrorMessage = ref('')
   const resetPinCredentials = ref(null)
 
-  async function loadStudents(month) {
+  async function loadStudents() {
     isLoading.value = true
     errorMessage.value = ''
 
     try {
-      students.value = await getStudents(month)
+      students.value = await getStudents()
+      return true
     } catch {
       errorMessage.value = 'No pudimos cargar tus estudiantes. Inténtalo nuevamente.'
+      return false
     } finally {
       isLoading.value = false
     }
-  }
-
-  async function loadStudent(studentId, month) {
-    isDetailLoading.value = true
-    errorMessage.value = ''
-
-    loadStudentInsights(studentId, month)
-
-    try {
-      selectedStudent.value = await getStudentDetail(studentId, month)
-    } catch {
-      selectedStudent.value = null
-      errorMessage.value = 'No pudimos cargar el perfil del estudiante. Inténtalo nuevamente.'
-    } finally {
-      isDetailLoading.value = false
-    }
-  }
-
-  // La tendencia y los tipos de error son complementarios: si fallan no deben
-  // tumbar el perfil, así que se cargan aparte y cada uno cae a un valor vacío.
-  async function loadStudentInsights(studentId, month) {
-    isInsightsLoading.value = true
-    const { from, to } = getMonthRange(month)
-
-    const [trend, types] = await Promise.all([
-      getAcceptanceTrend(studentId, from, to).catch(() => null),
-      getErrorTypes(studentId, month).catch(() => null),
-    ])
-
-    acceptanceTrend.value = trend
-    errorTypes.value = types
-    isInsightsLoading.value = false
   }
 
   async function resetStudentPin(studentId) {
@@ -87,29 +48,25 @@ export const useStudentsStore = defineStore('students', () => {
     resetPinErrorMessage.value = ''
   }
 
-  function clearSelectedStudent() {
-    selectedStudent.value = null
-    acceptanceTrend.value = null
-    errorTypes.value = null
+  function reset() {
+    students.value = []
+    isLoading.value = false
+    errorMessage.value = ''
     clearResetPinCredentials()
   }
 
+  window.addEventListener('auth:signed-out', reset)
+
   return {
     students,
-    selectedStudent,
-    acceptanceTrend,
-    errorTypes,
     isLoading,
-    isDetailLoading,
-    isInsightsLoading,
     isResettingPin,
     errorMessage,
     resetPinErrorMessage,
     resetPinCredentials,
     loadStudents,
-    loadStudent,
     resetStudentPin,
     clearResetPinCredentials,
-    clearSelectedStudent,
+    reset,
   }
 })
