@@ -246,6 +246,33 @@ test('a late exclusion from test A cannot overwrite the selected attempt or assi
   assert.equal(testsStore.assignments[0].studentId, 'student-b')
 })
 
+test('loader errors surface the translated backend message', async () => {
+  globalThis.fetch = async () => json({ message: 'Test not found' }, 404)
+  const testsStore = store()
+
+  await testsStore.loadTest('missing')
+  assert.equal(testsStore.errorMessage, 'No encontramos la prueba.')
+})
+
+test('mutate errors surface the translated backend message, keeping the 409 mapping', async () => {
+  globalThis.fetch = async (url, options) =>
+    options.method === 'PUT'
+      ? json({ message: 'Test is not editable once activated' }, 400)
+      : json(detail('a'))
+  const testsStore = store()
+
+  await testsStore.loadTest('a')
+  assert.equal(await testsStore.saveTest('a', 'Nuevo título'), false)
+  assert.equal(testsStore.mutationMessage, 'La prueba ya está activada.')
+
+  globalThis.fetch = async (url, options) =>
+    options.method === 'POST' ? json({ message: 'Test code already exists' }, 409) : json([])
+  const conflictStore = store()
+
+  assert.equal(await conflictStore.createTest({ code: 'AAA', title: 'A' }), false)
+  assert.equal(conflictStore.mutationMessage, 'Ese código ya existe.')
+})
+
 test('annotate keeps the updated row when refreshing loaded results fails', async () => {
   const annotated = {
     responseId: 'response-1',

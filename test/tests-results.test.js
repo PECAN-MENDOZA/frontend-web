@@ -51,6 +51,20 @@ test('resultsBanners reports incomplete results, insufficient sample and manual 
   ])
 })
 
+test('resultsBanners subtracts excluded attempts from the insufficient-sample count', () => {
+  assert.deepEqual(
+    resultsBanners({
+      sampleInsufficient: true,
+      minSample: 8,
+      sample: { completed: 9, excluded: 2 },
+    }),
+    [
+      { severity: 'warn', text: 'Muestra insuficiente (7 de 8).' },
+      { severity: 'info', text: 'Diseño manual: la condición no está contrabalanceada.' },
+    ],
+  )
+})
+
 test('conditionRows maps condition metrics into table-ready rows', () => {
   const conditions = {
     ASSISTED: {

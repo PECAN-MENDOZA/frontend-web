@@ -66,9 +66,10 @@ export function resultsBanners(results) {
     })
   }
   if (results?.sampleInsufficient) {
+    const analyzed = (results.sample?.completed ?? 0) - (results.sample?.excluded ?? 0)
     banners.push({
       severity: 'warn',
-      text: `Muestra insuficiente (${results.sample?.completed ?? 0} de ${results.minSample}).`,
+      text: `Muestra insuficiente (${analyzed} de ${results.minSample}).`,
     })
   }
   banners.push({ severity: 'info', text: MANUAL_DESIGN_NOTICE })

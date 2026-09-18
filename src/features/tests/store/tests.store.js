@@ -17,6 +17,7 @@ import {
 } from '@/features/tests/services/tests.service'
 import { hasAttemptsInProgress } from '@/features/tests/utils/attempts'
 import { saveBlob } from '@/features/research/utils/download'
+import { requestErrorMessage } from '@/features/research/utils/errors'
 import {
   createGuardedLoader,
   createPendingCounter,
@@ -72,7 +73,6 @@ export const useTestsStore = defineStore('tests', () => {
       setError: (message) => {
         errorMessage.value = message
       },
-      toMessage: (_error, fallback) => fallback,
     })
   }
 
@@ -119,7 +119,10 @@ export const useTestsStore = defineStore('tests', () => {
         return true
       } catch (error) {
         if (isLatest()) {
-          mutationMessage.value = error?.status === 409 ? conflictMessage : failureMessage
+          mutationMessage.value = requestErrorMessage(
+            error,
+            error?.status === 409 ? conflictMessage : failureMessage,
+          )
         }
         return false
       }
@@ -363,7 +366,9 @@ export const useTestsStore = defineStore('tests', () => {
     return mutate(
       async (isCurrent) => {
         const download = await downloadExportRequest(id)
-        if (isCurrent()) saveBlob(download, `prueba-${id}.csv`)
+        if (isCurrent()) {
+          saveBlob(download, `test-${selectedTest.value?.code ?? id}-responses.csv`)
+        }
       },
       'Archivo descargado.',
       'No pudimos descargar el archivo. Inténtalo nuevamente.',
