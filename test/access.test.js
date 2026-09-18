@@ -4,6 +4,7 @@ import {
   canAccessRoute,
   changePasswordErrorMessage,
   homeForRole,
+  nextRouteAfterPasswordChange,
   requiresPasswordChange,
 } from '../src/features/auth/utils/access.js'
 
@@ -49,4 +50,26 @@ test('changePasswordErrorMessage falls back to a generic message for any other s
     changePasswordErrorMessage(undefined),
     'No pudimos cambiar la contraseña. Inténtalo nuevamente.',
   )
+})
+
+test('requiresPasswordChange only applies to teachers', () => {
+  assert.equal(
+    requiresPasswordChange({ role: 'RESEARCHER', mustChangePassword: true }, 'research-tests'),
+    false,
+  )
+  assert.equal(requiresPasswordChange({ mustChangePassword: true }, 'dashboard'), false)
+})
+
+test('nextRouteAfterPasswordChange keeps an internal redirect and falls back to the home', () => {
+  assert.equal(nextRouteAfterPasswordChange('/students/7?tab=tests', 'TEACHER'), '/students/7?tab=tests')
+  assert.equal(nextRouteAfterPasswordChange(undefined, 'TEACHER'), '/dashboard')
+  assert.equal(nextRouteAfterPasswordChange('', 'TEACHER'), '/dashboard')
+  assert.equal(nextRouteAfterPasswordChange(['/a', '/b'], 'TEACHER'), '/dashboard')
+})
+
+test('nextRouteAfterPasswordChange rejects external URLs and the change-password page itself', () => {
+  assert.equal(nextRouteAfterPasswordChange('https://evil.example', 'TEACHER'), '/dashboard')
+  assert.equal(nextRouteAfterPasswordChange('//evil.example', 'TEACHER'), '/dashboard')
+  assert.equal(nextRouteAfterPasswordChange('/change-password', 'TEACHER'), '/dashboard')
+  assert.equal(nextRouteAfterPasswordChange('/change-password?redirect=/x', 'RESEARCHER'), '/research')
 })

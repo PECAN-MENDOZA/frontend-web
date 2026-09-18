@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import DatePicker from 'primevue/datepicker'
 import SelectButton from 'primevue/selectbutton'
 import {
@@ -25,7 +25,13 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue'])
 
-const today = new Date()
+// Se recalcula al abrir cada calendario: una pestaña abierta pasada la medianoche no debe
+// seguir limitando a "ayer".
+const today = ref(new Date())
+
+function refreshToday() {
+  today.value = new Date()
+}
 
 const preset = computed({
   get: () => props.modelValue.preset ?? 'custom',
@@ -78,6 +84,7 @@ const validationMessage = computed(() => periodErrors(props.modelValue))
           show-icon
           icon-display="input"
           :invalid="Boolean(validationMessage)"
+          @show="refreshToday"
         />
       </label>
       <label class="period-picker__field">
@@ -90,6 +97,7 @@ const validationMessage = computed(() => periodErrors(props.modelValue))
           show-icon
           icon-display="input"
           :invalid="Boolean(validationMessage)"
+          @show="refreshToday"
         />
       </label>
       <small v-if="validationMessage" class="period-picker__error" role="alert">

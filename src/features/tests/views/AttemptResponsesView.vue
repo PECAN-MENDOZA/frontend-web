@@ -78,13 +78,9 @@ async function loadPage() {
   await Promise.all(loads)
 }
 
-function showMutationResult(wasSuccessful) {
+function showMutationResult() {
   actionMessage.value = testsStore.mutationMessage
-  actionSeverity.value = wasSuccessful
-    ? testsStore.mutationMessage.includes('No pudimos actualizar')
-      ? 'warn'
-      : 'success'
-    : 'error'
+  actionSeverity.value = testsStore.mutationSeverity
 }
 
 async function annotate(responseId, errorCount) {
@@ -92,7 +88,8 @@ async function annotate(responseId, errorCount) {
   actionMessage.value = ''
 
   try {
-    showMutationResult(await testsStore.annotate(responseId, errorCount))
+    await testsStore.annotate(responseId, errorCount)
+    showMutationResult()
   } finally {
     pendingAction.value = null
   }
@@ -110,7 +107,7 @@ async function excludeAttempt(reason) {
   try {
     const wasSuccessful = await testsStore.excludeAttempt(testId.value, attemptId.value, reason)
     if (wasSuccessful) {
-      showMutationResult(true)
+      showMutationResult()
       isReasonDialogVisible.value = false
     } else {
       exclusionErrorMessage.value = testsStore.mutationMessage

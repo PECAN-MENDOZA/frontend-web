@@ -38,9 +38,15 @@ export function attemptLabel(summary) {
   return parts.length ? parts.join(' · ') : 'Prueba'
 }
 
-/** 'Oración 4 de 20' para un intento en curso. */
+/**
+ * 'Oración 4 de 20' para un intento en curso. La posición se acota al total: entre la última
+ * oración terminada y el cierre del intento el backend puede reportar N+1.
+ */
 export function liveProgressLabel(item) {
-  return `Oración ${item?.currentPosition ?? 1} de ${item?.sentenceCount ?? 0}`
+  const total = item?.sentenceCount ?? 0
+  const position = item?.currentPosition ?? 1
+
+  return `Oración ${total > 0 ? Math.min(position, total) : position} de ${total}`
 }
 
 /** Intentos que estaban en la lista anterior y ya no están (terminaron o se cancelaron). */

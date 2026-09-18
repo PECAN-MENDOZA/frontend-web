@@ -8,6 +8,7 @@ import {
   formatMean,
   formatPairedStats,
   formatSeconds,
+  hasPairedData,
   resultsBanners,
   resultsJsonFilename,
   sentenceRows,
@@ -158,4 +159,12 @@ test('resultsJsonFilename uses the test code and falls back to the id', () => {
   assert.equal(resultsJsonFilename({ code: 'DRYRUN-02' }), 'test-DRYRUN-02-results.json')
   assert.equal(resultsJsonFilename({ testId: 'abc' }), 'test-abc-results.json')
   assert.equal(resultsJsonFilename(null), 'test-prueba-results.json')
+})
+
+test('hasPairedData is true only when some paired metric has at least one student', () => {
+  const empty = { n: 0, meanDelta: null }
+
+  assert.equal(hasPairedData(null), false)
+  assert.equal(hasPairedData({ errorsPer100Words: empty, wordsPerMinute: empty }), false)
+  assert.equal(hasPairedData({ errorsPer100Words: { n: 3, meanDelta: -1.2 }, wordsPerMinute: empty }), true)
 })

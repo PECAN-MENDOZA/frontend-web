@@ -200,6 +200,7 @@ test('excludeAttempt keeps remote success when refreshing assignments fails', as
   assert.match(testsStore.mutationMessage, /^Intento excluido\./)
   assert.doesNotMatch(testsStore.mutationMessage, /No pudimos excluir/)
   assert.match(testsStore.mutationMessage, /No pudimos actualizar/)
+  assert.equal(testsStore.mutationSeverity, 'warn')
 })
 
 test('a late exclusion from test A cannot overwrite the selected attempt or assignments of B', async () => {
@@ -264,6 +265,7 @@ test('mutate errors surface the translated backend message, keeping the 409 mapp
   await testsStore.loadTest('a')
   assert.equal(await testsStore.saveTest('a', 'Nuevo título'), false)
   assert.equal(testsStore.mutationMessage, 'La prueba ya está activada.')
+  assert.equal(testsStore.mutationSeverity, 'error')
 
   globalThis.fetch = async (url, options) =>
     options.method === 'POST' ? json({ message: 'Test code already exists' }, 409) : json([])
@@ -293,4 +295,38 @@ test('annotate keeps the updated row when refreshing loaded results fails', asyn
   assert.match(testsStore.mutationMessage, /^Anotación guardada\./)
   assert.doesNotMatch(testsStore.mutationMessage, /No pudimos guardar la anotación/)
   assert.match(testsStore.mutationMessage, /No pudimos actualizar/)
+  assert.equal(testsStore.mutationSeverity, 'warn')
+})
+
+test('a successful mutation reports the success severity', async () => {
+  globalThis.fetch = async (url, options) =>
+    options.method === 'PUT' ? json(detail('a')) : json(detail('a'))
+  const testsStore = store()
+
+  await testsStore.loadTest('a')
+  assert.equal(await testsStore.saveTest('a', 'Prueba a'), true)
+  assert.equal(testsStore.mutationMessage, 'Cambios guardados.')
+  assert.equal(testsStore.mutationSeverity, 'success')
+})
+
+test('assignment loads keep their own error and never clear the test error', async () => {
+  globalThis.fetch = async (url) => {
+    const pathname = new URL(url).pathname
+
+    if (pathname.endsWith('/assignments')) throw new TypeError('Failed to fetch')
+    return json({ message: 'Test not found' }, 404)
+  }
+  const testsStore = store()
+
+  await testsStore.loadTest('a')
+  assert.equal(testsStore.errorMessage, 'No encontramos la prueba.')
+
+  assert.equal(await testsStore.loadAssignments('a'), false)
+  assert.equal(testsStore.errorMessage, 'No encontramos la prueba.')
+  assert.equal(testsStore.assignmentsError, 'No pudimos cargar las asignaciones. Inténtalo nuevamente.')
+
+  globalThis.fetch = async () => json([])
+  assert.equal(await testsStore.loadAssignments('a'), true)
+  assert.equal(testsStore.assignmentsError, '')
+  assert.equal(testsStore.errorMessage, 'No encontramos la prueba.')
 })

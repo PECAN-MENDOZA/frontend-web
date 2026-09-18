@@ -3,10 +3,11 @@ import { reactive, ref } from 'vue'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
 import Password from 'primevue/password'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/features/auth/store/auth.store'
-import { homeForRole } from '@/features/auth/utils/access'
+import { nextRouteAfterPasswordChange } from '@/features/auth/utils/access'
 
+const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 
@@ -45,7 +46,7 @@ async function submitChangePassword() {
   })
 
   if (changed) {
-    router.push(homeForRole(authStore.user?.role))
+    router.push(nextRouteAfterPasswordChange(route.query.redirect, authStore.user?.role))
   }
 }
 

@@ -19,7 +19,7 @@ const TEACHER_EMAIL_IN_USE_ERROR = 'Ese correo ya está en uso.'
 export const useResearchStore = defineStore('research', () => {
   const teachers = ref([])
   const classroomDirectory = ref([])
-  // { teacher: { id, username, email, institution }, password } tras crear o reiniciar.
+  // { teacher: { id, fullName, username, email, institution }, password } tras crear o reiniciar.
   const temporaryPassword = ref(null)
   const isTeachersLoading = ref(false)
   const isClassroomDirectoryLoading = ref(false)
@@ -85,6 +85,7 @@ export const useResearchStore = defineStore('research', () => {
       temporaryPassword.value = {
         teacher: {
           id: created.id,
+          fullName: created.fullName ?? null,
           username: created.username,
           email: created.email,
           institution: created.institution,

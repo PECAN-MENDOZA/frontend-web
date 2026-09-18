@@ -144,7 +144,7 @@ router.beforeEach((to) => {
     }
 
     if (requiresPasswordChange(authStore.user, to.name)) {
-      return { name: 'change-password' }
+      return { name: 'change-password', query: { redirect: to.fullPath } }
     }
   }
 

@@ -83,6 +83,12 @@ test('liveProgressLabel describes the current sentence of the attempt', () => {
   assert.equal(liveProgressLabel({ sentenceCount: 20 }), 'Oración 1 de 20')
 })
 
+test('liveProgressLabel never shows a position beyond the sentence count', () => {
+  assert.equal(liveProgressLabel({ currentPosition: 21, sentenceCount: 20 }), 'Oración 20 de 20')
+  assert.equal(liveProgressLabel({ currentPosition: 20, sentenceCount: 20 }), 'Oración 20 de 20')
+  assert.equal(liveProgressLabel({ currentPosition: 3, sentenceCount: 0 }), 'Oración 3 de 0')
+})
+
 test('finishedAttempts returns the attempts that were listed before and are gone now', () => {
   const previous = [
     { attemptId: 'a1', studentId: 's1', realName: 'Ana' },

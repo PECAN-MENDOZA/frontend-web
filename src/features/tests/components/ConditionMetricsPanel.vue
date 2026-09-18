@@ -6,6 +6,7 @@ import {
   formatDelta,
   formatInterval,
   formatPairedStats,
+  hasPairedData,
 } from '@/features/tests/utils/results'
 
 const props = defineProps({
@@ -14,6 +15,7 @@ const props = defineProps({
 
 const rows = computed(() => conditionRows(props.results))
 const paired = computed(() => props.results?.paired ?? null)
+const showPaired = computed(() => hasPairedData(paired.value))
 const pairedRows = computed(() => [
   { key: 'errors', label: 'Errores / 100 palabras', delta: paired.value?.errorsPer100Words },
   { key: 'ppm', label: 'Palabras por minuto', delta: paired.value?.wordsPerMinute },
@@ -57,7 +59,7 @@ const pairedRows = computed(() => [
 
     <div class="results-paired">
       <p class="overline">Diferencia con − sin (pareada)</p>
-      <p v-if="!paired" class="table-empty">
+      <p v-if="!showPaired" class="table-empty">
         La diferencia pareada aparece cuando un mismo alumno completó oraciones de ambas
         condiciones.
       </p>

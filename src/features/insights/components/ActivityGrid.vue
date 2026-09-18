@@ -47,7 +47,7 @@ const cards = computed(() => {
         </span>
         <span class="activity-card__meta">
           <span>Última escritura: {{ student.lastActivityLabel }}</span>
-          <span>{{ student.correctionsText }}</span>
+          <span v-if="!student.inactive">{{ student.correctionsText }}</span>
         </span>
         <span v-if="student.tags.length" class="activity-card__tags">
           <Tag
@@ -58,7 +58,9 @@ const cards = computed(() => {
             rounded
           />
         </span>
-        <span v-else class="activity-card__quiet">Sin escritura en este periodo</span>
+        <span v-else-if="student.inactive" class="activity-card__quiet">
+          Sin escritura en este periodo
+        </span>
       </button>
     </li>
   </ul>

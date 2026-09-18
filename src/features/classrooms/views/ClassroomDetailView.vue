@@ -29,6 +29,12 @@ const studentCountLabel = computed(() => {
 
   return count === 1 ? '1 estudiante activo' : `${count} estudiantes activos`
 })
+// Si la carga falla o el id no existe, la cabecera no se queda en "Cargando…".
+const headerDescription = computed(() => {
+  if (classroom.value) return studentCountLabel.value
+
+  return classroomsStore.errorMessage ? 'No encontramos este salón.' : 'Cargando el salón…'
+})
 
 const isRenameDialogVisible = ref(false)
 const isCreateDialogVisible = ref(false)
@@ -167,7 +173,7 @@ function openStudent(studentId) {
     <PageHeader
       eyebrow="Salón"
       :title="classroom?.name ?? 'Salón'"
-      :description="classroom ? studentCountLabel : 'Cargando el salón…'"
+      :description="headerDescription"
     >
       <template #actions>
         <Button

@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import Message from 'primevue/message'
@@ -17,6 +17,7 @@ import { hasAttemptsInProgress } from '@/features/tests/utils/attempts'
 import {
   STATUS_LABELS,
   canActivate,
+  hasUnsavedSentences,
   sentenceErrors,
   testFormErrors,
 } from '@/features/tests/utils/sentences'
@@ -52,9 +53,41 @@ const canSave = computed(() => isDraft.value && !titleError.value && !hasSentenc
 const canActivateCurrent = computed(
   () => canSave.value && canActivate(test.value, testsStore.draftSentences),
 )
+// Solo el borrador se edita: en ACTIVE/CLOSED las oraciones están congeladas.
+const hasUnsavedChanges = computed(
+  () =>
+    isDraft.value &&
+    (draftTitle.value !== (test.value?.title ?? '') ||
+      hasUnsavedSentences(test.value?.sentences, testsStore.draftSentences)),
+)
 
 onMounted(loadPage)
 onUnmounted(() => testsStore.stopAssignmentsPolling())
+
+// Al salir de un borrador con cambios se pide confirmación; cerrar el diálogo equivale a quedarse.
+onBeforeRouteLeave((_to, _from, next) => {
+  if (!hasUnsavedChanges.value) return next()
+
+  let settled = false
+  const settle = (allowed) => {
+    if (settled) return
+    settled = true
+    next(allowed)
+  }
+
+  confirm.require({
+    header: 'Cambios sin guardar',
+    message: 'Tienes oraciones sin guardar. ¿Salir sin guardar?',
+    icon: 'pi pi-exclamation-triangle',
+    acceptLabel: 'Salir sin guardar',
+    rejectLabel: 'Seguir editando',
+    acceptProps: { severity: 'danger' },
+    rejectProps: { severity: 'secondary', text: true },
+    accept: () => settle(true),
+    reject: () => settle(false),
+    onHide: () => settle(false),
+  })
+})
 
 watch(testId, loadPage)
 watch(
@@ -86,13 +119,9 @@ async function loadAssignmentData() {
   if (hasInProgress.value) testsStore.startAssignmentsPolling(testId.value)
 }
 
-function showMutationResult(wasSuccessful) {
+function showMutationResult() {
   actionMessage.value = testsStore.mutationMessage
-  actionSeverity.value = wasSuccessful
-    ? testsStore.mutationMessage.includes('No pudimos actualizar')
-      ? 'warn'
-      : 'success'
-    : 'error'
+  actionSeverity.value = testsStore.mutationSeverity
 }
 
 async function runAction(kind, action) {
@@ -101,7 +130,7 @@ async function runAction(kind, action) {
 
   try {
     const wasSuccessful = await action()
-    showMutationResult(wasSuccessful)
+    showMutationResult()
     return wasSuccessful
   } finally {
     pendingAction.value = null
@@ -163,7 +192,7 @@ async function assignTest(payload) {
       : await testsStore.assignStudents(testId.value, payload.studentIds)
 
     if (wasSuccessful) {
-      showMutationResult(true)
+      showMutationResult()
       isAssignDialogVisible.value = false
     } else {
       assignErrorMessage.value = testsStore.mutationMessage
@@ -196,7 +225,7 @@ async function excludeAttempt(reason) {
   try {
     const wasSuccessful = await testsStore.excludeAttempt(testId.value, target.attemptId, reason)
     if (wasSuccessful) {
-      showMutationResult(true)
+      showMutationResult()
       isReasonDialogVisible.value = false
       exclusionTarget.value = null
     } else {
@@ -364,6 +393,20 @@ function openResults() {
             />
           </div>
         </div>
+
+        <Message v-if="testsStore.assignmentsError" severity="error" :closable="false">
+          <div class="research-refresh-warning">
+            <span>{{ testsStore.assignmentsError }}</span>
+            <Button
+              label="Reintentar"
+              icon="pi pi-refresh"
+              severity="danger"
+              text
+              size="small"
+              @click="testsStore.loadAssignments(testId)"
+            />
+          </div>
+        </Message>
 
         <div
           v-if="testsStore.isLoading && !testsStore.assignments.length"
