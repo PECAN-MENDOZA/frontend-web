@@ -9,6 +9,7 @@ import {
   TEST_CODE_PATTERN,
   canActivate,
   countsSummary,
+  hasUnsavedSentences,
   moveSentence,
   newSentence,
   sentenceCounts,
@@ -111,4 +112,27 @@ test('canActivate requires a draft with valid sentences', () => {
   assert.equal(canActivate({ status: 'DRAFT' }, [{ referenceText: 'Texto válido' }]), true)
   assert.equal(canActivate({ status: 'ACTIVE' }, [{ referenceText: 'Texto válido' }]), false)
   assert.equal(canActivate({ status: 'DRAFT' }, []), false)
+})
+
+test('hasUnsavedSentences compares only the editable fields of each sentence', () => {
+  const saved = [
+    { position: 1, kind: 'DICTATED', referenceText: 'El perro corre.', assistance: 'ASSISTED' },
+    { position: 2, kind: 'FREE', referenceText: 'Describe tu casa.', assistance: 'UNASSISTED' },
+  ]
+  const sameContent = saved.map(({ kind, referenceText, assistance }) => ({
+    kind,
+    referenceText,
+    assistance,
+    id: 'local',
+  }))
+
+  assert.equal(hasUnsavedSentences(saved, sameContent), false)
+  assert.equal(hasUnsavedSentences(saved, [...saved].reverse()), true)
+  assert.equal(hasUnsavedSentences(saved, saved.slice(0, 1)), true)
+  assert.equal(
+    hasUnsavedSentences(saved, [saved[0], { ...saved[1], referenceText: 'Describe tu barrio.' }]),
+    true,
+  )
+  assert.equal(hasUnsavedSentences(undefined, []), false)
+  assert.equal(hasUnsavedSentences(null, [saved[0]]), true)
 })

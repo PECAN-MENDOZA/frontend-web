@@ -75,3 +75,22 @@ export function moveSentence(sentences, from, to) {
 export function canActivate(test, sentences) {
   return test?.status === 'DRAFT' && sentenceErrors(sentences).length === 0
 }
+
+// Compara solo los campos editables (tipo, texto, ayuda) en su orden: `position` e ids locales
+// no cuentan como cambios.
+export function hasUnsavedSentences(saved, draft) {
+  const savedList = saved ?? []
+  const draftList = draft ?? []
+
+  if (savedList.length !== draftList.length) return true
+
+  return savedList.some((sentence, index) => {
+    const edited = draftList[index]
+
+    return (
+      sentence.kind !== edited.kind ||
+      sentence.referenceText !== edited.referenceText ||
+      sentence.assistance !== edited.assistance
+    )
+  })
+}

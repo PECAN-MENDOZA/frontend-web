@@ -69,6 +69,11 @@ function statusSeverity(row) {
         <span class="test-number">{{ formatDateTime(data.startedAt) }}</span>
       </template>
     </Column>
+    <Column header="Fin">
+      <template #body="{ data }">
+        <span class="test-number">{{ formatDateTime(data.completedAt) }}</span>
+      </template>
+    </Column>
     <Column header="Acciones">
       <template #body="{ data }">
         <div v-if="data.attemptId" class="row-actions">

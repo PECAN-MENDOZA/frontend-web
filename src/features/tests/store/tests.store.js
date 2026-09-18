@@ -16,6 +16,7 @@ import {
   saveTest as saveTestRequest,
 } from '@/features/tests/services/tests.service'
 import { hasAttemptsInProgress } from '@/features/tests/utils/attempts'
+import { mutationFeedback } from '@/features/tests/utils/mutations'
 import { saveBlob } from '@/features/research/utils/download'
 import { requestErrorMessage } from '@/features/research/utils/errors'
 import {
@@ -25,7 +26,6 @@ import {
 
 const GENERIC_ERROR = 'No pudimos completar la acción. Inténtalo nuevamente.'
 const DUPLICATE_CODE_ERROR = 'Ese código ya existe.'
-const PARTIAL_REFRESH_MESSAGE = 'No pudimos actualizar los datos. Usa Actualizar para reintentar.'
 
 export const useTestsStore = defineStore('tests', () => {
   const tests = ref([])
@@ -37,7 +37,11 @@ export const useTestsStore = defineStore('tests', () => {
   const isLoading = ref(false)
   const isMutating = ref(false)
   const errorMessage = ref('')
+  // El sondeo de asignaciones guarda su error aparte para no borrar el de otras cargas.
+  const assignmentsError = ref('')
   const mutationMessage = ref('')
+  // 'success' | 'warn' (acción hecha, recarga fallida) | 'error'; acompaña a mutationMessage.
+  const mutationSeverity = ref('success')
   const loadingStates = {
     tests: false,
     test: false,
@@ -66,19 +70,19 @@ export const useTestsStore = defineStore('tests', () => {
     })
   }
 
-  function loader(name, getSelectedId) {
+  function loader(name, getSelectedId, errorRef = errorMessage) {
     return createGuardedLoader({
       getSelectedStudyId: getSelectedId,
       setLoading: (value) => setLoading(name, value),
       setError: (message) => {
-        errorMessage.value = message
+        errorRef.value = message
       },
     })
   }
 
   const testsLoader = loader('tests')
   const testLoader = loader('test', () => selectedTestId)
-  const assignmentsLoader = loader('assignments', () => assignmentsTestId)
+  const assignmentsLoader = loader('assignments', () => assignmentsTestId, assignmentsError)
   const attemptLoader = loader('attempt', () => selectedAttemptKey)
   const resultsLoader = loader('results', () => resultsTestId)
   const loaders = [testsLoader, testLoader, assignmentsLoader, attemptLoader, resultsLoader]
@@ -111,10 +115,9 @@ export const useTestsStore = defineStore('tests', () => {
         const outcome = await action(isCurrent)
 
         if (isLatest()) {
-          mutationMessage.value =
-            outcome?.refreshOk === false
-              ? `${successMessage} ${PARTIAL_REFRESH_MESSAGE}`
-              : successMessage
+          const feedback = mutationFeedback(successMessage, outcome)
+          mutationMessage.value = feedback.message
+          mutationSeverity.value = feedback.severity
         }
         return true
       } catch (error) {
@@ -123,6 +126,7 @@ export const useTestsStore = defineStore('tests', () => {
             error,
             error?.status === 409 ? conflictMessage : failureMessage,
           )
+          mutationSeverity.value = 'error'
         }
         return false
       }
@@ -414,7 +418,9 @@ export const useTestsStore = defineStore('tests', () => {
     isLoading.value = false
     isMutating.value = false
     errorMessage.value = ''
+    assignmentsError.value = ''
     mutationMessage.value = ''
+    mutationSeverity.value = 'success'
   }
 
   window.addEventListener('auth:signed-out', reset)
@@ -429,7 +435,9 @@ export const useTestsStore = defineStore('tests', () => {
     isLoading,
     isMutating,
     errorMessage,
+    assignmentsError,
     mutationMessage,
+    mutationSeverity,
     loadTests,
     createTest,
     loadTest,

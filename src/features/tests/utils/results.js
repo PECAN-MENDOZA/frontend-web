@@ -105,3 +105,8 @@ export function sentenceRows(results) {
 export function resultsJsonFilename(results) {
   return `test-${results?.code || results?.testId || 'prueba'}-results.json`
 }
+
+// El backend siempre envía `paired` (con n = 0 si nadie completó ambas condiciones).
+export function hasPairedData(paired) {
+  return Object.values(paired ?? {}).some((delta) => (delta?.n ?? 0) > 0)
+}
