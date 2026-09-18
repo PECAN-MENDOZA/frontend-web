@@ -111,8 +111,10 @@ export function periodLabel({ from, to }) {
 }
 
 /** Mensaje de validación del periodo, o '' si es válido. Refleja las reglas del backend. */
-export function periodErrors({ from, to }) {
-  if (!from || !to) return ''
+export function periodErrors({ from, to, preset }) {
+  // En modo "Elegir fechas" ambas fechas son obligatorias: al limpiar un DatePicker se pierde
+  // ese campo y hay que avisar en vez de dejar el periodo silenciosamente incompleto.
+  if (!from || !to) return preset === 'custom' ? 'Elige ambas fechas.' : ''
 
   const fromDate = asUtcDate(from)
   const toDate = asUtcDate(to)
@@ -167,6 +169,16 @@ export function formatClock(instant, now = new Date()) {
 function limaSlashDate(date) {
   const [year, month, day] = limaDateFormatter.format(date).split('-')
   return `${day}/${month}/${year}`
+}
+
+/** '10/09/2026 14:32' en Lima, con año siempre visible; '—' si instant es nulo o inválido. */
+export function formatDateTimeWithYear(instant) {
+  if (!instant) return '—'
+
+  const date = new Date(instant)
+  if (Number.isNaN(date.getTime())) return '—'
+
+  return `${limaSlashDate(date)} ${limaClockFormatter.format(date)}`
 }
 
 /** 'hace 12 min' | 'hace 3 h' | 'ayer' | '10/09/2026' | '—' si instant es nulo o inválido. */

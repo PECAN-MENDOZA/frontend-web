@@ -42,10 +42,10 @@ const isCustom = computed(() => preset.value === 'custom')
 function dateField(field) {
   return computed({
     get: () => fromIsoDate(props.modelValue[field]),
+    // Al limpiar el DatePicker (date === null) se propaga '' en vez de ignorar el cambio: así
+    // periodErrors puede avisar en vez de que el campo "rebote" de vuelta al valor anterior.
     set: (date) => {
-      const iso = toIsoDate(date)
-      if (!iso) return
-      emit('update:modelValue', { ...props.modelValue, [field]: iso, preset: 'custom' })
+      emit('update:modelValue', { ...props.modelValue, [field]: toIsoDate(date), preset: 'custom' })
     },
   })
 }

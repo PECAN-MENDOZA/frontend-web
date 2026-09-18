@@ -1,8 +1,8 @@
 <script setup>
 import { computed } from 'vue'
 import Tag from 'primevue/tag'
+import { formatDateTimeWithYear } from '@/features/insights/utils/period.js'
 import { attemptLabel, testSentenceRows } from '@/features/insights/utils/tests.js'
-import { formatDateTime } from '@/features/research/utils/dates'
 
 // "Pruebas": cada intento completado (StudentTestSummary[]) con una tabla por oración: qué se
 // dictó o pidió, qué escribió, cuántos errores y cuáles, con o sin ayuda, cuánto tardó.
@@ -17,7 +17,7 @@ const attempts = computed(() =>
   props.tests.map((summary) => ({
     attemptId: summary.attemptId,
     label: attemptLabel(summary),
-    completedLabel: formatDateTime(summary.completedAt),
+    completedLabel: formatDateTimeWithYear(summary.completedAt),
     excluded: Boolean(summary.excluded),
     rows: testSentenceRows(summary),
   })),

@@ -29,9 +29,12 @@ const link = computed(() =>
 )
 const studentName = computed(() => link.value?.realName ?? '')
 const title = computed(() => studentName.value || 'Estudiante')
-const identity = computed(() =>
-  [link.value?.username, link.value?.classroomName || 'Sin salón'].filter(Boolean).join(' · '),
-)
+// '' mientras el directorio no ha cargado el vínculo: evita mostrar "Sin salón" de más antes de
+// saber si el alumno tiene o no un salón.
+const identity = computed(() => {
+  if (!link.value) return ''
+  return [link.value.username, link.value.classroomName || 'Sin salón'].filter(Boolean).join(' · ')
+})
 
 const periodMessage = computed(() => periodErrors(insightsStore.period))
 const periodText = computed(() => periodLabel(insightsStore.period))

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import {
   PRESETS,
   formatClock,
+  formatDateTimeWithYear,
   formatRelative,
   fromIsoDate,
   periodErrors,
@@ -68,6 +69,20 @@ test('periodErrors flags an inverted range, one over 92 days, and accepts a vali
   assert.equal(periodErrors({ from: '2026-01-01', to: '2026-06-30' }), 'Máximo 92 días.')
 })
 
+test('periodErrors requires both dates in custom mode, but not for presets still loading', () => {
+  assert.equal(
+    periodErrors({ from: '', to: '2026-09-17', preset: 'custom' }),
+    'Elige ambas fechas.',
+  )
+  assert.equal(
+    periodErrors({ from: '2026-09-17', to: '', preset: 'custom' }),
+    'Elige ambas fechas.',
+  )
+  assert.equal(periodErrors({ from: '', to: '', preset: 'custom' }), 'Elige ambas fechas.')
+  assert.equal(periodErrors({ from: '', to: '', preset: 'today' }), '')
+  assert.equal(periodErrors({ from: '', to: '' }), '')
+})
+
 test('formatRelative renders minutes, hours, "ayer", an absolute date, and a dash for null', () => {
   const now = new Date('2026-09-17T20:00:00Z') // 15:00 en Lima, 2026-09-17
 
@@ -100,4 +115,11 @@ test('formatClock shows the Lima time, with the day when it is not today, and a 
   assert.equal(formatClock('2026-09-10T20:07:00Z', now), '10/09 15:07')
   assert.equal(formatClock(null, now), '—')
   assert.equal(formatClock('not a date', now), '—')
+})
+
+test('formatDateTimeWithYear renders the Lima date with year and time, and a dash for null/invalid', () => {
+  assert.equal(formatDateTimeWithYear('2026-09-17T20:07:00Z'), '17/09/2026 15:07')
+  assert.equal(formatDateTimeWithYear('2026-01-01T04:30:00Z'), '31/12/2025 23:30')
+  assert.equal(formatDateTimeWithYear(null), '—')
+  assert.equal(formatDateTimeWithYear('not a date'), '—')
 })

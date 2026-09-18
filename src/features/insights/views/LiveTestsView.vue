@@ -22,6 +22,11 @@ const router = useRouter()
 const insightsStore = useInsightsStore()
 const finished = ref([])
 const timers = new Map()
+// Se pone en true tras la primera carga (éxito o error): evita que el esqueleto reaparezca en
+// cada sondeo de 5 s mientras la lista está vacía.
+const hasLoaded = ref(false)
+// Bandera propia del botón Actualizar: no debe girar por el sondeo en segundo plano.
+const isRefreshing = ref(false)
 
 const rows = computed(() => {
   const now = new Date()
@@ -34,7 +39,7 @@ const rows = computed(() => {
   }))
 })
 
-const isFirstLoad = computed(() => insightsStore.isLiveLoading && !insightsStore.live.length)
+const isFirstLoad = computed(() => insightsStore.isLiveLoading && !hasLoaded.value)
 
 // Un intento que deja de estar en curso se anuncia 30 s con un enlace a la ficha del alumno.
 function announceFinished(items) {
@@ -58,13 +63,27 @@ function dismissFinished(attemptId) {
   finished.value = finished.value.filter((item) => item.attemptId !== attemptId)
 }
 
-watch(
-  () => insightsStore.live,
-  (current, previous) => announceFinished(finishedAttempts(previous, current)),
-)
+async function refreshLive() {
+  isRefreshing.value = true
+  try {
+    await insightsStore.loadLive()
+  } finally {
+    isRefreshing.value = false
+  }
+}
 
-onMounted(() => {
-  insightsStore.loadLive()
+onMounted(async () => {
+  // Carga inicial fresca antes de registrar el watch: así el aviso de "terminó" solo compara
+  // intentos que cambian mientras el docente ya está mirando esta pantalla, no contra datos
+  // obsoletos de una visita anterior.
+  await insightsStore.loadLive()
+  hasLoaded.value = true
+
+  watch(
+    () => insightsStore.live,
+    (current, previous) => announceFinished(finishedAttempts(previous, current)),
+  )
+
   insightsStore.startLivePolling()
 })
 
@@ -88,8 +107,8 @@ onUnmounted(() => {
           icon="pi pi-refresh"
           severity="secondary"
           outlined
-          :loading="insightsStore.isLiveLoading"
-          @click="insightsStore.loadLive"
+          :loading="isRefreshing"
+          @click="refreshLive"
         />
       </template>
     </PageHeader>
