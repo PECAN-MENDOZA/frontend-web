@@ -12,7 +12,7 @@ import {
   getStudentWritings,
   listClassrooms,
 } from '@/features/insights/services/insights.service.js'
-import { presetRange } from '@/features/insights/utils/period.js'
+import { isValidStoredPeriod, presetRange } from '@/features/insights/utils/period.js'
 import { saveBlob } from '@/features/research/utils/download.js'
 import { requestErrorMessage } from '@/features/research/utils/errors.js'
 import { createGuardedLoader } from '@/features/research/utils/mutations.js'
@@ -34,6 +34,13 @@ function readStored(key) {
   }
 }
 
+// El periodo persistido puede venir corrupto, de otra versión del portal, o de un rango "Elegir
+// fechas" que quedó a medio llenar: sin esta validación from/to llegarían undefined al backend.
+function readStoredPeriod() {
+  const stored = readStored(PERIOD_KEY)
+  return isValidStoredPeriod(stored) ? stored : null
+}
+
 function writeStored(key, value) {
   try {
     if (value == null) globalThis.localStorage?.removeItem(key)
@@ -52,13 +59,18 @@ function emptyStudent() {
 }
 
 export const useInsightsStore = defineStore('insights', () => {
-  const period = ref(readStored(PERIOD_KEY) ?? defaultPeriod())
+  const period = ref(readStoredPeriod() ?? defaultPeriod())
   const selectedClassroomId = ref(readStored(CLASSROOM_KEY))
   const classrooms = ref([])
   const activity = ref(null)
   const recent = ref([])
   const classroomErrors = ref(null)
+  // Salón/periodo de la última carga que sí llegó a buen término: la vista rotula el panel con
+  // esto (no con la selección actual), así el título nunca promete datos que todavía no llegaron.
+  const classroomLoadedFor = ref(null)
   const student = ref(emptyStudent())
+  // Alumno/periodo de la última carga exitosa de la ficha (mismo motivo que classroomLoadedFor).
+  const studentLoadedFor = ref(null)
   const live = ref([])
   const isLoading = ref(false)
   const isLiveLoading = ref(false)
@@ -138,18 +150,22 @@ export const useInsightsStore = defineStore('insights', () => {
     }
 
     const id = selectedClassroomId.value
+    // Foto del periodo pedido: si el docente cambia el periodo mientras esta carga sigue en
+    // vuelo, loadedFor debe describir lo que efectivamente se pidió y llegó, no el periodo actual.
+    const requestedPeriod = { from: period.value.from, to: period.value.to }
     const outcome = await classroomLoader.load({
       studyId: id,
       request: () =>
         Promise.all([
-          getClassroomActivity(id, period.value),
-          getRecentCorrections(id, period.value, RECENT_LIMIT),
-          getClassroomErrors(id, period.value),
+          getClassroomActivity(id, requestedPeriod),
+          getRecentCorrections(id, requestedPeriod, RECENT_LIMIT),
+          getClassroomErrors(id, requestedPeriod),
         ]),
       apply: ([activityData, recentData, errorsData]) => {
         activity.value = activityData
         recent.value = recentData
         classroomErrors.value = errorsData
+        classroomLoadedFor.value = { classroomId: id, ...requestedPeriod }
       },
       fallback: 'No pudimos cargar el salón. Inténtalo nuevamente.',
     })
@@ -158,17 +174,19 @@ export const useInsightsStore = defineStore('insights', () => {
 
   async function loadStudentToday(studentId) {
     studentLoaderId = studentId
+    const requestedPeriod = { from: period.value.from, to: period.value.to }
     const outcome = await studentLoader.load({
       studyId: studentId,
       request: () =>
         Promise.all([
-          getStudentErrors(studentId, period.value),
-          getStudentHelp(studentId, period.value),
-          getStudentWritings(studentId, period.value),
+          getStudentErrors(studentId, requestedPeriod),
+          getStudentHelp(studentId, requestedPeriod),
+          getStudentWritings(studentId, requestedPeriod),
           getStudentTests(studentId),
         ]),
       apply: ([errors, help, writings, tests]) => {
         student.value = { id: studentId, errors, help, writings, tests }
+        studentLoadedFor.value = { studentId, ...requestedPeriod }
       },
       fallback: 'No pudimos cargar la ficha del alumno. Inténtalo nuevamente.',
     })
@@ -236,7 +254,9 @@ export const useInsightsStore = defineStore('insights', () => {
     activity.value = null
     recent.value = []
     classroomErrors.value = null
+    classroomLoadedFor.value = null
     student.value = emptyStudent()
+    studentLoadedFor.value = null
     live.value = []
     isLoading.value = false
     isLiveLoading.value = false
@@ -257,7 +277,9 @@ export const useInsightsStore = defineStore('insights', () => {
     activity,
     recent,
     classroomErrors,
+    classroomLoadedFor,
     student,
+    studentLoadedFor,
     live,
     isLoading,
     isLiveLoading,

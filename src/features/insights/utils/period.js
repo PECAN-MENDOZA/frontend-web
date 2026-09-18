@@ -91,6 +91,21 @@ export function periodQuery({ from, to }) {
   return `from=${from}&to=${to}`
 }
 
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/
+const PRESET_KEYS = PRESETS.map((item) => item.key)
+
+function isIsoDate(value) {
+  return typeof value === 'string' && ISO_DATE_RE.test(value) && !Number.isNaN(asUtcDate(value).getTime())
+}
+
+// Forma mínima persistible de un periodo: se usa para validar lo leído de localStorage antes de
+// confiar en él (puede ser de otra versión del portal, o estar corrupto/editado a mano).
+export function isValidStoredPeriod(value) {
+  if (!value || typeof value !== 'object') return false
+  const { from, to, preset } = value
+  return isIsoDate(from) && isIsoDate(to) && PRESET_KEYS.includes(preset)
+}
+
 /** Etiqueta en español (es-PE) del periodo: un día o un rango dentro/fuera del mismo mes. */
 export function periodLabel({ from, to }) {
   const fromDate = asUtcDate(from)

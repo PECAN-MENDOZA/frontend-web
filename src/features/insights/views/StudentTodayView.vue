@@ -37,11 +37,25 @@ const identity = computed(() => {
 })
 
 const periodMessage = computed(() => periodErrors(insightsStore.period))
-const periodText = computed(() => periodLabel(insightsStore.period))
+// studentLoadedFor (alumno + periodo de la última carga exitosa) manda sobre el periodo elegido:
+// el rótulo describe lo que está en pantalla, no lo que se acaba de elegir.
+const periodText = computed(() => periodLabel(insightsStore.studentLoadedFor ?? insightsStore.period))
 // Solo se muestran datos cargados para este alumno: al cambiar de ficha no queda la anterior.
 const student = computed(() =>
   insightsStore.student.id === studentId.value ? insightsStore.student : null,
 )
+
+// El alumno coincide, pero el periodo puede haber cambiado (o el alumno seguir cargando) desde
+// la última carga exitosa: lo que se ve en pantalla sigue siendo lo cargado hasta Actualizar.
+const isStale = computed(() => {
+  const loadedFor = insightsStore.studentLoadedFor
+  if (!loadedFor) return false
+  return (
+    loadedFor.studentId !== studentId.value ||
+    loadedFor.from !== insightsStore.period.from ||
+    loadedFor.to !== insightsStore.period.to
+  )
+})
 const isFirstLoad = computed(() => insightsStore.isLoading && !student.value)
 const isUnknownStudent = computed(
   () => !link.value && !studentsStore.isLoading && studentsStore.students.length > 0,
@@ -141,6 +155,9 @@ watch(studentId, loadStudent)
     </Message>
     <Message v-if="insightsStore.downloadMessage" severity="warn" :closable="false">
       {{ insightsStore.downloadMessage }}
+    </Message>
+    <Message v-if="isStale" severity="info" :closable="false">
+      Mostrando datos de {{ periodText }}; pulsa Actualizar.
     </Message>
     <Message v-if="studentsStore.resetPinErrorMessage" severity="warn" :closable="false">
       {{ studentsStore.resetPinErrorMessage }}

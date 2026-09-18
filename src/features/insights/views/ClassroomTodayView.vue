@@ -27,15 +27,48 @@ const selectedClassroom = computed(() =>
   insightsStore.classrooms.find((classroom) => classroom.id === insightsStore.selectedClassroomId),
 )
 
-const title = computed(
-  () => selectedClassroom.value?.name ?? insightsStore.activity?.classroomName ?? 'Salón hoy',
-)
+// classroomLoadedFor (salón + periodo de la última carga exitosa) manda sobre la selección
+// vigente: el título y los rótulos de periodo describen lo que está en pantalla, no lo elegido.
+const loadedClassroom = computed(() => {
+  const loadedFor = insightsStore.classroomLoadedFor
+  if (!loadedFor) return null
+  return insightsStore.classrooms.find((classroom) => classroom.id === loadedFor.classroomId) ?? null
+})
+
+const title = computed(() => {
+  if (insightsStore.classroomLoadedFor) {
+    return (
+      loadedClassroom.value?.name ?? insightsStore.activity?.classroomName ?? 'Salón hoy'
+    )
+  }
+  return selectedClassroom.value?.name ?? 'Salón hoy'
+})
 
 const periodMessage = computed(() => periodErrors(insightsStore.period))
-const periodText = computed(() => periodLabel(insightsStore.period))
+const periodText = computed(() => periodLabel(insightsStore.classroomLoadedFor ?? insightsStore.period))
 const hasClassrooms = computed(() => insightsStore.classrooms.length > 0)
 const isFirstLoad = computed(() => insightsStore.isLoading && !insightsStore.activity)
 const students = computed(() => insightsStore.activity?.students ?? [])
+
+// La selección (salón + periodo) puede haber cambiado desde la última carga exitosa: lo que se
+// ve en pantalla sigue siendo lo cargado hasta que el docente pulse Actualizar.
+const isStale = computed(() => {
+  const loadedFor = insightsStore.classroomLoadedFor
+  if (!loadedFor) return false
+  return (
+    loadedFor.classroomId !== insightsStore.selectedClassroomId ||
+    loadedFor.from !== insightsStore.period.from ||
+    loadedFor.to !== insightsStore.period.to
+  )
+})
+
+const staleLabel = computed(() => {
+  const loadedFor = insightsStore.classroomLoadedFor
+  if (!loadedFor) return ''
+  const name = loadedClassroom.value?.name ?? insightsStore.activity?.classroomName ?? ''
+  const label = periodLabel(loadedFor)
+  return name ? `${name} · ${label}` : label
+})
 
 async function loadClassroom() {
   if (periodMessage.value || !insightsStore.selectedClassroomId) return
@@ -122,6 +155,10 @@ onMounted(async () => {
       Aún no tienes salones. Crea uno en
       <RouterLink :to="{ name: 'classrooms' }">Salones</RouterLink>
       para ver aquí lo que escriben tus estudiantes.
+    </Message>
+
+    <Message v-if="isStale" severity="info" :closable="false">
+      Mostrando datos de {{ staleLabel }}; pulsa Actualizar.
     </Message>
 
     <template v-if="isFirstLoad">

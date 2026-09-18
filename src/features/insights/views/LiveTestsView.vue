@@ -7,6 +7,7 @@ import DataTable from 'primevue/datatable'
 import Message from 'primevue/message'
 import Skeleton from 'primevue/skeleton'
 import { useInsightsStore } from '@/features/insights/store/insights.store.js'
+import { createMountGuard } from '@/features/insights/utils/mountGuard.js'
 import { formatRelative } from '@/features/insights/utils/period.js'
 import {
   attemptLabel,
@@ -27,6 +28,12 @@ const timers = new Map()
 const hasLoaded = ref(false)
 // Bandera propia del botón Actualizar: no debe girar por el sondeo en segundo plano.
 const isRefreshing = ref(false)
+// onUnmounted() se registra antes del primer await: si la vista se desmonta mientras carga la
+// primera respuesta, mounted queda en false y el código posterior al await no arranca el sondeo
+// ni el watch. stopLiveWatch guarda el handle del watch creado después del await, porque Vue ya
+// no lo puede desechar automáticamente al salir del scope síncrono del setup.
+const mountGuard = createMountGuard()
+let stopLiveWatch = null
 
 const rows = computed(() => {
   const now = new Date()
@@ -79,7 +86,11 @@ onMounted(async () => {
   await insightsStore.loadLive()
   hasLoaded.value = true
 
-  watch(
+  // La vista pudo desmontarse mientras loadLive() estaba en vuelo (navegación rápida fuera de
+  // /tests/live): en ese caso onUnmounted ya corrió y no hay que arrancar nada nuevo.
+  if (!mountGuard.mounted) return
+
+  stopLiveWatch = watch(
     () => insightsStore.live,
     (current, previous) => announceFinished(finishedAttempts(previous, current)),
   )
@@ -88,6 +99,9 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+  mountGuard.unmount()
+  stopLiveWatch?.()
+  stopLiveWatch = null
   insightsStore.stopLivePolling()
   for (const timer of timers.values()) window.clearTimeout(timer)
   timers.clear()
