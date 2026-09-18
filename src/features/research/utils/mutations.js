@@ -1,63 +1,10 @@
 import { requestErrorMessage } from './errors.js'
 
-export const STUDY_CHANGED_MESSAGE = 'El estudio cambió durante la operación'
 export const RESULTS_UPDATED_MESSAGE = 'Los resultados se actualizaron.'
 export const RESULTS_NOT_UPDATED_MESSAGE = 'No se pudieron actualizar los resultados'
-export const REISSUE_PARTIAL_MESSAGE =
-  'El código anterior fue revocado, pero no se pudo emitir uno nuevo'
-
-// La petición terminó en el backend, pero la selección ya no es el estudio de origen:
-// el resultado se ignora y la vista lo informa sin tratarlo como un fallo.
-export class StudyChangedError extends Error {
-  constructor() {
-    super(STUDY_CHANGED_MESSAGE)
-    this.name = 'StudyChangedError'
-  }
-}
-
-// Entrega la credencial en cuanto el POST resuelve y solo después espera la recarga:
-// el código de un solo uso nunca queda retenido detrás de un refresh lento.
-export async function issueThenRefresh(issue, refresh, onCredential = () => {}) {
-  const credential = await issue()
-
-  onCredential(credential)
-  await refresh(credential)
-
-  return credential
-}
-
-// Regenerar no es atómico: si la revocación se aplicó pero la emisión falla, se recarga igual
-// (la fila deja de ofrecer un código que el backend ya invalidó) y el error principal sigue
-// siendo el de la emisión, con el aviso de que el código anterior sí quedó revocado.
-export async function revokeThenReissue(revoke, issue, refresh, onCredential = () => {}) {
-  await revoke()
-
-  let credential
-
-  try {
-    credential = await issue()
-  } catch (issueError) {
-    await refresh().catch(() => {})
-
-    throw new Error(`${REISSUE_PARTIAL_MESSAGE}: ${issueError.message}`, { cause: issueError })
-  }
-
-  onCredential(credential)
-  await refresh(credential)
-
-  return credential
-}
-
-// La lista de estudios se vuelve a pedir cuando falta o cuando la cargó otra cuenta en la misma
-// pestaña: sin sesión nunca hay una lista válida.
-export function shouldReloadStudies(ownerUserId, currentUserId, hasStudies) {
-  if (!hasStudies) return true
-
-  return !currentUserId || ownerUserId !== currentUserId
-}
 
 // Contador de generación para descartar respuestas obsoletas de otra selección.
-export function createRequestGuard(getSelectedStudyId) {
+function createRequestGuard(getSelectedStudyId) {
   let latestGeneration = 0
 
   return {
@@ -114,7 +61,7 @@ export function createGuardedLoader({
     }
   }
 
-  // Una mutación local (p. ej. crear un estudio) deja obsoletas las cargas en curso: ya no
+  // Una mutación local (p. ej. crear una prueba) deja obsoletas las cargas en curso: ya no
   // publican ni apagan nada, así que la carga se libera aquí.
   function invalidate() {
     guard.begin()

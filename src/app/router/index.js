@@ -79,28 +79,32 @@ const routes = [
     children: [
       {
         path: '',
-        name: 'research-overview',
-        component: () => import('@/features/research/views/ResearchOverviewView.vue'),
+        redirect: { name: 'research-tests' },
+      },
+      {
+        path: 'tests',
+        name: 'research-tests',
+        component: () => import('@/features/tests/views/TestsListView.vue'),
+      },
+      {
+        path: 'tests/:testId',
+        name: 'research-test',
+        component: () => import('@/features/tests/views/TestEditorView.vue'),
+      },
+      {
+        path: 'tests/:testId/attempts/:attemptId',
+        name: 'research-attempt',
+        component: () => import('@/features/tests/views/AttemptResponsesView.vue'),
+      },
+      {
+        path: 'tests/:testId/results',
+        name: 'research-results',
+        component: () => import('@/features/tests/views/TestResultsView.vue'),
       },
       {
         path: 'teachers',
         name: 'research-teachers',
         component: () => import('@/features/research/views/ResearchTeachersView.vue'),
-      },
-      {
-        path: 'study',
-        name: 'research-study',
-        component: () => import('@/features/research/views/ResearchStudyView.vue'),
-      },
-      {
-        path: 'sessions',
-        name: 'research-sessions',
-        component: () => import('@/features/research/views/ResearchSessionsView.vue'),
-      },
-      {
-        path: 'results',
-        name: 'research-results',
-        component: () => import('@/features/research/views/ResearchResultsView.vue'),
       },
     ],
   },

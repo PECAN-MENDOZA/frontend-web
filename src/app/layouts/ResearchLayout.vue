@@ -1,14 +1,12 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
 import ConfirmDialog from 'primevue/confirmdialog'
-import Tag from 'primevue/tag'
 import Toast from 'primevue/toast'
 import { useAuthStore } from '@/features/auth/store/auth.store'
 import { useResearchStore } from '@/features/research/store/research.store'
-import { refreshStatusLabel } from '@/features/research/utils/study'
 import { APP_NAME } from '@/shared/constants/app'
 
 const router = useRouter()
@@ -17,21 +15,9 @@ const researchStore = useResearchStore()
 const isNavigationOpen = ref(false)
 
 const navigationItems = [
-  { label: 'Resumen', icon: 'pi pi-chart-bar', to: '/research' },
+  { label: 'Pruebas', icon: 'pi pi-list-check', to: '/research/tests' },
   { label: 'Docentes', icon: 'pi pi-id-card', to: '/research/teachers' },
-  { label: 'Estudio', icon: 'pi pi-book', to: '/research/study' },
-  { label: 'Sesiones', icon: 'pi pi-list', to: '/research/sessions' },
-  { label: 'Resultados', icon: 'pi pi-chart-line', to: '/research/results' },
 ]
-
-// Solo afirma una actualización que ocurrió: hora de la última recarga completa exitosa, y
-// nada mientras haya una carga o un error en pantalla.
-const refreshStatus = computed(() =>
-  refreshStatusLabel(researchStore.lastRefreshAt, {
-    isLoading: researchStore.isLoading || researchStore.isLoadingResults,
-    hasError: Boolean(researchStore.error || researchStore.resultsError),
-  }),
-)
 
 function closeNavigation() {
   isNavigationOpen.value = false
@@ -82,7 +68,6 @@ onUnmounted(() => {
 
       <nav class="sidebar__navigation" aria-label="Navegación principal">
         <span class="sidebar__section-label">Datos seudonimizados</span>
-        <!-- "/research" es prefijo de todas las rutas: solo la coincidencia exacta se marca activa. -->
         <RouterLink
           v-for="item in navigationItems"
           :key="item.label"
@@ -126,7 +111,6 @@ onUnmounted(() => {
         </div>
 
         <div class="topbar__actions">
-          <Tag v-if="refreshStatus" :value="refreshStatus" severity="secondary" rounded />
           <div class="topbar__profile">
             <Avatar :label="authStore.userInitials" shape="circle" />
             <div>

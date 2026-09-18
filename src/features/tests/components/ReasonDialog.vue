@@ -4,69 +4,34 @@ import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
 import Message from 'primevue/message'
 import Textarea from 'primevue/textarea'
-import {
-  REASON_MAX_LENGTH,
-  REASON_MIN_LENGTH,
-  reasonErrors,
-} from '@/features/research/utils/sessions'
+import { exclusionReasonError } from '@/features/tests/utils/attempts'
 
 const props = defineProps({
-  visible: {
-    type: Boolean,
-    required: true,
-  },
-  title: {
-    type: String,
-    required: true,
-  },
-  description: {
-    type: String,
-    required: true,
-  },
-  confirmLabel: {
-    type: String,
-    required: true,
-  },
-  icon: {
-    type: String,
-    default: 'pi pi-exclamation-triangle',
-  },
-  isSaving: {
-    type: Boolean,
-    required: true,
-  },
-  errorMessage: {
-    type: String,
-    required: true,
-  },
+  visible: { type: Boolean, required: true },
+  username: { type: String, required: true },
+  isSaving: { type: Boolean, required: true },
+  errorMessage: { type: String, required: true },
 })
 
 const emit = defineEmits(['update:visible', 'submit'])
 const reason = ref('')
-const errors = computed(() => reasonErrors(reason.value))
-const isValid = computed(() => errors.value.length === 0)
-// El aviso de longitud aparece solo cuando ya se escribió algo; el botón sigue la regla siempre.
-const hint = computed(() => (reason.value.trim() ? errors.value[0] : ''))
+const validationError = computed(() => exclusionReasonError(reason.value))
+const isValid = computed(() => Boolean(reason.value.trim()) && !validationError.value)
+const hint = computed(() => (reason.value.trim() ? validationError.value : ''))
 
 watch(
   () => props.visible,
   (isVisible) => {
-    if (isVisible) {
-      reason.value = ''
-    }
+    if (isVisible) reason.value = ''
   },
 )
 
 function submitReason() {
-  if (!isValid.value || props.isSaving) return
-
-  emit('submit', reason.value.trim())
+  if (isValid.value && !props.isSaving) emit('submit', reason.value.trim())
 }
 
 function close() {
-  if (props.isSaving) return
-
-  emit('update:visible', false)
+  if (!props.isSaving) emit('update:visible', false)
 }
 </script>
 
@@ -74,19 +39,19 @@ function close() {
   <Dialog
     :visible="visible"
     modal
-    :header="title"
+    header="Excluir intento"
     :closable="!isSaving"
     class="research-dialog research-dialog--reason"
     @update:visible="close"
   >
     <div class="research-dialog__intro">
       <span class="research-dialog__icon research-dialog__icon--danger">
-        <i :class="icon" aria-hidden="true"></i>
+        <i class="pi pi-ban" aria-hidden="true"></i>
       </span>
       <div>
         <p class="overline">Decisión registrada</p>
-        <h3>Esta acción no se puede deshacer.</h3>
-        <p>{{ description }}</p>
+        <h3>Excluirás el intento de {{ username || 'este alumno' }}.</h3>
+        <p>Seguirá visible en la tabla, pero no contará en los resultados de la prueba.</p>
       </div>
     </div>
 
@@ -98,9 +63,7 @@ function close() {
       <label>
         <span>
           Motivo
-          <small class="research-form__counter"
-            >{{ reason.length }} / {{ REASON_MAX_LENGTH }}</small
-          >
+          <small class="research-form__counter">{{ reason.length }} / 500</small>
         </span>
         <Textarea
           v-model="reason"
@@ -108,14 +71,14 @@ function close() {
           auto-resize
           fluid
           autofocus
-          :placeholder="`Explica la razón en al menos ${REASON_MIN_LENGTH} caracteres.`"
-          :maxlength="REASON_MAX_LENGTH"
+          maxlength="500"
+          placeholder="Explica la razón en al menos 10 caracteres."
           :invalid="Boolean(hint)"
           :disabled="isSaving"
         />
         <small v-if="hint" class="research-form__error">{{ hint }}</small>
         <small v-else class="research-form__help">
-          El motivo quedará asociado a la sesión y visible en esta tabla.
+          El motivo es obligatorio y quedará asociado al intento.
         </small>
       </label>
     </form>
@@ -123,8 +86,8 @@ function close() {
     <template #footer>
       <Button label="Volver" severity="secondary" text :disabled="isSaving" @click="close" />
       <Button
-        :label="confirmLabel"
-        :icon="icon"
+        label="Excluir intento"
+        icon="pi pi-ban"
         severity="danger"
         :disabled="!isValid"
         :loading="isSaving"
