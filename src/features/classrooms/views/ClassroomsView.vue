@@ -89,7 +89,7 @@ function openClassroom(classroomId) {
       <DataTable
         v-else
         :value="classroomsStore.classrooms"
-        class="classrooms-table"
+        class="classrooms-table" scrollable
         :row-class="(data) => (data.archivedAt ? 'classrooms-table__row--archived' : '')"
         table-style="min-width: 40rem"
       >
@@ -107,7 +107,7 @@ function openClassroom(classroomId) {
           </template>
         </Column>
         <Column field="studentCount" header="Estudiantes" />
-        <Column header="Acciones">
+        <Column header="Acciones" frozen align-frozen="right">
           <template #body="{ data }">
             <div class="row-actions">
               <Button

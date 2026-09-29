@@ -1068,10 +1068,18 @@ h2 {
 
 .page-header {
   display: flex;
+  flex-wrap: wrap;
   padding: 0.5rem 0 0.3rem;
   align-items: end;
   justify-content: space-between;
   gap: 1rem;
+}
+
+/* El bloque del título cede ancho; si los botones no caben, bajan de línea
+   alineados a la derecha en vez de ensanchar la página. */
+.page-header > div:first-child {
+  min-width: 0;
+  flex: 1 1 22rem;
 }
 
 .page-header h1 {
@@ -1089,7 +1097,10 @@ h2 {
 
 .page-header__actions {
   display: flex;
+  flex-wrap: wrap;
+  margin-left: auto;
   align-items: center;
+  justify-content: flex-end;
   gap: 0.65rem;
 }
 
@@ -1136,6 +1147,19 @@ h2 {
   border-color: var(--color-line);
   color: var(--color-ink);
   font-size: 0.78rem;
+}
+
+/* Columna de acciones fija a la derecha (Column frozen align-frozen="right"):
+   los botones quedan visibles aunque la tabla tenga scroll horizontal. Las
+   filas son transparentes, así que la celda fija necesita fondo opaco. */
+.p-datatable-tbody > tr > td.p-datatable-frozen-column {
+  background-color: var(--color-surface);
+  box-shadow: -10px 0 12px -12px rgba(21, 53, 48, 0.45);
+}
+
+.p-datatable-thead > tr > th.p-datatable-frozen-column {
+  background: #f6f8f3;
+  box-shadow: -10px 0 12px -12px rgba(21, 53, 48, 0.45);
 }
 
 .table-muted {
@@ -1693,12 +1717,20 @@ h2 {
   gap: 0.65rem;
 }
 
+/* Sin mínimo atado al viewport: 65vw no descontaba la barra lateral y
+   ensanchaba la página entre 768 y 1440 px. */
 .test-editor-header h1 {
-  min-width: min(42rem, 65vw);
+  min-width: 0;
+}
+
+/* El título es editable: se le reserva más ancho y, si no cabe junto a los
+   botones, estos bajan a la línea siguiente (no se recorta el título). */
+.test-editor-header > div:first-child {
+  flex-basis: 36rem;
 }
 
 .test-title-input.p-inputtext {
-  width: min(42rem, 65vw);
+  width: 100%;
   padding: 0.15rem 0.35rem;
   border-color: transparent;
   color: var(--color-ink);
@@ -1785,6 +1817,78 @@ h2 {
   gap: 0.2rem;
 }
 
+/* Editor estrecho (con la barra lateral, por debajo de ~1300 px de ventana):
+   cada oración pasa a ser una tarjeta de dos líneas (número, tipo, ayuda y
+   acciones arriba; texto debajo a todo el ancho) en vez de una tabla de
+   64rem con scroll que escondía "Con/Sin ayuda" y los botones de orden. */
+.sentence-editor {
+  container-type: inline-size;
+}
+
+@container (max-width: 60rem) {
+  .sentence-editor table {
+    min-width: 0;
+  }
+
+  .sentence-editor thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+
+  .sentence-editor tbody {
+    display: block;
+  }
+
+  .sentence-editor tr {
+    display: grid;
+    padding: 0.75rem 0.65rem;
+    align-items: center;
+    grid-template-areas:
+      "pos kind assist actions"
+      "pos text text text";
+    grid-template-columns: 2.5rem minmax(0, 12rem) minmax(0, 1fr) auto;
+    gap: 0.55rem 0.65rem;
+    border-top: 1px solid var(--color-line);
+  }
+
+  .sentence-editor td {
+    display: block;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .sentence-editor td:nth-child(1) { grid-area: pos; align-self: start; }
+  .sentence-editor td:nth-child(2) { grid-area: kind; }
+  .sentence-editor td:nth-child(3) { grid-area: text; }
+  .sentence-editor td:nth-child(4) { grid-area: assist; justify-self: start; }
+  .sentence-editor td:nth-child(5) { grid-area: actions; }
+
+  .sentence-editor__text,
+  .sentence-editor__text p,
+  .sentence-editor__text .p-textarea {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .sentence-editor td .p-select {
+    width: 100%;
+  }
+}
+
+@container (max-width: 34rem) {
+  .sentence-editor tr {
+    grid-template-areas:
+      "pos kind actions"
+      "pos assist assist"
+      "pos text text";
+    grid-template-columns: 2rem minmax(0, 1fr) auto;
+  }
+}
+
 .sentence-editor__footer {
   display: flex;
   padding: 0.85rem 1rem;
@@ -1835,6 +1939,11 @@ h2 {
 .attempts-table .p-datatable-tbody > tr.attempts-table__row--excluded > td {
   color: var(--color-ink-soft);
   background: rgba(184, 65, 43, 0.04);
+}
+
+.attempts-table .p-datatable-tbody > tr.attempts-table__row--excluded > td.p-datatable-frozen-column {
+  background-color: var(--color-surface);
+  background-image: linear-gradient(rgba(184, 65, 43, 0.04), rgba(184, 65, 43, 0.04));
 }
 
 .attempts-table .p-paginator {

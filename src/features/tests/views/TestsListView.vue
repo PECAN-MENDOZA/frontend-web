@@ -98,7 +98,7 @@ function openTest(testId) {
         v-else
         :value="testsStore.tests"
         data-key="id"
-        class="tests-table"
+        class="tests-table" scrollable
         table-style="min-width: 60rem"
       >
         <template #empty>
@@ -148,7 +148,7 @@ function openTest(testId) {
             <span class="test-number">{{ formatDate(data.createdAt) }}</span>
           </template>
         </Column>
-        <Column header="Acciones">
+        <Column header="Acciones" frozen align-frozen="right">
           <template #body="{ data }">
             <Button
               label="Abrir"

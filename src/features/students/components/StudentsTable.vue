@@ -28,7 +28,7 @@ const rows = computed(() => {
 <template>
   <DataTable
     :value="rows"
-    class="student-directory-table"
+    class="student-directory-table" scrollable
     paginator
     :rows="8"
     :rows-per-page-options="[8, 15]"
@@ -59,7 +59,7 @@ const rows = computed(() => {
         <span v-else class="table-muted">Sin actividad</span>
       </template>
     </Column>
-    <Column header="Ficha">
+    <Column header="Ficha" frozen align-frozen="right">
       <template #body="{ data }">
         <Button
           label="Ver ficha"

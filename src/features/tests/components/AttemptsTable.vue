@@ -37,7 +37,7 @@ function statusSeverity(row) {
   <DataTable
     :value="rows"
     data-key="studentId"
-    class="attempts-table"
+    class="attempts-table" scrollable
     :row-class="(row) => (row.excluded ? 'attempts-table__row--excluded' : '')"
     paginator
     :rows="15"
@@ -74,7 +74,7 @@ function statusSeverity(row) {
         <span class="test-number">{{ formatDateTime(data.completedAt) }}</span>
       </template>
     </Column>
-    <Column header="Acciones">
+    <Column header="Acciones" frozen align-frozen="right">
       <template #body="{ data }">
         <div v-if="data.attemptId" class="row-actions">
           <Button

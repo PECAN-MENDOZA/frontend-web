@@ -244,7 +244,7 @@ function openStudent(studentId) {
       <DataTable
         v-else
         :value="classroomsStore.students"
-        class="classroom-students-table"
+        class="classroom-students-table" scrollable
         data-key="studentId"
         paginator
         :rows="15"
@@ -323,7 +323,7 @@ function openStudent(studentId) {
             {{ formatLastAccess(data.lastAccessAt) }}
           </template>
         </Column>
-        <Column header="Acciones">
+        <Column header="Acciones" frozen align-frozen="right">
           <template #body="{ data }">
             <div class="row-actions">
               <Button

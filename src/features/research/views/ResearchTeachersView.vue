@@ -129,7 +129,7 @@ function closePasswordDialog() {
       >
         <Skeleton v-for="item in 4" :key="item" height="3.6rem" />
       </div>
-      <DataTable v-else :value="researchStore.teachers" class="teachers-table" table-style="min-width: 48rem">
+      <DataTable v-else :value="researchStore.teachers" class="teachers-table" scrollable table-style="min-width: 48rem">
         <template #empty>
           <p class="table-empty">
             Aún no hay docentes. Crea la primera cuenta para que empiece a registrar salones.
@@ -154,7 +154,7 @@ function closePasswordDialog() {
             />
           </template>
         </Column>
-        <Column header="Acciones">
+        <Column header="Acciones" frozen align-frozen="right">
           <template #body="{ data }">
             <Button
               label="Reiniciar contraseña"
