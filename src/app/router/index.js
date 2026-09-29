@@ -4,6 +4,7 @@ import AuthLayout from '@/app/layouts/AuthLayout.vue'
 import ResearchLayout from '@/app/layouts/ResearchLayout.vue'
 import { useAuthStore } from '@/features/auth/store/auth.store'
 import { canAccessRoute, homeForRole, requiresPasswordChange } from '@/features/auth/utils/access'
+import { reloadOnceForChunkError } from './chunkReload'
 
 const routes = [
   {
@@ -151,6 +152,15 @@ router.beforeEach((to) => {
   if (to.meta.guestOnly && authStore.isAuthenticated) {
     return homeForRole(authStore.user?.role)
   }
+})
+
+// Bundle viejo tras un despliegue: recarga hacia la ruta a la que se iba.
+router.onError((error, to) => {
+  reloadOnceForChunkError(error, {
+    storage: window.sessionStorage,
+    reload: (path) => window.location.assign(path ?? window.location.href),
+    targetPath: to?.fullPath,
+  })
 })
 
 export default router

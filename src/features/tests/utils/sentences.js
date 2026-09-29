@@ -59,8 +59,10 @@ export function sentenceCounts(sentences) {
   )
 }
 
+const plural = (n, singular, pluralForm) => `${n} ${n === 1 ? singular : pluralForm}`
+
 export function countsSummary({ total, dictated, free, assisted, unassisted }) {
-  return `${total} oraciones · ${dictated} dictadas / ${free} libres · ${assisted} con ayuda / ${unassisted} sin`
+  return `${plural(total, 'oración', 'oraciones')} · ${plural(dictated, 'dictada', 'dictadas')} / ${plural(free, 'libre', 'libres')} · ${assisted} con ayuda / ${unassisted} sin`
 }
 
 export function moveSentence(sentences, from, to) {

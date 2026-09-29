@@ -18,7 +18,7 @@ test('OUTCOME_LABELS and OUTCOME_SEVERITIES cover the five outcomes in Spanish',
     'UNDONE',
     'UNANSWERED',
   ])
-  assert.equal(OUTCOME_LABELS.EDITED, 'Resolvió solo')
+  assert.equal(OUTCOME_LABELS.EDITED, 'Aceptó y editó')
   assert.equal(OUTCOME_SEVERITIES.UNANSWERED, 'secondary')
 })
 

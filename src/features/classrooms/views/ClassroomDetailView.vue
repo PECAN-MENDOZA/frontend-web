@@ -307,7 +307,7 @@ function openStudent(studentId) {
                 severity="secondary"
                 text
                 rounded
-                aria-label="Editar nombre real"
+                :aria-label="`Editar nombre real de ${data.studentUsername}`"
                 @click="startEdit(data)"
               />
             </div>

@@ -2,7 +2,7 @@
 // no evalúa. Sin severidades de "mejora" ni comparación entre periodos.
 
 export const OUTCOME_LABELS = {
-  EDITED: 'Resolvió solo',
+  EDITED: 'Aceptó y editó',
   ACCEPTED: 'Aceptó',
   REJECTED: 'Rechazó',
   UNDONE: 'Deshizo',

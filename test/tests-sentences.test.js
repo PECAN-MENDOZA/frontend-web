@@ -136,3 +136,10 @@ test('hasUnsavedSentences compares only the editable fields of each sentence', (
   assert.equal(hasUnsavedSentences(undefined, []), false)
   assert.equal(hasUnsavedSentences(null, [saved[0]]), true)
 })
+
+test('countsSummary usa singular cuando la cifra es 1', () => {
+  assert.equal(
+    countsSummary({ total: 1, dictated: 1, free: 1, assisted: 1, unassisted: 0 }),
+    '1 oración · 1 dictada / 1 libre · 1 con ayuda / 0 sin',
+  )
+})
