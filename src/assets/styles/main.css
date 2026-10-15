@@ -1199,6 +1199,13 @@ h2 {
   text-align: center;
 }
 
+/* Acciones del investigador sobre un docente: varias en la misma celda. */
+.teacher-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
 .classroom-cell {
   display: flex;
   align-items: center;

@@ -9,6 +9,7 @@ export function teacherFormErrors({ fullName, email, institution }) {
 }
 
 export function teacherStatusLabel(teacher) {
+  if (teacher?.deactivatedAt) return 'Dado de baja'
   return teacher?.mustChangePassword ? 'Contraseña temporal' : 'Activo'
 }
 
@@ -25,6 +26,24 @@ export function temporaryPasswordNotice(teacher, password) {
 // Cómo nombrar al docente en títulos y confirmaciones: su nombre o, si falta, su correo.
 export function teacherLabel(teacher) {
   return (teacher?.fullName ?? '').trim() || teacher?.email || 'el docente'
+}
+
+export function teacherDeactivateConfirmation(teacher) {
+  return {
+    header: `Dar de baja a ${teacherLabel(teacher)}`,
+    message:
+      'Ya no podrá entrar al panel y sus estudiantes no podrán usar el teclado. No se borra nada y puedes reactivarlo después.',
+    acceptLabel: 'Dar de baja',
+  }
+}
+
+export function teacherReactivateConfirmation(teacher) {
+  return {
+    header: `Reactivar a ${teacherLabel(teacher)}`,
+    message:
+      'Podrá volver a entrar al panel con su contraseña actual y sus estudiantes podrán usar el teclado otra vez.',
+    acceptLabel: 'Reactivar',
+  }
 }
 
 export function passwordResetConfirmation(teacher) {

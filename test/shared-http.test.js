@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import {
   isMissingResource,
   isPasswordChangeRequired,
+  sessionEndReason,
   statusMessage,
 } from '../src/shared/utils/http.js'
 import {
@@ -49,4 +50,12 @@ test('student confirmations fall back to the alias when there is no real name', 
   assert.equal(pinResetConfirmation('', 'tren-40').header, 'Reiniciar el PIN de tren-40')
   assert.equal(reactivateConfirmation(null, 'tren-40').header, 'Reactivar a tren-40')
   assert.match(pinResetConfirmation('', 'tren-40').message, /«tren-40»/)
+})
+
+test('sessionEndReason tells a plain 401 from a reset password or a deactivated account', () => {
+  assert.equal(sessionEndReason(200, ''), undefined)
+  assert.equal(sessionEndReason(404, 'Not found'), undefined)
+  assert.equal(sessionEndReason(401, 'Invalid token'), null)
+  assert.equal(sessionEndReason(403, 'Password change required'), 'password-reset')
+  assert.equal(sessionEndReason(401, 'Teacher account is deactivated'), 'deactivated')
 })

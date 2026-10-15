@@ -4,6 +4,9 @@ export const PASSWORD_MAX_LENGTH = 72
 export const PASSWORD_RESET_NOTICE =
   'Tu contraseña fue reiniciada. Entra con la contraseña temporal que te dieron.'
 
+export const DEACTIVATED_NOTICE =
+  'Tu cuenta fue dada de baja. Si crees que es un error, habla con el administrador del panel.'
+
 const PASSWORD_LENGTH_MESSAGE = `La contraseña debe tener entre ${PASSWORD_MIN_LENGTH} y ${PASSWORD_MAX_LENGTH} caracteres.`
 
 export function homeForRole(role) {

@@ -7,8 +7,12 @@ import {
   restoreSession,
   signIn as signInRequest,
 } from '@/features/auth/services/auth.service'
-import { changePasswordErrorMessage, PASSWORD_RESET_NOTICE } from '@/features/auth/utils/access'
-import { SESSION_END_PASSWORD_RESET } from '@/shared/utils/http'
+import {
+  changePasswordErrorMessage,
+  DEACTIVATED_NOTICE,
+  PASSWORD_RESET_NOTICE,
+} from '@/features/auth/utils/access'
+import { SESSION_END_DEACTIVATED, SESSION_END_PASSWORD_RESET } from '@/shared/utils/http'
 
 export const useAuthStore = defineStore('auth', () => {
   const session = restoreSession()
@@ -76,6 +80,7 @@ export const useAuthStore = defineStore('auth', () => {
   window.addEventListener('auth:unauthorized', (event) => {
     signOut()
     if (event?.detail?.reason === SESSION_END_PASSWORD_RESET) notice.value = PASSWORD_RESET_NOTICE
+    if (event?.detail?.reason === SESSION_END_DEACTIVATED) notice.value = DEACTIVATED_NOTICE
   })
 
   return {

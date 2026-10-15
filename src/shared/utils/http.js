@@ -4,8 +4,24 @@
 // fuera de /auth/**.
 export const PASSWORD_CHANGE_REQUIRED = 'Password change required'
 
-// Motivo que viaja en auth:unauthorized para que el login explique por qué se cerró la sesión.
+// TemporaryPasswordFilter: el investigador dio de baja al docente; su sesión deja de valer (401).
+export const TEACHER_DEACTIVATED = 'Teacher account is deactivated'
+
+// Motivos que viajan en auth:unauthorized para que el login explique por qué se cerró la sesión.
 export const SESSION_END_PASSWORD_RESET = 'password-reset'
+export const SESSION_END_DEACTIVATED = 'deactivated'
+
+/**
+ * Si la respuesta cierra la sesión: undefined si no; null si es un 401 sin más; o el motivo que el
+ * login debe explicar (contraseña reiniciada o cuenta dada de baja).
+ */
+export function sessionEndReason(status, message) {
+  if (isPasswordChangeRequired(status, message)) return SESSION_END_PASSWORD_RESET
+  if (status !== 401) return undefined
+  return typeof message === 'string' && message.trim() === TEACHER_DEACTIVATED
+    ? SESSION_END_DEACTIVATED
+    : null
+}
 
 export function isPasswordChangeRequired(status, message) {
   return (

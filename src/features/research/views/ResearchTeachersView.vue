@@ -13,14 +13,20 @@ import { useResearchStore } from '@/features/research/store/research.store'
 import { copyText } from '@/features/research/utils/clipboard'
 import {
   passwordResetConfirmation,
+  teacherDeactivateConfirmation,
   teacherDisplayName,
+  teacherReactivateConfirmation,
   teacherLabel,
   teacherStatusLabel,
   temporaryPasswordNotice,
 } from '@/features/research/utils/teachers'
 import PageHeader from '@/shared/components/PageHeader.vue'
 
-const TEACHER_STATUS_SEVERITIES = { 'Contraseña temporal': 'warn', Activo: 'success' }
+const TEACHER_STATUS_SEVERITIES = {
+  'Contraseña temporal': 'warn',
+  Activo: 'success',
+  'Dado de baja': 'danger',
+}
 
 const researchStore = useResearchStore()
 const confirm = useConfirm()
@@ -78,6 +84,29 @@ function confirmResetPassword(teacher) {
     rejectProps: { severity: 'secondary', text: true },
     accept: () => resetPassword(teacher),
   })
+}
+
+function confirmSetActive(teacher, active) {
+  confirm.require({
+    ...(active ? teacherReactivateConfirmation(teacher) : teacherDeactivateConfirmation(teacher)),
+    icon: active ? 'pi pi-user-plus' : 'pi pi-user-minus',
+    rejectLabel: 'Cancelar',
+    acceptProps: { severity: active ? 'primary' : 'danger' },
+    rejectProps: { severity: 'secondary', text: true },
+    accept: () => setActive(teacher, active),
+  })
+}
+
+async function setActive(teacher, active) {
+  resetErrorMessage.value = ''
+  pendingTeacherId.value = teacher.id
+  try {
+    await researchStore.setTeacherActive(teacher.id, active)
+  } catch (error) {
+    resetErrorMessage.value = error.message
+  } finally {
+    pendingTeacherId.value = null
+  }
 }
 
 async function resetPassword(teacher) {
@@ -175,16 +204,40 @@ function closePasswordDialog() {
         </Column>
         <Column header="Acciones" frozen align-frozen="right">
           <template #body="{ data }">
-            <Button
-              label="Reiniciar contraseña"
-              icon="pi pi-key"
-              severity="secondary"
-              text
-              size="small"
-              :loading="pendingTeacherId === data.id"
-              :disabled="researchStore.isMutating && pendingTeacherId !== data.id"
-              @click="confirmResetPassword(data)"
-            />
+            <div class="teacher-actions">
+              <template v-if="!data.deactivatedAt">
+                <Button
+                  label="Reiniciar contraseña"
+                  icon="pi pi-key"
+                  severity="secondary"
+                  text
+                  size="small"
+                  :loading="pendingTeacherId === data.id"
+                  :disabled="researchStore.isMutating && pendingTeacherId !== data.id"
+                  @click="confirmResetPassword(data)"
+                />
+                <Button
+                  label="Dar de baja"
+                  icon="pi pi-user-minus"
+                  severity="danger"
+                  text
+                  size="small"
+                  :disabled="researchStore.isMutating"
+                  @click="confirmSetActive(data, false)"
+                />
+              </template>
+              <Button
+                v-else
+                label="Reactivar"
+                icon="pi pi-user-plus"
+                severity="secondary"
+                text
+                size="small"
+                :loading="pendingTeacherId === data.id"
+                :disabled="researchStore.isMutating && pendingTeacherId !== data.id"
+                @click="confirmSetActive(data, true)"
+              />
+            </div>
           </template>
         </Column>
       </DataTable>
@@ -228,6 +281,7 @@ function closePasswordDialog() {
             <div class="classroom-cell">
               <strong>{{ data.name }}</strong>
               <Tag v-if="data.archived" value="Archivado" severity="secondary" rounded />
+              <Tag v-if="data.teacherDeactivated" value="Docente de baja" severity="danger" rounded />
             </div>
           </template>
         </Column>

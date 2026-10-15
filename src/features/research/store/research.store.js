@@ -5,6 +5,8 @@ import {
   listClassroomDirectory,
   listTeachers,
   resetTeacherPassword as resetTeacherPasswordRequest,
+  deactivateTeacher as deactivateTeacherRequest,
+  reactivateTeacher as reactivateTeacherRequest,
 } from '@/features/research/services/teachers.service'
 import { requestErrorMessage } from '@/features/research/utils/errors'
 import { createGuardedLoader, createPendingCounter } from '@/features/research/utils/mutations'
@@ -114,6 +116,14 @@ export const useResearchStore = defineStore('research', () => {
     })
   }
 
+  // Baja o reactivación: cambia el estado del docente y, en el directorio, la marca de sus salones.
+  function setTeacherActive(id, active) {
+    return pendingCounter.track(async () => {
+      await post(() => (active ? reactivateTeacherRequest(id) : deactivateTeacherRequest(id)))
+      await Promise.all([loadTeachers(), loadClassroomDirectory()])
+    })
+  }
+
   function clearTemporaryPassword() {
     temporaryPassword.value = null
   }
@@ -155,6 +165,7 @@ export const useResearchStore = defineStore('research', () => {
     loadClassroomDirectory,
     createTeacher,
     resetTeacherPassword,
+    setTeacherActive,
     clearTemporaryPassword,
     reset,
   }

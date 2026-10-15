@@ -1,4 +1,4 @@
-import { isPasswordChangeRequired, SESSION_END_PASSWORD_RESET } from '@/shared/utils/http'
+import { sessionEndReason } from '@/shared/utils/http'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'
 const TOKEN_KEY = 'florisboard_access_token'
@@ -21,19 +21,16 @@ export async function request(path, options = {}) {
     headers: getHeaders(options.headers, isFormData),
   })
 
-  if (response.status === 401 && !skipUnauthorizedEvent) {
-    window.dispatchEvent(new CustomEvent('auth:unauthorized'))
-  }
-
   if (!response.ok) {
     const error = await response
       .json()
       .catch(() => ({ message: 'Ocurrió un error inesperado en la solicitud.' }))
-    // Contraseña reiniciada con la sesión abierta: el token ya no sirve, así que se cierra la
-    // sesión como con un 401 y el login explica el motivo.
-    if (!skipUnauthorizedEvent && isPasswordChangeRequired(response.status, error.message)) {
+    // Un 401, una contraseña reiniciada (403) o una cuenta dada de baja (401) cierran la sesión; en
+    // los dos últimos casos el login explica el motivo.
+    const reason = sessionEndReason(response.status, error.message)
+    if (!skipUnauthorizedEvent && reason !== undefined) {
       window.dispatchEvent(
-        new CustomEvent('auth:unauthorized', { detail: { reason: SESSION_END_PASSWORD_RESET } }),
+        new CustomEvent('auth:unauthorized', reason ? { detail: { reason } } : undefined),
       )
     }
 
