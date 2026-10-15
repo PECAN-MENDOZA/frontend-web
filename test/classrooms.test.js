@@ -56,10 +56,12 @@ test('sortClassrooms puts active classrooms first, then by name', () => {
   )
 })
 
-test('formatLastAccess shows a placeholder when the student never signed in', () => {
-  assert.equal(formatLastAccess(null), 'Sin ingresos')
-  assert.equal(formatLastAccess('no-es-fecha'), 'Sin ingresos')
-  assert.match(formatLastAccess('2026-09-17T15:04:00Z'), /2026/)
+test('formatLastAccess matches the students directory: relative, or "Sin actividad"', () => {
+  assert.equal(formatLastAccess(null), 'Sin actividad')
+  assert.equal(formatLastAccess('no-es-fecha'), 'Sin actividad')
+  const now = new Date('2026-09-17T15:30:00Z')
+  assert.equal(formatLastAccess('2026-09-17T15:04:00Z', now), 'hace 26 min')
+  assert.match(formatLastAccess('2026-09-01T15:04:00Z', now), /2026/)
 })
 
 test('inactiveInClassroom keeps only that classroom, most recent deactivation first', () => {

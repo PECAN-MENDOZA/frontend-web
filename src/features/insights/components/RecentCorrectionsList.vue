@@ -62,7 +62,7 @@ function toggle(sessionId) {
             >
               {{ row.realName || row.username }}
             </RouterLink>
-            <span class="classroom-username">{{ row.username }}</span>
+            <span v-if="row.realName" class="classroom-username">{{ row.username }}</span>
           </div>
           <p class="correction-item__line">{{ row.line }}</p>
           <div class="correction-item__labels">

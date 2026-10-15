@@ -40,7 +40,9 @@ const title = computed(() => studentName.value || link.value?.username || 'Estud
 // saber si el alumno tiene o no un salón.
 const identity = computed(() => {
   if (!link.value) return ''
-  return [link.value.username, link.value.classroomName || 'Sin salón'].filter(Boolean).join(' · ')
+  // Sin nombre real el título ya es el alias: no se repite debajo.
+  const alias = studentName.value ? link.value.username : null
+  return [alias, link.value.classroomName || 'Sin salón'].filter(Boolean).join(' · ')
 })
 
 const periodMessage = computed(() => periodErrors(insightsStore.period))

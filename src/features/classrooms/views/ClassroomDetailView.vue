@@ -46,12 +46,20 @@ const isRenameDialogVisible = ref(false)
 const isCreateDialogVisible = ref(false)
 const createMode = ref('named')
 const isCredentialsDialogVisible = ref(false)
+// Tras crear se muestra solo el lote nuevo; "Imprimir credenciales" muestra todo lo de esta visita.
+const credentialsScope = ref('created')
+const credentialsToShow = computed(() =>
+  credentialsScope.value === 'session'
+    ? classroomsStore.sessionCredentials
+    : classroomsStore.createdCredentials,
+)
 const isMoveDialogVisible = ref(false)
 const movingStudent = ref(null)
 // Qué acción (y de qué fila) está en curso: solo ese botón muestra el spinner.
 const pendingAction = ref(null)
 // Edición en línea del nombre real: una fila a la vez.
-const editing = reactive({ studentId: null, name: '' })
+// Edición en línea de una celda: el nombre real o las notas del docente (una a la vez).
+const editing = reactive({ studentId: null, field: 'name', name: '' })
 const editInput = ref(null)
 
 const isAnyDialogVisible = computed(
@@ -92,8 +100,14 @@ function openCreateStudents(mode) {
 async function createStudents(body) {
   if (await classroomsStore.createStudents(classroomId.value, body)) {
     isCreateDialogVisible.value = false
+    credentialsScope.value = 'created'
     isCredentialsDialogVisible.value = true
   }
+}
+
+function openSessionCredentials() {
+  credentialsScope.value = 'session'
+  isCredentialsDialogVisible.value = true
 }
 
 function isPending(kind, studentId) {
@@ -110,9 +124,10 @@ async function runPending(kind, studentId, action) {
   }
 }
 
-async function startEdit(student) {
+async function startEdit(student, field = 'name') {
   editing.studentId = student.studentId
-  editing.name = student.studentRealName ?? ''
+  editing.field = field
+  editing.name = (field === 'notes' ? student.notes : student.studentRealName) ?? ''
   // El campo se monta al cambiar la fila a modo edición; el foco se pide una vez montado.
   await nextTick()
   editInput.value?.$el?.focus()
@@ -120,14 +135,16 @@ async function startEdit(student) {
 
 function cancelEdit() {
   editing.studentId = null
+  editing.field = 'name'
   editing.name = ''
 }
 
 async function saveEdit(student) {
   const wasSaved = await runPending('edit', student.studentId, () =>
     classroomsStore.updateStudent(student.studentId, {
-      studentRealName: editing.name.trim(),
-      notes: student.notes ?? '',
+      studentRealName:
+        editing.field === 'name' ? editing.name.trim() : (student.studentRealName ?? ''),
+      notes: editing.field === 'notes' ? editing.name.trim() : (student.notes ?? ''),
     }),
   )
 
@@ -226,12 +243,12 @@ function openStudent(studentId) {
             @click="router.push({ name: 'classrooms' })"
           />
           <Button
-            v-if="classroomsStore.createdCredentials.length"
+            v-if="classroomsStore.sessionCredentials.length"
             label="Imprimir credenciales"
             icon="pi pi-print"
             severity="secondary"
             outlined
-            @click="isCredentialsDialogVisible = true"
+            @click="openSessionCredentials"
           />
           <Button
             label="Crear varios"
@@ -306,7 +323,7 @@ function openStudent(studentId) {
           <Column header="Nombre real">
             <template #body="{ data }">
               <form
-                v-if="editing.studentId === data.studentId"
+                v-if="editing.studentId === data.studentId && editing.field === 'name'"
                 class="inline-edit"
                 @submit.prevent="saveEdit(data)"
               >
@@ -357,10 +374,55 @@ function openStudent(studentId) {
           </Column>
           <Column header="Notas">
             <template #body="{ data }">
-              <span class="classroom-notes">{{ data.notes || '—' }}</span>
+              <form
+                v-if="editing.studentId === data.studentId && editing.field === 'notes'"
+                class="inline-edit"
+                @submit.prevent="saveEdit(data)"
+              >
+                <InputText
+                  ref="editInput"
+                  v-model="editing.name"
+                  size="small"
+                  :maxlength="2000"
+                  aria-label="Notas del docente"
+                  @keydown.esc.prevent="cancelEdit"
+                />
+                <Button
+                  type="submit"
+                  icon="pi pi-check"
+                  size="small"
+                  text
+                  rounded
+                  aria-label="Guardar notas"
+                  :loading="isPending('edit', data.studentId)"
+                />
+                <Button
+                  type="button"
+                  icon="pi pi-times"
+                  size="small"
+                  severity="secondary"
+                  text
+                  rounded
+                  aria-label="Cancelar edición"
+                  :disabled="isPending('edit', data.studentId)"
+                  @click="cancelEdit"
+                />
+              </form>
+              <div v-else class="inline-edit">
+                <span class="classroom-notes">{{ data.notes || '—' }}</span>
+                <Button
+                  icon="pi pi-pencil"
+                  size="small"
+                  severity="secondary"
+                  text
+                  rounded
+                  :aria-label="`Editar notas de ${data.studentUsername}`"
+                  @click="startEdit(data, 'notes')"
+                />
+              </div>
             </template>
           </Column>
-          <Column header="Último acceso">
+          <Column header="Última actividad">
             <template #body="{ data }">
               {{ formatLastAccess(data.lastAccessAt) }}
             </template>
@@ -475,7 +537,7 @@ function openStudent(studentId) {
 
       <CredentialsListDialog
         v-model:visible="isCredentialsDialogVisible"
-        :credentials="classroomsStore.createdCredentials"
+        :credentials="credentialsToShow"
         :classroom-name="classroom?.name ?? ''"
       />
 

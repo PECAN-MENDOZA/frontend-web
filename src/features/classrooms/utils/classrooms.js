@@ -1,3 +1,5 @@
+import { formatRelative } from '../../insights/utils/period.js'
+
 export const CLASSROOM_NAME_MAX_LENGTH = 80
 export const STUDENT_COUNT_MAX = 40
 
@@ -41,9 +43,10 @@ export function sortClassrooms(list) {
   })
 }
 
-export function formatLastAccess(value) {
-  const date = value ? new Date(value) : null
-  return date && !Number.isNaN(date.getTime()) ? lastAccessFormatter.format(date) : 'Sin ingresos'
+// Mismo texto que la columna "Última actividad" de Estudiantes: relativo, o "Sin actividad".
+export function formatLastAccess(value, now = new Date()) {
+  const label = formatRelative(value, now)
+  return label === '—' ? 'Sin actividad' : label
 }
 
 // Dados de baja de un salón (GET /teachers/students/inactive trae los de todos): los de ese salón,

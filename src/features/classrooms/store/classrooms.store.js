@@ -29,7 +29,10 @@ export const useClassroomsStore = defineStore('classrooms', () => {
   const inactiveStudents = ref([])
   // Salón ajeno o inexistente: la vista muestra solo el aviso y el botón para volver.
   const isNotFound = ref(false)
+  // Último lote creado (lo muestra el diálogo justo después de crear) y todas las credenciales
+  // creadas o reiniciadas en esta visita al salón ("Imprimir credenciales"). Ninguna sobrevive a la salida.
   const createdCredentials = ref([])
+  const sessionCredentials = ref([])
   const resetPinCredentials = ref(null)
   const isLoading = ref(false)
   const isMutating = ref(false)
@@ -150,6 +153,7 @@ export const useClassroomsStore = defineStore('classrooms', () => {
   function createStudents(id, body) {
     return runMutation(async () => {
       createdCredentials.value = await createClassroomStudents(id, body)
+      sessionCredentials.value = [...sessionCredentials.value, ...createdCredentials.value]
       students.value = await listClassroomStudents(id)
       syncStudentCount()
     }, 'No pudimos crear las cuentas. Inténtalo nuevamente.')
@@ -183,6 +187,7 @@ export const useClassroomsStore = defineStore('classrooms', () => {
 
       await deactivateStudentRequest(studentId)
       removeStudent(studentId)
+      sessionCredentials.value = sessionCredentials.value.filter((item) => item.studentId !== studentId)
       if (student) {
         inactiveStudents.value = [
           { ...student, deactivatedAt: new Date().toISOString() },
@@ -226,6 +231,9 @@ export const useClassroomsStore = defineStore('classrooms', () => {
       const credential = await resetStudentPinRequest(studentId)
       const student = students.value.find((item) => item.studentId === studentId)
 
+      sessionCredentials.value = sessionCredentials.value.map((item) =>
+        item.studentId === studentId ? { ...item, pin: credential.pin } : item,
+      )
       resetPinCredentials.value = {
         ...credential,
         studentRealName: student?.studentRealName || student?.studentUsername,
@@ -255,6 +263,8 @@ export const useClassroomsStore = defineStore('classrooms', () => {
 
   function clearSelectedClassroom() {
     selectedClassroom.value = null
+    createdCredentials.value = []
+    sessionCredentials.value = []
     students.value = []
     inactiveStudents.value = []
     isNotFound.value = false
@@ -271,6 +281,7 @@ export const useClassroomsStore = defineStore('classrooms', () => {
     inactiveStudents.value = []
     isNotFound.value = false
     createdCredentials.value = []
+    sessionCredentials.value = []
     resetPinCredentials.value = null
     errorMessage.value = ''
     mutationErrorMessage.value = ''
@@ -283,6 +294,7 @@ export const useClassroomsStore = defineStore('classrooms', () => {
     inactiveStudents,
     isNotFound,
     createdCredentials,
+    sessionCredentials,
     resetPinCredentials,
     isLoading,
     isMutating,

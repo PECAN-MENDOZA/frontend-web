@@ -506,7 +506,7 @@ h2 {
 }
 
 .topbar__profile strong,
-.topbar__profile span {
+.topbar__profile > div:not(.p-avatar) > span {
   display: block;
 }
 
@@ -514,7 +514,8 @@ h2 {
   font-size: 0.75rem;
 }
 
-.topbar__profile span {
+/* Solo el rol bajo el nombre: el span de las iniciales del avatar conserva su estilo. */
+.topbar__profile > div:not(.p-avatar) > span {
   margin-top: 0.1rem;
   color: var(--color-ink-soft);
   font-size: 0.67rem;

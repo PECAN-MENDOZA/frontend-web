@@ -30,8 +30,8 @@ const rows = computed(() => {
     :value="rows"
     class="student-directory-table" scrollable
     paginator
-    :rows="8"
-    :rows-per-page-options="[8, 15]"
+    :rows="15"
+    :rows-per-page-options="[15, 40]"
     table-style="min-width: 40rem"
   >
     <Column header="Nombre">

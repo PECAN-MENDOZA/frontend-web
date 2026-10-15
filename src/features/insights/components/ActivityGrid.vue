@@ -43,7 +43,7 @@ const cards = computed(() => {
       >
         <span class="activity-card__identity">
           <strong>{{ student.realName || student.username }}</strong>
-          <span class="classroom-username">{{ student.username }}</span>
+          <span v-if="student.realName" class="classroom-username">{{ student.username }}</span>
         </span>
         <span class="activity-card__meta">
           <span>Última escritura: {{ student.lastActivityLabel }}</span>
