@@ -78,11 +78,8 @@ const { authStore, credentials, submitSignIn } = useAuth()
           />
         </div>
 
-        <p class="login-card__options">
-          ¿Olvidaste tu contraseña? Pide al administrador del panel que la reinicie.
-        </p>
-
         <Button
+          class="login-card__submit"
           type="submit"
           label="Ingresar al panel"
           icon="pi pi-arrow-right"
