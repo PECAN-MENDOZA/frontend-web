@@ -40,8 +40,6 @@ const BACKEND_MESSAGES = {
   "'to' must not be before 'from'": 'La fecha final no puede ser anterior a la inicial.',
   'Dates must use the YYYY-MM-DD format': 'Las fechas no tienen un formato válido.',
   'Failed to generate PDF report': 'No pudimos generar el reporte. Inténtalo nuevamente.',
-  'Too many login attempts':
-    'Demasiados intentos. Espera 15 minutos o pide al administrador que reinicie tu contraseña.',
   // Bean Validation (400 con validationErrors por campo).
   'Request validation failed': 'La solicitud no pasó la validación.',
 }

@@ -25,6 +25,5 @@ export function isMissingResource(error) {
 export function statusMessage(status, fallback) {
   if (status === 403) return 'No tienes acceso a esta información.'
   if (status === 404) return 'No encontramos lo que buscas.'
-  if (status === 429) return 'Demasiados intentos. Espera unos minutos e inténtalo nuevamente.'
   return fallback
 }

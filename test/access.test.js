@@ -108,11 +108,7 @@ test('changePasswordFormError validates the current password, 8 to 72 characters
   )
 })
 
-test('loginErrorMessage explains the lockout on 429 and stays generic otherwise', () => {
-  assert.equal(
-    loginErrorMessage(429),
-    'Demasiados intentos. Espera 15 minutos o pide al administrador que reinicie tu contraseña.',
-  )
+test('loginErrorMessage stays generic', () => {
   assert.equal(
     loginErrorMessage(401),
     'No pudimos iniciar sesión. Verifica tus credenciales e inténtalo nuevamente.',

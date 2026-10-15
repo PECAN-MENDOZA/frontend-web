@@ -28,10 +28,9 @@ test('isMissingResource treats 403 and 404 as "not yours or does not exist"', ()
   assert.equal(isMissingResource(null), false)
 })
 
-test('statusMessage gives Spanish text for 403, 404 and 429 and the fallback otherwise', () => {
+test('statusMessage gives Spanish text for 403 and 404 and the fallback otherwise', () => {
   assert.equal(statusMessage(403, 'x'), 'No tienes acceso a esta información.')
   assert.equal(statusMessage(404, 'x'), 'No encontramos lo que buscas.')
-  assert.match(statusMessage(429, 'x'), /^Demasiados intentos/)
   assert.equal(statusMessage(500, 'x'), 'x')
 })
 

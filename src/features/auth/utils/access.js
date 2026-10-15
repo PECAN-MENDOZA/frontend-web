@@ -56,10 +56,7 @@ export function changePasswordFormError({ currentPassword, newPassword, confirmP
   return ''
 }
 
-export function loginErrorMessage(status) {
-  if (status === 429) {
-    return 'Demasiados intentos. Espera 15 minutos o pide al administrador que reinicie tu contraseña.'
-  }
+export function loginErrorMessage() {
   return 'No pudimos iniciar sesión. Verifica tus credenciales e inténtalo nuevamente.'
 }
 

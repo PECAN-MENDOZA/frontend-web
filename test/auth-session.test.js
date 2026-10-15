@@ -91,19 +91,6 @@ test('without displayName the name is derived from the email', async () => {
   assert.equal(authStore.user.name, 'Ana Qa')
 })
 
-test('a 429 on login shows the lockout message', async () => {
-  setActivePinia(createPinia())
-  globalThis.fetch = async () => json({ message: 'Too many login attempts' }, 429)
-  const authStore = useAuthStore()
-
-  await assert.rejects(authStore.signIn({ email: 'ana@x.pe', password: 'x' }))
-
-  assert.equal(
-    authStore.errorMessage,
-    'Demasiados intentos. Espera 15 minutos o pide al administrador que reinicie tu contraseña.',
-  )
-})
-
 test('a 403 "Password change required" signs out and leaves the notice for the login', async () => {
   const authStore = await signedInStore()
   globalThis.fetch = async () => json({ message: 'Password change required' }, 403)
