@@ -1,15 +1,26 @@
 <script setup>
-import { reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
 import Password from 'primevue/password'
+import { useToast } from 'primevue/usetoast'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/features/auth/store/auth.store'
-import { nextRouteAfterPasswordChange } from '@/features/auth/utils/access'
+import {
+  changePasswordFormError,
+  homeForRole,
+  nextRouteAfterPasswordChange,
+} from '@/features/auth/utils/access'
 
 const route = useRoute()
 const router = useRouter()
+const toast = useToast()
 const authStore = useAuthStore()
+
+// Con contraseña temporal el cambio es obligatorio; si no, es un cambio voluntario que se puede
+// cancelar. Se fija al entrar: al guardar, mustChangePassword pasa a false y la pantalla no
+// debe cambiar de textos justo antes de salir.
+const isTemporary = Boolean(authStore.user?.mustChangePassword)
 
 const form = reactive({
   currentPassword: '',
@@ -18,25 +29,16 @@ const form = reactive({
 })
 
 const validationError = ref('')
+const currentPasswordLabel = computed(() =>
+  isTemporary ? 'Contraseña temporal' : 'Contraseña actual',
+)
 
-function validate() {
-  if (!form.currentPassword) {
-    return 'Escribe tu contraseña actual.'
-  }
-
-  if (form.newPassword.length < 8) {
-    return 'La nueva contraseña debe tener al menos 8 caracteres.'
-  }
-
-  if (form.newPassword !== form.confirmPassword) {
-    return 'Las contraseñas no coinciden.'
-  }
-
-  return ''
-}
+onMounted(() => authStore.clearErrors())
 
 async function submitChangePassword() {
-  validationError.value = validate()
+  // El error del intento anterior (p. ej. "contraseña actual incorrecta") no debe quedar junto al nuevo.
+  authStore.clearErrors()
+  validationError.value = changePasswordFormError(form)
 
   if (validationError.value) return
 
@@ -46,8 +48,13 @@ async function submitChangePassword() {
   })
 
   if (changed) {
+    toast.add({ severity: 'success', summary: 'Contraseña actualizada', life: 4000 })
     router.push(nextRouteAfterPasswordChange(route.query.redirect, authStore.user?.role))
   }
+}
+
+function cancel() {
+  router.push(homeForRole(authStore.user?.role))
 }
 
 // Salida explícita: sin ella, el docente quedaría atrapado en esta pantalla hasta que
@@ -61,10 +68,17 @@ function signOut() {
 <template>
   <section class="change-password-page">
     <form class="login-card" @submit.prevent="submitChangePassword">
-      <div>
+      <div v-if="isTemporary">
         <p class="overline">Antes de continuar</p>
         <h2>Elige tu contraseña</h2>
         <p class="login-card__subtitle">Tu contraseña temporal solo sirve para entrar una vez.</p>
+      </div>
+      <div v-else>
+        <p class="overline">Tu cuenta</p>
+        <h2>Cambiar contraseña</h2>
+        <p class="login-card__subtitle">
+          Escribe tu contraseña actual y elige una nueva de 8 a 72 caracteres.
+        </p>
       </div>
 
       <Message v-if="validationError" severity="warn" :closable="false">
@@ -75,12 +89,12 @@ function signOut() {
       </Message>
 
       <div class="form-field">
-        <label for="current-password">Contraseña temporal</label>
+        <label for="current-password">{{ currentPasswordLabel }}</label>
         <Password
           input-id="current-password"
           v-model="form.currentPassword"
           autocomplete="current-password"
-          placeholder="Contraseña que recibiste"
+          :placeholder="isTemporary ? 'Contraseña que recibiste' : 'Tu contraseña de ahora'"
           :feedback="false"
           toggle-mask
           fluid
@@ -93,7 +107,7 @@ function signOut() {
           input-id="new-password"
           v-model="form.newPassword"
           autocomplete="new-password"
-          placeholder="Al menos 8 caracteres"
+          placeholder="Entre 8 y 72 caracteres"
           :feedback="false"
           toggle-mask
           fluid
@@ -123,6 +137,17 @@ function signOut() {
       />
 
       <Button
+        v-if="!isTemporary"
+        type="button"
+        label="Cancelar"
+        severity="secondary"
+        text
+        fluid
+        :disabled="authStore.isLoading"
+        @click="cancel"
+      />
+      <Button
+        v-else
         type="button"
         label="Cerrar sesión"
         icon="pi pi-sign-out"

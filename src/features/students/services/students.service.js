@@ -13,7 +13,8 @@ export function resetStudentPin(studentId) {
 function mapStudentLink(link) {
   return {
     id: link.studentId,
-    realName: link.studentRealName ?? 'Estudiante',
+    // '' si el docente aún no le puso nombre: la tabla muestra "Sin nombre".
+    realName: link.studentRealName ?? '',
     username: link.studentUsername ?? '',
     notes: link.notes ?? '',
     classroomId: link.classroomId ?? null,

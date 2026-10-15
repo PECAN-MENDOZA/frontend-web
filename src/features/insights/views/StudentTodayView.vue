@@ -4,22 +4,29 @@ import { useRoute, useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
 import Skeleton from 'primevue/skeleton'
+import { useConfirm } from 'primevue/useconfirm'
 import ErrorExamplesPanel from '@/features/insights/components/ErrorExamplesPanel.vue'
 import HelpResponsePanel from '@/features/insights/components/HelpResponsePanel.vue'
 import PeriodPicker from '@/features/insights/components/PeriodPicker.vue'
 import PracticeWordsCard from '@/features/insights/components/PracticeWordsCard.vue'
 import StudentTestsPanel from '@/features/insights/components/StudentTestsPanel.vue'
+import { SENTENCE_TESTS_ENABLED } from '@/shared/constants/features'
 import WritingsList from '@/features/insights/components/WritingsList.vue'
-import { useInsightsStore } from '@/features/insights/store/insights.store.js'
+import {
+  STUDENT_NOT_FOUND_MESSAGE,
+  useInsightsStore,
+} from '@/features/insights/store/insights.store.js'
 import { periodErrors, periodLabel } from '@/features/insights/utils/period.js'
 import StudentCredentialDialog from '@/features/students/components/StudentCredentialDialog.vue'
 import { useStudentsStore } from '@/features/students/store/students.store'
+import { pinResetConfirmation } from '@/features/students/utils/students'
 import PageHeader from '@/shared/components/PageHeader.vue'
 
 // Ficha del alumno: qué escribió, en qué se equivocó y cómo respondió a la ayuda en el periodo
 // elegido. Describe; no compara periodos ni califica.
 const route = useRoute()
 const router = useRouter()
+const confirm = useConfirm()
 const insightsStore = useInsightsStore()
 const studentsStore = useStudentsStore()
 
@@ -28,7 +35,7 @@ const link = computed(() =>
   studentsStore.students.find((student) => String(student.id) === studentId.value),
 )
 const studentName = computed(() => link.value?.realName ?? '')
-const title = computed(() => studentName.value || 'Estudiante')
+const title = computed(() => studentName.value || link.value?.username || 'Estudiante')
 // '' mientras el directorio no ha cargado el vínculo: evita mostrar "Sin salón" de más antes de
 // saber si el alumno tiene o no un salón.
 const identity = computed(() => {
@@ -57,12 +64,19 @@ const isStale = computed(() => {
   )
 })
 const isFirstLoad = computed(() => insightsStore.isLoading && !student.value)
+// Alumno ajeno, dado de baja o inexistente: lo dice el backend (403/404) o no aparece en el
+// directorio ya cargado. Entonces solo se muestra el aviso y el botón para volver.
 const isUnknownStudent = computed(
-  () => !link.value && !studentsStore.isLoading && studentsStore.students.length > 0,
+  () =>
+    insightsStore.errorMessage === STUDENT_NOT_FOUND_MESSAGE ||
+    (!link.value && !studentsStore.isLoading && studentsStore.students.length > 0),
 )
 const resetCredential = computed(() =>
   studentsStore.resetPinCredentials
-    ? { ...studentsStore.resetPinCredentials, studentRealName: studentName.value }
+    ? {
+        ...studentsStore.resetPinCredentials,
+        studentRealName: studentName.value || link.value?.username,
+      }
     : null,
 )
 
@@ -83,7 +97,14 @@ function downloadReport() {
 }
 
 function resetPin() {
-  studentsStore.resetStudentPin(studentId.value)
+  confirm.require({
+    ...pinResetConfirmation(studentName.value, link.value?.username),
+    icon: 'pi pi-key',
+    rejectLabel: 'Cancelar',
+    acceptProps: { severity: 'danger' },
+    rejectProps: { severity: 'secondary', text: true },
+    accept: () => studentsStore.resetStudentPin(studentId.value),
+  })
 }
 
 onMounted(async () => {
@@ -109,132 +130,134 @@ watch(studentId, loadStudent)
       @click="router.push({ name: 'students' })"
     />
 
-    <PageHeader eyebrow="Ficha del alumno" :title="title" :description="identity">
-      <template #actions>
-        <Button
-          label="Actualizar"
-          icon="pi pi-refresh"
-          severity="secondary"
-          outlined
-          :loading="insightsStore.isLoading"
-          :disabled="Boolean(periodMessage)"
-          @click="loadStudent"
-        />
-        <Button
-          label="Reporte del periodo (PDF)"
-          icon="pi pi-download"
-          severity="secondary"
-          outlined
-          :loading="insightsStore.isDownloading"
-          :disabled="Boolean(periodMessage)"
-          @click="downloadReport"
-        />
-        <Button
-          label="Reiniciar PIN"
-          icon="pi pi-key"
-          severity="secondary"
-          outlined
-          :loading="studentsStore.isResettingPin"
-          :disabled="!link"
-          @click="resetPin"
-        />
-      </template>
-    </PageHeader>
-
-    <PeriodPicker :model-value="insightsStore.period" @update:model-value="updatePeriod" />
-
-    <Message v-if="insightsStore.errorMessage" severity="error">
-      {{ insightsStore.errorMessage }}
-    </Message>
-    <Message v-if="studentsStore.errorMessage" severity="error">
-      {{ studentsStore.errorMessage }}
-    </Message>
     <Message v-if="isUnknownStudent" severity="info" :closable="false">
-      Este estudiante no está entre tus vínculos activos. Vuelve a
-      <RouterLink :to="{ name: 'students' }">Estudiantes</RouterLink>.
-    </Message>
-    <Message v-if="insightsStore.downloadMessage" severity="warn" :closable="false">
-      {{ insightsStore.downloadMessage }}
-    </Message>
-    <Message v-if="isStale" severity="info" :closable="false">
-      Mostrando datos de {{ periodText }}; pulsa Actualizar.
-    </Message>
-    <Message v-if="studentsStore.resetPinErrorMessage" severity="warn" :closable="false">
-      {{ studentsStore.resetPinErrorMessage }}
+      {{ STUDENT_NOT_FOUND_MESSAGE }}
     </Message>
 
-    <template v-if="isFirstLoad">
-      <Skeleton height="12rem" border-radius="1rem" />
-      <Skeleton height="14rem" border-radius="1rem" />
-      <Skeleton height="16rem" border-radius="1rem" />
-    </template>
-
-    <template v-else-if="student">
-      <section class="panel" aria-labelledby="student-errors-heading">
-        <div class="panel__header">
-          <div>
-            <p class="overline">Errores por tipo</p>
-            <h2 id="student-errors-heading">En qué se equivoca</h2>
-          </div>
-          <span class="panel__meta">{{ periodText }}</span>
-        </div>
-        <ErrorExamplesPanel :errors="student.errors" />
-      </section>
-
-      <div class="student-today-grid">
-        <section class="panel" aria-labelledby="student-help-heading">
-          <div class="panel__header">
-            <div>
-              <p class="overline">Sugerencias del teclado</p>
-              <h2 id="student-help-heading">Cómo responde a la ayuda</h2>
-            </div>
-            <span class="panel__meta">{{ periodText }}</span>
-          </div>
-          <HelpResponsePanel :help="student.help" />
-        </section>
-
-        <section class="panel" aria-labelledby="student-practice-heading">
-          <div class="panel__header">
-            <div>
-              <p class="overline">Para la clase</p>
-              <h2 id="student-practice-heading">Palabras para practicar</h2>
-            </div>
-            <span class="panel__meta">{{ periodText }}</span>
-          </div>
-          <PracticeWordsCard
-            :words="student.errors?.practiceWords ?? []"
-            :student-name="studentName"
+    <template v-else>
+      <PageHeader eyebrow="Ficha del alumno" :title="title" :description="identity">
+        <template #actions>
+          <Button
+            label="Actualizar"
+            icon="pi pi-refresh"
+            severity="secondary"
+            outlined
+            :loading="insightsStore.isLoading"
+            :disabled="Boolean(periodMessage)"
+            @click="loadStudent"
           />
+          <Button
+            label="Reporte del periodo (PDF)"
+            icon="pi pi-download"
+            severity="secondary"
+            outlined
+            :loading="insightsStore.isDownloading"
+            :disabled="Boolean(periodMessage)"
+            @click="downloadReport"
+          />
+          <Button
+            label="Reiniciar PIN"
+            icon="pi pi-key"
+            severity="secondary"
+            outlined
+            :loading="studentsStore.isResettingPin"
+            :disabled="!link"
+            @click="resetPin"
+          />
+        </template>
+      </PageHeader>
+
+      <PeriodPicker :model-value="insightsStore.period" @update:model-value="updatePeriod" />
+
+      <Message v-if="insightsStore.errorMessage" severity="error">
+        {{ insightsStore.errorMessage }}
+      </Message>
+      <Message v-if="studentsStore.errorMessage" severity="error">
+        {{ studentsStore.errorMessage }}
+      </Message>
+      <Message v-if="insightsStore.downloadMessage" severity="warn" :closable="false">
+        {{ insightsStore.downloadMessage }}
+      </Message>
+      <Message v-if="isStale" severity="info" :closable="false">
+        Mostrando datos de {{ periodText }}; pulsa Actualizar.
+      </Message>
+      <Message v-if="studentsStore.resetPinErrorMessage" severity="warn" :closable="false">
+        {{ studentsStore.resetPinErrorMessage }}
+      </Message>
+
+      <template v-if="isFirstLoad">
+        <Skeleton height="12rem" border-radius="1rem" />
+        <Skeleton height="14rem" border-radius="1rem" />
+        <Skeleton height="16rem" border-radius="1rem" />
+      </template>
+
+      <template v-else-if="student">
+        <section class="panel" aria-labelledby="student-errors-heading">
+          <div class="panel__header">
+            <div>
+              <p class="overline">Errores por tipo</p>
+              <h2 id="student-errors-heading">En qué se equivoca</h2>
+            </div>
+            <span class="panel__meta">{{ periodText }}</span>
+          </div>
+          <ErrorExamplesPanel :errors="student.errors" />
         </section>
-      </div>
 
-      <section class="panel" aria-labelledby="student-writings-heading">
-        <div class="panel__header">
-          <div>
-            <p class="overline">Escrituras</p>
-            <h2 id="student-writings-heading">Lo que escribió</h2>
-          </div>
-          <span class="panel__meta">{{ periodText }}</span>
-        </div>
-        <WritingsList :items="student.writings" />
-      </section>
+        <div class="student-today-grid">
+          <section class="panel" aria-labelledby="student-help-heading">
+            <div class="panel__header">
+              <div>
+                <p class="overline">Sugerencias del teclado</p>
+                <h2 id="student-help-heading">Cómo responde a la ayuda</h2>
+              </div>
+              <span class="panel__meta">{{ periodText }}</span>
+            </div>
+            <HelpResponsePanel :help="student.help" />
+          </section>
 
-      <section class="panel" aria-labelledby="student-tests-heading">
-        <div class="panel__header">
-          <div>
-            <p class="overline">Pruebas de oraciones</p>
-            <h2 id="student-tests-heading">Pruebas</h2>
-          </div>
-          <span class="panel__meta">Todas las pruebas completadas</span>
+          <section class="panel" aria-labelledby="student-practice-heading">
+            <div class="panel__header">
+              <div>
+                <p class="overline">Para la clase</p>
+                <h2 id="student-practice-heading">Palabras para practicar</h2>
+              </div>
+              <span class="panel__meta">{{ periodText }}</span>
+            </div>
+            <PracticeWordsCard
+              :words="student.errors?.practiceWords ?? []"
+              :student-name="studentName"
+            />
+          </section>
         </div>
-        <StudentTestsPanel :tests="student.tests" />
-      </section>
+
+        <section class="panel" aria-labelledby="student-writings-heading">
+          <div class="panel__header">
+            <div>
+              <p class="overline">Escrituras</p>
+              <h2 id="student-writings-heading">Lo que escribió</h2>
+            </div>
+            <span class="panel__meta">{{ periodText }}</span>
+          </div>
+          <WritingsList :items="student.writings" />
+        </section>
+
+        <section v-if="SENTENCE_TESTS_ENABLED" class="panel" aria-labelledby="student-tests-heading">
+          <div class="panel__header">
+            <div>
+              <p class="overline">Pruebas de oraciones</p>
+              <h2 id="student-tests-heading">Pruebas</h2>
+            </div>
+            <span class="panel__meta">Todas las pruebas completadas</span>
+          </div>
+          <StudentTestsPanel :tests="student.tests" />
+        </section>
+      </template>
     </template>
 
     <StudentCredentialDialog
       :credential="resetCredential"
-      header="Nuevo PIN temporal"
-      intro="Entrega este nuevo PIN al estudiante. El usuario se mantiene igual."
+      header="Nuevo PIN"
+      intro="Entrega este nuevo PIN al estudiante. El alias se mantiene igual."
       action-label="Ya entregué el nuevo PIN"
       @close="studentsStore.clearResetPinCredentials"
     />

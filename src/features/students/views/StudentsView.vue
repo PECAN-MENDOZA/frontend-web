@@ -67,7 +67,7 @@ onMounted(() => studentsStore.loadStudents())
         </div>
         <label class="directory-search">
           <i class="pi pi-search"></i>
-          <InputText v-model="searchQuery" placeholder="Buscar por nombre o usuario" />
+          <InputText v-model="searchQuery" placeholder="Buscar por nombre o alias" />
         </label>
       </div>
 

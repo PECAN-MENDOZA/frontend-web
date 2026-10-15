@@ -4,6 +4,7 @@ import AuthLayout from '@/app/layouts/AuthLayout.vue'
 import ResearchLayout from '@/app/layouts/ResearchLayout.vue'
 import { useAuthStore } from '@/features/auth/store/auth.store'
 import { canAccessRoute, homeForRole, requiresPasswordChange } from '@/features/auth/utils/access'
+import { SENTENCE_TESTS_ENABLED } from '@/shared/constants/features'
 import { reloadOnceForChunkError } from './chunkReload'
 
 const routes = [
@@ -29,10 +30,11 @@ const routes = [
   },
   {
     // Ruta de nivel superior (no hija de /auth) para que meta.guestOnly del padre /auth
-    // no se herede en to.meta y bloquee a un docente ya autenticado.
+    // no se herede en to.meta y bloquee a un usuario ya autenticado. La usan el docente con
+    // contraseña temporal (obligatorio) y docente o investigador por voluntad propia.
     path: '/change-password',
     component: AuthLayout,
-    meta: { requiresAuth: true, roles: ['TEACHER'] },
+    meta: { requiresAuth: true, roles: ['TEACHER', 'RESEARCHER'] },
     children: [
       {
         path: '',
@@ -71,11 +73,15 @@ const routes = [
         name: 'student-detail',
         component: () => import('@/features/insights/views/StudentTodayView.vue'),
       },
-      {
-        path: 'tests/live',
-        name: 'tests-live',
-        component: () => import('@/features/insights/views/LiveTestsView.vue'),
-      },
+      ...(SENTENCE_TESTS_ENABLED
+        ? [
+            {
+              path: 'tests/live',
+              name: 'tests-live',
+              component: () => import('@/features/insights/views/LiveTestsView.vue'),
+            },
+          ]
+        : []),
     ],
   },
   {
@@ -85,28 +91,32 @@ const routes = [
     children: [
       {
         path: '',
-        redirect: { name: 'research-tests' },
+        redirect: { name: SENTENCE_TESTS_ENABLED ? 'research-tests' : 'research-teachers' },
       },
-      {
-        path: 'tests',
-        name: 'research-tests',
-        component: () => import('@/features/tests/views/TestsListView.vue'),
-      },
-      {
-        path: 'tests/:testId',
-        name: 'research-test',
-        component: () => import('@/features/tests/views/TestEditorView.vue'),
-      },
-      {
-        path: 'tests/:testId/attempts/:attemptId',
-        name: 'research-attempt',
-        component: () => import('@/features/tests/views/AttemptResponsesView.vue'),
-      },
-      {
-        path: 'tests/:testId/results',
-        name: 'research-results',
-        component: () => import('@/features/tests/views/TestResultsView.vue'),
-      },
+      ...(SENTENCE_TESTS_ENABLED
+        ? [
+            {
+              path: 'tests',
+              name: 'research-tests',
+              component: () => import('@/features/tests/views/TestsListView.vue'),
+            },
+            {
+              path: 'tests/:testId',
+              name: 'research-test',
+              component: () => import('@/features/tests/views/TestEditorView.vue'),
+            },
+            {
+              path: 'tests/:testId/attempts/:attemptId',
+              name: 'research-attempt',
+              component: () => import('@/features/tests/views/AttemptResponsesView.vue'),
+            },
+            {
+              path: 'tests/:testId/results',
+              name: 'research-results',
+              component: () => import('@/features/tests/views/TestResultsView.vue'),
+            },
+          ]
+        : []),
       {
         path: 'teachers',
         name: 'research-teachers',

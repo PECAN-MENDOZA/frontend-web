@@ -7,11 +7,14 @@ import Dialog from 'primevue/dialog'
 import Message from 'primevue/message'
 import Skeleton from 'primevue/skeleton'
 import Tag from 'primevue/tag'
+import { useConfirm } from 'primevue/useconfirm'
 import CreateTeacherDialog from '@/features/research/components/CreateTeacherDialog.vue'
 import { useResearchStore } from '@/features/research/store/research.store'
 import { copyText } from '@/features/research/utils/clipboard'
 import {
+  passwordResetConfirmation,
   teacherDisplayName,
+  teacherLabel,
   teacherStatusLabel,
   temporaryPasswordNotice,
 } from '@/features/research/utils/teachers'
@@ -20,6 +23,7 @@ import PageHeader from '@/shared/components/PageHeader.vue'
 const TEACHER_STATUS_SEVERITIES = { 'Contraseña temporal': 'warn', Activo: 'success' }
 
 const researchStore = useResearchStore()
+const confirm = useConfirm()
 const isCreateDialogVisible = ref(false)
 const createErrorMessage = ref('')
 // Docente cuya contraseña se está reiniciando: solo ese botón muestra el spinner.
@@ -28,6 +32,11 @@ const resetErrorMessage = ref('')
 const copyStatus = ref('')
 
 const passwordDialogTeacher = computed(() => researchStore.temporaryPassword?.teacher ?? null)
+// El directorio de salones solo trae el username del docente: se muestra su nombre si está en la
+// lista de docentes ya cargada.
+const teacherNames = computed(
+  () => new Map(researchStore.teachers.map((teacher) => [teacher.id, teacherLabel(teacher)])),
+)
 const passwordDialogNotice = computed(() => {
   const state = researchStore.temporaryPassword
 
@@ -58,6 +67,17 @@ async function createTeacher(payload) {
   } catch (error) {
     createErrorMessage.value = error.message
   }
+}
+
+function confirmResetPassword(teacher) {
+  confirm.require({
+    ...passwordResetConfirmation(teacher),
+    icon: 'pi pi-key',
+    rejectLabel: 'Cancelar',
+    acceptProps: { severity: 'danger' },
+    rejectProps: { severity: 'secondary', text: true },
+    accept: () => resetPassword(teacher),
+  })
 }
 
 async function resetPassword(teacher) {
@@ -119,7 +139,7 @@ function closePasswordDialog() {
       <div class="directory-panel__toolbar">
         <div>
           <p class="overline">Cuentas creadas</p>
-          <h2>Docentes del estudio</h2>
+          <h2>Docentes</h2>
         </div>
       </div>
 
@@ -140,7 +160,6 @@ function closePasswordDialog() {
             {{ teacherDisplayName(data) }}
           </template>
         </Column>
-        <Column field="username" header="Usuario" />
         <Column field="email" header="Correo" />
         <Column field="institution" header="Institución" />
         <Column field="classroomCount" header="Salones" />
@@ -164,7 +183,7 @@ function closePasswordDialog() {
               size="small"
               :loading="pendingTeacherId === data.id"
               :disabled="researchStore.isMutating && pendingTeacherId !== data.id"
-              @click="resetPassword(data)"
+              @click="confirmResetPassword(data)"
             />
           </template>
         </Column>
@@ -180,7 +199,7 @@ function closePasswordDialog() {
         <div>
           <p class="overline">Solo lectura</p>
           <h2>Salones</h2>
-          <p>Directorio de todos los salones y sus usernames, para asignar las pruebas.</p>
+          <p>Directorio de todos los salones de los docentes y los alias de sus estudiantes.</p>
         </div>
       </div>
 
@@ -199,7 +218,11 @@ function closePasswordDialog() {
         <template #empty>
           <p class="table-empty">Todavía no hay salones creados por ningún docente.</p>
         </template>
-        <Column field="teacherUsername" header="Docente" />
+        <Column header="Docente">
+          <template #body="{ data }">
+            {{ teacherNames.get(data.teacherId) ?? data.teacherUsername }}
+          </template>
+        </Column>
         <Column header="Salón">
           <template #body="{ data }">
             <div class="classroom-cell">
@@ -213,7 +236,7 @@ function closePasswordDialog() {
             {{ data.students.length }}
           </template>
         </Column>
-        <Column header="Estudiantes">
+        <Column header="Alias de los estudiantes">
           <template #body="{ data }">
             <div class="classroom-directory-students">
               <Tag
@@ -247,7 +270,7 @@ function closePasswordDialog() {
       <div v-if="passwordDialogTeacher" class="credential-reveal">
         <div class="credential-reveal__heading">
           <Tag value="Entrega única" severity="warn" />
-          <h3>Contraseña temporal de {{ passwordDialogTeacher.username }}</h3>
+          <h3>Contraseña temporal de {{ teacherLabel(passwordDialogTeacher) }}</h3>
           <p>Entrega esta contraseña al docente; deberá cambiarla al entrar.</p>
         </div>
 

@@ -7,6 +7,7 @@ export const OUTCOME_LABELS = {
   REJECTED: 'Rechazó',
   UNDONE: 'Deshizo',
   UNANSWERED: 'Sin respuesta',
+  NO_CHANGES: 'Ya estaba bien',
 }
 
 export const OUTCOME_SEVERITIES = {
@@ -15,10 +16,12 @@ export const OUTCOME_SEVERITIES = {
   REJECTED: 'warn',
   UNDONE: 'warn',
   UNANSWERED: 'secondary',
+  NO_CHANGES: 'secondary',
 }
 
-// Orden fijo de presentación (mismo orden en toda la UI, no depende de las cifras).
-const OUTCOME_ORDER = ['EDITED', 'ACCEPTED', 'REJECTED', 'UNDONE', 'UNANSWERED']
+// Orden fijo de presentación (mismo orden en toda la UI, no depende de las cifras). "Ya estaba
+// bien" (la IA no propuso ningún cambio) va al final: no es una respuesta del alumno a la ayuda.
+const OUTCOME_ORDER = ['EDITED', 'ACCEPTED', 'REJECTED', 'UNDONE', 'UNANSWERED', 'NO_CHANGES']
 
 const COUNT_FIELD = {
   EDITED: 'edited',
@@ -26,6 +29,7 @@ const COUNT_FIELD = {
   REJECTED: 'rejected',
   UNDONE: 'undone',
   UNANSWERED: 'unanswered',
+  NO_CHANGES: 'noChanges',
 }
 
 /** [{key, label, count, pct}] a partir de un StudentHelpResponse; pct con 1 decimal, 0 si total=0. */

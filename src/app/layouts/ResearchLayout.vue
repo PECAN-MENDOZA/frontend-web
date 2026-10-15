@@ -4,10 +4,10 @@ import { useRouter } from 'vue-router'
 import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
 import ConfirmDialog from 'primevue/confirmdialog'
-import Toast from 'primevue/toast'
 import { useAuthStore } from '@/features/auth/store/auth.store'
 import { useResearchStore } from '@/features/research/store/research.store'
 import { APP_NAME } from '@/shared/constants/app'
+import { SENTENCE_TESTS_ENABLED } from '@/shared/constants/features'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -15,7 +15,9 @@ const researchStore = useResearchStore()
 const isNavigationOpen = ref(false)
 
 const navigationItems = [
-  { label: 'Pruebas', icon: 'pi pi-list-check', to: '/research/tests' },
+  ...(SENTENCE_TESTS_ENABLED
+    ? [{ label: 'Pruebas', icon: 'pi pi-list-check', to: '/research/tests' }]
+    : []),
   { label: 'Docentes', icon: 'pi pi-id-card', to: '/research/teachers' },
 ]
 
@@ -118,6 +120,15 @@ onUnmounted(() => {
               <span>{{ authStore.user?.roleLabel }}</span>
             </div>
           </div>
+          <Button
+            class="topbar__password"
+            aria-label="Cambiar contraseña"
+            label="Cambiar contraseña"
+            icon="pi pi-lock"
+            severity="secondary"
+            text
+            @click="router.push({ name: 'change-password' })"
+          />
           <Button icon="pi pi-sign-out" text rounded aria-label="Cerrar sesión" @click="signOut" />
         </div>
       </header>
@@ -127,7 +138,6 @@ onUnmounted(() => {
       </main>
     </section>
 
-    <Toast position="bottom-right" />
     <ConfirmDialog class="research-confirm" />
   </div>
 </template>

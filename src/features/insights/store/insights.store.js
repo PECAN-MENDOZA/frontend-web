@@ -14,14 +14,25 @@ import {
 } from '@/features/insights/services/insights.service.js'
 import { isValidStoredPeriod, presetRange } from '@/features/insights/utils/period.js'
 import { saveBlob } from '@/features/research/utils/download.js'
+import { SENTENCE_TESTS_ENABLED } from '@/shared/constants/features'
 import { requestErrorMessage } from '@/features/research/utils/errors.js'
 import { createGuardedLoader } from '@/features/research/utils/mutations.js'
+import { isMissingResource } from '@/shared/utils/http'
 
 const PERIOD_KEY = 'insights_period'
 const CLASSROOM_KEY = 'insights_selected_classroom_id'
 const RECENT_LIMIT = 50
 const LIVE_POLL_MS = 5000
 const GENERIC_ERROR = 'No pudimos completar la acción. Inténtalo nuevamente.'
+// Ficha de un alumno ajeno, dado de baja o inexistente (403/404): la vista lo reconoce por
+// este texto y muestra solo el aviso y el botón para volver.
+export const STUDENT_NOT_FOUND_MESSAGE = 'Este estudiante no está entre tus estudiantes.'
+
+function studentErrorMessage(requestError, fallback) {
+  return isMissingResource(requestError)
+    ? STUDENT_NOT_FOUND_MESSAGE
+    : requestErrorMessage(requestError, fallback)
+}
 
 // Persistencia en localStorage: conveniencia para el docente (recordar su periodo y salón), no
 // estado de sesión. Se envuelve en try/catch porque puede fallar (modo privado, cuota, SSR).
@@ -87,9 +98,10 @@ export const useInsightsStore = defineStore('insights', () => {
     isLoading.value = Object.values(loadingStates).some(Boolean)
   }
 
-  function loader(name, getSelectedStudyId) {
+  function loader(name, getSelectedStudyId, toMessage = requestErrorMessage) {
     return createGuardedLoader({
       getSelectedStudyId,
+      toMessage,
       setLoading: (value) => setLoading(name, value),
       setError: (message) => {
         errorMessage.value = message
@@ -100,7 +112,7 @@ export const useInsightsStore = defineStore('insights', () => {
   const classroomsLoader = loader('classrooms')
   const classroomLoader = loader('classroom', () => selectedClassroomId.value)
   let studentLoaderId = null
-  const studentLoader = loader('student', () => studentLoaderId)
+  const studentLoader = loader('student', () => studentLoaderId, studentErrorMessage)
   // El sondeo de /tests/live tiene sus propias banderas: un fallo del sondeo no borra el error de
   // otra carga, ni su carga enciende el indicador general del panel.
   const liveLoader = createGuardedLoader({
@@ -182,7 +194,7 @@ export const useInsightsStore = defineStore('insights', () => {
           getStudentErrors(studentId, requestedPeriod),
           getStudentHelp(studentId, requestedPeriod),
           getStudentWritings(studentId, requestedPeriod),
-          getStudentTests(studentId),
+          SENTENCE_TESTS_ENABLED ? getStudentTests(studentId) : [],
         ]),
       apply: ([errors, help, writings, tests]) => {
         student.value = { id: studentId, errors, help, writings, tests }

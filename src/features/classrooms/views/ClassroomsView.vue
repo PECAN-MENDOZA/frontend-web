@@ -7,11 +7,14 @@ import DataTable from 'primevue/datatable'
 import Message from 'primevue/message'
 import Skeleton from 'primevue/skeleton'
 import Tag from 'primevue/tag'
+import { useConfirm } from 'primevue/useconfirm'
 import CreateClassroomDialog from '@/features/classrooms/components/CreateClassroomDialog.vue'
 import { useClassroomsStore } from '@/features/classrooms/store/classrooms.store'
+import { classroomArchiveConfirmation } from '@/features/classrooms/utils/classrooms'
 import PageHeader from '@/shared/components/PageHeader.vue'
 
 const router = useRouter()
+const confirm = useConfirm()
 const classroomsStore = useClassroomsStore()
 const isCreateDialogVisible = ref(false)
 // Qué salón está archivándose/restaurándose: solo ese botón muestra el spinner.
@@ -30,7 +33,21 @@ async function createClassroom(name) {
   }
 }
 
-async function toggleArchived(classroom) {
+// Archivar pide confirmación; restaurar no (no quita nada a nadie).
+function toggleArchived(classroom) {
+  if (classroom.archivedAt) return setArchived(classroom)
+
+  confirm.require({
+    ...classroomArchiveConfirmation(classroom.name),
+    icon: 'pi pi-inbox',
+    rejectLabel: 'Cancelar',
+    acceptProps: { severity: 'danger' },
+    rejectProps: { severity: 'secondary', text: true },
+    accept: () => setArchived(classroom),
+  })
+}
+
+async function setArchived(classroom) {
   pendingClassroomId.value = classroom.id
 
   try {

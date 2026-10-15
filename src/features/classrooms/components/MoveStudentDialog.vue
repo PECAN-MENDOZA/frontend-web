@@ -83,7 +83,7 @@ function close() {
       <div>
         <p class="overline">Cambio de salón</p>
         <h3>Mueve a {{ studentLabel }}.</h3>
-        <p>Conservará su usuario, su PIN y todo su historial.</p>
+        <p>Conservará su alias, su PIN y todo su historial.</p>
       </div>
     </div>
 

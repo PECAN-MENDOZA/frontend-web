@@ -1,4 +1,6 @@
-// Mensajes conocidos del backend de investigación (backend/docs/research-api.md), en español.
+import { statusMessage } from '../../../shared/utils/http.js'
+
+// Mensajes conocidos del backend (backend/docs/research-api.md y API del docente), en español.
 const BACKEND_MESSAGES = {
   // Pruebas de oraciones (§3).
   'Test not found': 'No encontramos la prueba.',
@@ -27,6 +29,19 @@ const BACKEND_MESSAGES = {
   'Email is already in use': 'Ese correo ya está en uso.',
   'Classroom not found': 'No encontramos el salón.',
   'Student not found': 'No encontramos al alumno.',
+  // Panel docente.
+  'Teacher does not have access to this student': 'Este estudiante no está entre tus estudiantes.',
+  'Teacher does not have access to this classroom': 'No encontramos este salón.',
+  'Teacher does not own this classroom': 'No encontramos este salón.',
+  'Classroom name is already in use': 'Ya tienes un salón con ese nombre.',
+  'Cannot move a student to an archived classroom':
+    'No puedes mover estudiantes a un salón archivado.',
+  'Cannot add students to an archived classroom': 'No puedes crear cuentas en un salón archivado.',
+  "'to' must not be before 'from'": 'La fecha final no puede ser anterior a la inicial.',
+  'Dates must use the YYYY-MM-DD format': 'Las fechas no tienen un formato válido.',
+  'Failed to generate PDF report': 'No pudimos generar el reporte. Inténtalo nuevamente.',
+  'Too many login attempts':
+    'Demasiados intentos. Espera 15 minutos o pide al administrador que reinicie tu contraseña.',
   // Bean Validation (400 con validationErrors por campo).
   'Request validation failed': 'La solicitud no pasó la validación.',
 }
@@ -35,9 +50,11 @@ const BACKEND_MESSAGES = {
 const BACKEND_PATTERNS = [
   [/^Sentence out of order: expected (\d+)$/, 'La oración no es la siguiente (se esperaba la $1).'],
   [/^Student not found: (.+)$/, 'No encontramos al alumno $1.'],
+  [/^Period must not exceed (\d+) days$/, 'El periodo no puede pasar de $1 días.'],
 ]
 
-export function translateBackendMessage(message) {
+// Traducción de un mensaje conocido del backend; null si no se conoce.
+function knownBackendMessage(message) {
   const text = typeof message === 'string' ? message.trim() : ''
 
   if (BACKEND_MESSAGES[text]) return BACKEND_MESSAGES[text]
@@ -46,15 +63,21 @@ export function translateBackendMessage(message) {
     if (pattern.test(text)) return text.replace(pattern, replacement)
   }
 
-  return text
+  return null
 }
 
-// Conserva el mensaje del backend (traducido si es conocido); sin respuesta HTTP
-// —por ejemplo, un fallo de red— usa el texto genérico.
+export function translateBackendMessage(message) {
+  return knownBackendMessage(message) ?? (typeof message === 'string' ? message.trim() : '')
+}
+
+// El backend responde en inglés: solo se muestra su mensaje si tiene traducción conocida; si no,
+// el texto según el estado HTTP o el genérico de la pantalla. Sin respuesta HTTP —por ejemplo,
+// un fallo de red— también se usa el genérico.
 export function requestErrorMessage(requestError, fallback) {
   if (!requestError || typeof requestError.status !== 'number') return fallback
 
-  const message = translateBackendMessage(requestError.message) || fallback
+  const message =
+    knownBackendMessage(requestError.message) ?? statusMessage(requestError.status, fallback)
   const fields = Object.keys(requestError.validationErrors ?? {})
 
   // Los 400 de validación traen el detalle por campo: se nombran los campos, no sus reglas.

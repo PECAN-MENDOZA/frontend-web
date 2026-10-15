@@ -13,8 +13,13 @@ import CreateStudentsDialog from '@/features/classrooms/components/CreateStudent
 import CredentialsListDialog from '@/features/classrooms/components/CredentialsListDialog.vue'
 import MoveStudentDialog from '@/features/classrooms/components/MoveStudentDialog.vue'
 import { useClassroomsStore } from '@/features/classrooms/store/classrooms.store'
-import { formatLastAccess } from '@/features/classrooms/utils/classrooms'
+import { formatDeactivatedAt, formatLastAccess } from '@/features/classrooms/utils/classrooms'
 import StudentCredentialDialog from '@/features/students/components/StudentCredentialDialog.vue'
+import {
+  deactivateConfirmation,
+  pinResetConfirmation,
+  reactivateConfirmation,
+} from '@/features/students/utils/students'
 import PageHeader from '@/shared/components/PageHeader.vue'
 
 const route = useRoute()
@@ -29,12 +34,13 @@ const studentCountLabel = computed(() => {
 
   return count === 1 ? '1 estudiante activo' : `${count} estudiantes activos`
 })
-// Si la carga falla o el id no existe, la cabecera no se queda en "Cargando…".
+// Si la carga falla, la cabecera no se queda en "Cargando…" (el aviso de error ya lo explica).
 const headerDescription = computed(() => {
   if (classroom.value) return studentCountLabel.value
 
-  return classroomsStore.errorMessage ? 'No encontramos este salón.' : 'Cargando el salón…'
+  return classroomsStore.errorMessage ? '' : 'Cargando el salón…'
 })
+const inactiveCount = computed(() => classroomsStore.inactiveStudents.length)
 
 const isRenameDialogVisible = ref(false)
 const isCreateDialogVisible = ref(false)
@@ -128,10 +134,23 @@ async function saveEdit(student) {
   if (wasSaved) cancelEdit()
 }
 
+// Opciones comunes de las confirmaciones de esta vista (acción destructiva en rojo).
+const CONFIRM_DEFAULTS = {
+  rejectLabel: 'Cancelar',
+  acceptProps: { severity: 'danger' },
+  rejectProps: { severity: 'secondary', text: true },
+}
+
 function resetPin(student) {
-  return runPending('reset', student.studentId, () =>
-    classroomsStore.resetStudentPin(student.studentId),
-  )
+  confirm.require({
+    ...CONFIRM_DEFAULTS,
+    ...pinResetConfirmation(student.studentRealName, student.studentUsername),
+    icon: 'pi pi-key',
+    accept: () =>
+      runPending('reset', student.studentId, () =>
+        classroomsStore.resetStudentPin(student.studentId),
+      ),
+  })
 }
 
 function openMoveStudent(student) {
@@ -149,16 +168,25 @@ async function moveStudent(targetClassroomId) {
 
 function confirmDeactivate(student) {
   confirm.require({
-    header: `Dar de baja a ${student.studentRealName || student.studentUsername}`,
-    message: 'El estudiante dejará de aparecer en tus listas. Sus datos no se borran.',
+    ...CONFIRM_DEFAULTS,
+    ...deactivateConfirmation(student.studentRealName, student.studentUsername),
     icon: 'pi pi-user-minus',
-    acceptLabel: 'Dar de baja',
-    rejectLabel: 'Cancelar',
-    acceptProps: { severity: 'danger' },
-    rejectProps: { severity: 'secondary', text: true },
     accept: () =>
       runPending('deactivate', student.studentId, () =>
         classroomsStore.deactivateStudent(student.studentId),
+      ),
+  })
+}
+
+function confirmReactivate(student) {
+  confirm.require({
+    ...CONFIRM_DEFAULTS,
+    ...reactivateConfirmation(student.studentRealName, student.studentUsername),
+    icon: 'pi pi-user-plus',
+    acceptProps: {},
+    accept: () =>
+      runPending('reactivate', student.studentId, () =>
+        classroomsStore.reactivateStudent(student.studentId),
       ),
   })
 }
@@ -170,243 +198,304 @@ function openStudent(studentId) {
 
 <template>
   <div class="classroom-detail-page">
-    <PageHeader
-      eyebrow="Salón"
-      :title="classroom?.name ?? 'Salón'"
-      :description="headerDescription"
-    >
-      <template #actions>
+    <template v-if="classroomsStore.isNotFound">
+      <Message severity="info" :closable="false">No encontramos este salón.</Message>
+      <div>
         <Button
-          label="Salones"
+          label="Volver a salones"
           icon="pi pi-arrow-left"
           severity="secondary"
           text
           @click="router.push({ name: 'classrooms' })"
         />
-        <Button
-          v-if="classroomsStore.createdCredentials.length"
-          label="Imprimir credenciales"
-          icon="pi pi-print"
-          severity="secondary"
-          outlined
-          @click="isCredentialsDialogVisible = true"
-        />
-        <Button
-          label="Crear varios"
-          icon="pi pi-users"
-          severity="secondary"
-          outlined
-          :disabled="!classroom || Boolean(classroom.archivedAt)"
-          @click="openCreateStudents('count')"
-        />
-        <Button
-          label="Nuevo estudiante"
-          icon="pi pi-user-plus"
-          :disabled="!classroom || Boolean(classroom.archivedAt)"
-          @click="openCreateStudents('named')"
-        />
-      </template>
-    </PageHeader>
-
-    <Message v-if="classroomsStore.errorMessage" severity="error">
-      {{ classroomsStore.errorMessage }}
-    </Message>
-    <Message v-if="classroomsStore.mutationErrorMessage && !isAnyDialogVisible" severity="error">
-      {{ classroomsStore.mutationErrorMessage }}
-    </Message>
-    <Message v-if="classroom?.archivedAt" severity="warn" :closable="false">
-      Este salón está archivado. Restáuralo desde la lista de salones para crear cuentas.
-    </Message>
-
-    <section class="panel directory-panel">
-      <div class="directory-panel__toolbar">
-        <div>
-          <p class="overline">Estudiantes del salón</p>
-          <h2>Cuentas y accesos</h2>
-        </div>
-        <Button
-          icon="pi pi-pencil"
-          label="Renombrar"
-          severity="secondary"
-          text
-          size="small"
-          :disabled="!classroom"
-          @click="openRenameClassroom"
-        />
       </div>
+    </template>
 
-      <div
-        v-if="classroomsStore.isLoading && !classroomsStore.students.length"
-        class="directory-loading"
+    <template v-else>
+      <PageHeader
+        eyebrow="Salón"
+        :title="classroom?.name ?? 'Salón'"
+        :description="headerDescription"
       >
-        <Skeleton v-for="item in 6" :key="item" height="3.6rem" />
-      </div>
-      <DataTable
-        v-else
-        :value="classroomsStore.students"
-        class="classroom-students-table" scrollable
-        data-key="studentId"
-        paginator
-        :rows="15"
-        :rows-per-page-options="[15, 40]"
-        table-style="min-width: 58rem"
-      >
-        <template #empty>
-          <p class="table-empty">
-            Este salón aún no tiene estudiantes. Crea la primera cuenta con «Nuevo estudiante».
-          </p>
+        <template #actions>
+          <Button
+            label="Salones"
+            icon="pi pi-arrow-left"
+            severity="secondary"
+            text
+            @click="router.push({ name: 'classrooms' })"
+          />
+          <Button
+            v-if="classroomsStore.createdCredentials.length"
+            label="Imprimir credenciales"
+            icon="pi pi-print"
+            severity="secondary"
+            outlined
+            @click="isCredentialsDialogVisible = true"
+          />
+          <Button
+            label="Crear varios"
+            icon="pi pi-users"
+            severity="secondary"
+            outlined
+            :disabled="!classroom || Boolean(classroom.archivedAt)"
+            @click="openCreateStudents('count')"
+          />
+          <Button
+            label="Nuevo estudiante"
+            icon="pi pi-user-plus"
+            :disabled="!classroom || Boolean(classroom.archivedAt)"
+            @click="openCreateStudents('named')"
+          />
         </template>
-        <Column header="Usuario">
-          <template #body="{ data }">
-            <code class="classroom-username">{{ data.studentUsername }}</code>
+      </PageHeader>
+
+      <Message v-if="classroomsStore.errorMessage" severity="error">
+        {{ classroomsStore.errorMessage }}
+      </Message>
+      <Message v-if="classroomsStore.mutationErrorMessage && !isAnyDialogVisible" severity="error">
+        {{ classroomsStore.mutationErrorMessage }}
+      </Message>
+      <Message v-if="classroom?.archivedAt" severity="warn" :closable="false">
+        Este salón está archivado. Restáuralo desde la lista de salones para crear cuentas.
+      </Message>
+
+      <section class="panel directory-panel">
+        <div class="directory-panel__toolbar">
+          <div>
+            <p class="overline">Estudiantes del salón</p>
+            <h2>Cuentas y accesos</h2>
+          </div>
+          <Button
+            icon="pi pi-pencil"
+            label="Renombrar"
+            severity="secondary"
+            text
+            size="small"
+            :disabled="!classroom"
+            @click="openRenameClassroom"
+          />
+        </div>
+
+        <div
+          v-if="classroomsStore.isLoading && !classroomsStore.students.length"
+          class="directory-loading"
+        >
+          <Skeleton v-for="item in 6" :key="item" height="3.6rem" />
+        </div>
+        <DataTable
+          v-else
+          :value="classroomsStore.students"
+          class="classroom-students-table" scrollable
+          data-key="studentId"
+          paginator
+          :rows="15"
+          :rows-per-page-options="[15, 40]"
+          table-style="min-width: 58rem"
+        >
+          <template #empty>
+            <p class="table-empty">
+              Este salón aún no tiene estudiantes. Crea la primera cuenta con «Nuevo estudiante».
+            </p>
           </template>
-        </Column>
-        <Column header="Nombre real">
-          <template #body="{ data }">
-            <form
-              v-if="editing.studentId === data.studentId"
-              class="inline-edit"
-              @submit.prevent="saveEdit(data)"
-            >
-              <InputText
-                ref="editInput"
-                v-model="editing.name"
-                size="small"
-                :maxlength="160"
-                aria-label="Nombre real del estudiante"
-                @keydown.esc.prevent="cancelEdit"
-              />
-              <Button
-                type="submit"
-                icon="pi pi-check"
-                size="small"
-                text
-                rounded
-                aria-label="Guardar nombre"
-                :loading="isPending('edit', data.studentId)"
-              />
-              <Button
-                type="button"
-                icon="pi pi-times"
-                size="small"
-                severity="secondary"
-                text
-                rounded
-                aria-label="Cancelar edición"
-                :disabled="isPending('edit', data.studentId)"
-                @click="cancelEdit"
-              />
-            </form>
-            <div v-else class="inline-edit">
+          <Column header="Alias">
+            <template #body="{ data }">
+              <code class="classroom-username">{{ data.studentUsername }}</code>
+            </template>
+          </Column>
+          <Column header="Nombre real">
+            <template #body="{ data }">
+              <form
+                v-if="editing.studentId === data.studentId"
+                class="inline-edit"
+                @submit.prevent="saveEdit(data)"
+              >
+                <InputText
+                  ref="editInput"
+                  v-model="editing.name"
+                  size="small"
+                  :maxlength="160"
+                  aria-label="Nombre real del estudiante"
+                  @keydown.esc.prevent="cancelEdit"
+                />
+                <Button
+                  type="submit"
+                  icon="pi pi-check"
+                  size="small"
+                  text
+                  rounded
+                  aria-label="Guardar nombre"
+                  :loading="isPending('edit', data.studentId)"
+                />
+                <Button
+                  type="button"
+                  icon="pi pi-times"
+                  size="small"
+                  severity="secondary"
+                  text
+                  rounded
+                  aria-label="Cancelar edición"
+                  :disabled="isPending('edit', data.studentId)"
+                  @click="cancelEdit"
+                />
+              </form>
+              <div v-else class="inline-edit">
+                <span :class="{ 'classroom-name--empty': !data.studentRealName }">
+                  {{ data.studentRealName || 'Sin nombre' }}
+                </span>
+                <Button
+                  icon="pi pi-pencil"
+                  size="small"
+                  severity="secondary"
+                  text
+                  rounded
+                  :aria-label="`Editar nombre real de ${data.studentUsername}`"
+                  @click="startEdit(data)"
+                />
+              </div>
+            </template>
+          </Column>
+          <Column header="Notas">
+            <template #body="{ data }">
+              <span class="classroom-notes">{{ data.notes || '—' }}</span>
+            </template>
+          </Column>
+          <Column header="Último acceso">
+            <template #body="{ data }">
+              {{ formatLastAccess(data.lastAccessAt) }}
+            </template>
+          </Column>
+          <Column header="Acciones" frozen align-frozen="right">
+            <template #body="{ data }">
+              <div class="row-actions">
+                <Button
+                  v-tooltip.top="'Reiniciar PIN'"
+                  icon="pi pi-key"
+                  severity="secondary"
+                  text
+                  rounded
+                  aria-label="Reiniciar PIN"
+                  :loading="isPending('reset', data.studentId)"
+                  @click="resetPin(data)"
+                />
+                <Button
+                  v-tooltip.top="'Mover de salón'"
+                  icon="pi pi-arrow-right-arrow-left"
+                  severity="secondary"
+                  text
+                  rounded
+                  aria-label="Mover de salón"
+                  @click="openMoveStudent(data)"
+                />
+                <Button
+                  v-tooltip.top="'Dar de baja'"
+                  icon="pi pi-user-minus"
+                  severity="danger"
+                  text
+                  rounded
+                  aria-label="Dar de baja"
+                  :loading="isPending('deactivate', data.studentId)"
+                  @click="confirmDeactivate(data)"
+                />
+                <Button
+                  label="Ver ficha"
+                  icon="pi pi-arrow-right"
+                  icon-pos="right"
+                  text
+                  size="small"
+                  @click="openStudent(data.studentId)"
+                />
+              </div>
+            </template>
+          </Column>
+        </DataTable>
+      </section>
+
+      <details v-if="inactiveCount" class="panel inactive-students">
+        <summary class="inactive-students__summary">
+          <i class="pi pi-chevron-right" aria-hidden="true"></i>
+          <span>Dados de baja ({{ inactiveCount }})</span>
+        </summary>
+        <DataTable
+          :value="classroomsStore.inactiveStudents"
+          class="inactive-students-table"
+          scrollable
+          data-key="studentId"
+          table-style="min-width: 40rem"
+        >
+          <Column header="Alias">
+            <template #body="{ data }">
+              <code class="classroom-username">{{ data.studentUsername }}</code>
+            </template>
+          </Column>
+          <Column header="Nombre real">
+            <template #body="{ data }">
               <span :class="{ 'classroom-name--empty': !data.studentRealName }">
                 {{ data.studentRealName || 'Sin nombre' }}
               </span>
+            </template>
+          </Column>
+          <Column header="Fecha de baja">
+            <template #body="{ data }">
+              {{ formatDeactivatedAt(data.deactivatedAt) }}
+            </template>
+          </Column>
+          <Column header="Acciones" frozen align-frozen="right">
+            <template #body="{ data }">
               <Button
-                icon="pi pi-pencil"
-                size="small"
+                label="Reactivar"
+                icon="pi pi-user-plus"
                 severity="secondary"
-                text
-                rounded
-                :aria-label="`Editar nombre real de ${data.studentUsername}`"
-                @click="startEdit(data)"
-              />
-            </div>
-          </template>
-        </Column>
-        <Column header="Notas">
-          <template #body="{ data }">
-            <span class="classroom-notes">{{ data.notes || '—' }}</span>
-          </template>
-        </Column>
-        <Column header="Último acceso">
-          <template #body="{ data }">
-            {{ formatLastAccess(data.lastAccessAt) }}
-          </template>
-        </Column>
-        <Column header="Acciones" frozen align-frozen="right">
-          <template #body="{ data }">
-            <div class="row-actions">
-              <Button
-                v-tooltip.top="'Reiniciar PIN'"
-                icon="pi pi-key"
-                severity="secondary"
-                text
-                rounded
-                aria-label="Reiniciar PIN"
-                :loading="isPending('reset', data.studentId)"
-                @click="resetPin(data)"
-              />
-              <Button
-                v-tooltip.top="'Mover de salón'"
-                icon="pi pi-arrow-right-arrow-left"
-                severity="secondary"
-                text
-                rounded
-                aria-label="Mover de salón"
-                @click="openMoveStudent(data)"
-              />
-              <Button
-                v-tooltip.top="'Dar de baja'"
-                icon="pi pi-user-minus"
-                severity="danger"
-                text
-                rounded
-                aria-label="Dar de baja"
-                :loading="isPending('deactivate', data.studentId)"
-                @click="confirmDeactivate(data)"
-              />
-              <Button
-                label="Ver ficha"
-                icon="pi pi-arrow-right"
-                icon-pos="right"
                 text
                 size="small"
-                @click="openStudent(data.studentId)"
+                :loading="isPending('reactivate', data.studentId)"
+                :disabled="classroomsStore.isMutating && !isPending('reactivate', data.studentId)"
+                @click="confirmReactivate(data)"
               />
-            </div>
-          </template>
-        </Column>
-      </DataTable>
-    </section>
+            </template>
+          </Column>
+        </DataTable>
+      </details>
 
-    <CreateClassroomDialog
-      v-model:visible="isRenameDialogVisible"
-      :classroom="classroom"
-      :is-saving="classroomsStore.isMutating"
-      :error-message="classroomsStore.mutationErrorMessage"
-      @submit="renameClassroom"
-    />
+      <CreateClassroomDialog
+        v-model:visible="isRenameDialogVisible"
+        :classroom="classroom"
+        :is-saving="classroomsStore.isMutating"
+        :error-message="classroomsStore.mutationErrorMessage"
+        @submit="renameClassroom"
+      />
 
-    <CreateStudentsDialog
-      v-model:visible="isCreateDialogVisible"
-      :initial-mode="createMode"
-      :is-saving="classroomsStore.isMutating"
-      :error-message="classroomsStore.mutationErrorMessage"
-      @submit="createStudents"
-    />
+      <CreateStudentsDialog
+        v-model:visible="isCreateDialogVisible"
+        :initial-mode="createMode"
+        :is-saving="classroomsStore.isMutating"
+        :error-message="classroomsStore.mutationErrorMessage"
+        @submit="createStudents"
+      />
 
-    <CredentialsListDialog
-      v-model:visible="isCredentialsDialogVisible"
-      :credentials="classroomsStore.createdCredentials"
-      :classroom-name="classroom?.name ?? ''"
-    />
+      <CredentialsListDialog
+        v-model:visible="isCredentialsDialogVisible"
+        :credentials="classroomsStore.createdCredentials"
+        :classroom-name="classroom?.name ?? ''"
+      />
 
-    <MoveStudentDialog
-      v-model:visible="isMoveDialogVisible"
-      :student="movingStudent"
-      :classrooms="classroomsStore.classrooms"
-      :current-classroom-id="classroomId"
-      :is-saving="classroomsStore.isMutating"
-      :error-message="classroomsStore.mutationErrorMessage"
-      @submit="moveStudent"
-    />
+      <MoveStudentDialog
+        v-model:visible="isMoveDialogVisible"
+        :student="movingStudent"
+        :classrooms="classroomsStore.classrooms"
+        :current-classroom-id="classroomId"
+        :is-saving="classroomsStore.isMutating"
+        :error-message="classroomsStore.mutationErrorMessage"
+        @submit="moveStudent"
+      />
 
-    <StudentCredentialDialog
-      :credential="classroomsStore.resetPinCredentials"
-      header="Nuevo PIN"
-      intro="Entrega el nuevo PIN al estudiante para que vuelva a ingresar desde el teclado."
-      action-label="Ya entregué el PIN"
-      @close="classroomsStore.clearResetPinCredentials"
-    />
+      <StudentCredentialDialog
+        :credential="classroomsStore.resetPinCredentials"
+        header="Nuevo PIN"
+        intro="Entrega el nuevo PIN al estudiante para que vuelva a ingresar desde el teclado."
+        action-label="Ya entregué el PIN"
+        @close="classroomsStore.clearResetPinCredentials"
+      />
+    </template>
   </div>
 </template>

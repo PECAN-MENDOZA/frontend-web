@@ -36,10 +36,11 @@ const rows = computed(() => {
   >
     <Column header="Nombre">
       <template #body="{ data }">
-        <strong>{{ data.realName }}</strong>
+        <strong v-if="data.realName">{{ data.realName }}</strong>
+        <span v-else class="table-muted">Sin nombre</span>
       </template>
     </Column>
-    <Column header="Usuario">
+    <Column header="Alias">
       <template #body="{ data }">
         <span class="classroom-username">{{ data.username }}</span>
       </template>

@@ -73,11 +73,11 @@ function close() {
           {{ credentials.length }}
           {{ credentials.length === 1 ? 'cuenta lista' : 'cuentas listas' }}.
         </h3>
-        <p>Imprime o copia esta hoja y reparte a cada estudiante su usuario y PIN.</p>
+        <p>Imprime o copia esta hoja y reparte a cada estudiante su alias y PIN.</p>
       </div>
 
       <Message severity="warn" :closable="false">
-        Los PIN temporales solo se muestran ahora. Guárdalos antes de cerrar esta ventana.
+        Los PIN solo se muestran ahora. Guárdalos antes de cerrar esta ventana.
       </Message>
 
       <pre class="credentials-sheet">{{ text }}</pre>

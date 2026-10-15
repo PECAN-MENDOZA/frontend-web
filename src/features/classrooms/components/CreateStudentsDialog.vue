@@ -96,7 +96,7 @@ function close() {
       <div>
         <p class="overline">Cuentas con PIN</p>
         <h3>Incorpora estudiantes a este salón.</h3>
-        <p>Crearemos un usuario y un PIN temporal por cada estudiante.</p>
+        <p>Crearemos un alias y un PIN por cada estudiante.</p>
       </div>
     </div>
 
@@ -134,7 +134,7 @@ function close() {
           <span>Notas docentes <small>Opcional</small></span>
           <Textarea
             v-model="form.notes"
-            placeholder="Agrega contexto útil para el seguimiento mensual."
+            placeholder="Agrega contexto útil para el seguimiento."
             rows="3"
             :maxlength="2000"
             auto-resize

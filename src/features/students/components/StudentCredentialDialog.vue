@@ -12,7 +12,7 @@ const props = defineProps({
   },
   header: {
     type: String,
-    default: 'PIN temporal',
+    default: 'PIN',
   },
   intro: {
     type: String,
@@ -72,13 +72,13 @@ function copyWithFallback(value) {
       </div>
 
       <Message severity="warn" :closable="false">
-        El PIN temporal solo se muestra ahora. Entrégalo antes de cerrar esta ventana.
+        El PIN solo se muestra ahora. Entrégalo antes de cerrar esta ventana.
       </Message>
 
       <div class="credential-sheet">
         <div class="credential-sheet__row">
           <div>
-            <small>Alias de acceso</small>
+            <small>Alias</small>
             <code>{{ credential.username }}</code>
           </div>
           <Button
@@ -93,7 +93,7 @@ function copyWithFallback(value) {
         </div>
         <div class="credential-sheet__row credential-sheet__row--password">
           <div>
-            <small>PIN temporal</small>
+            <small>PIN</small>
             <code>{{ accessPin }}</code>
           </div>
           <Button
@@ -101,7 +101,7 @@ function copyWithFallback(value) {
             severity="secondary"
             text
             rounded
-            aria-label="Copiar PIN temporal"
+            aria-label="Copiar PIN"
             @click="copyCredential('pin', accessPin)"
           />
           <span v-if="copiedField === 'pin'">Copiado</span>

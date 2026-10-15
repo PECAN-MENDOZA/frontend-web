@@ -28,9 +28,9 @@ export function studentsFormErrors({ mode, studentRealName, count }) {
     : { count: `Indica entre 1 y ${STUDENT_COUNT_MAX} estudiantes.` }
 }
 
-// Solo usuario y PIN: la hoja se imprime y circula por el aula, no lleva nombres.
+// Solo alias y PIN: la hoja se imprime y circula por el aula, no lleva nombres.
 export function credentialsAsText(credentials, classroomName) {
-  const lines = credentials.map((c) => `usuario: ${c.username} · PIN: ${c.pin}`)
+  const lines = credentials.map((c) => `alias: ${c.username} · PIN: ${c.pin}`)
   return [`Salón ${classroomName}`, ...lines].join('\n')
 }
 
@@ -44,4 +44,26 @@ export function sortClassrooms(list) {
 export function formatLastAccess(value) {
   const date = value ? new Date(value) : null
   return date && !Number.isNaN(date.getTime()) ? lastAccessFormatter.format(date) : 'Sin ingresos'
+}
+
+// Dados de baja de un salón (GET /teachers/students/inactive trae los de todos): los de ese salón,
+// del más reciente al más antiguo.
+export function inactiveInClassroom(links, classroomId) {
+  return (links ?? [])
+    .filter((link) => link.classroomId === classroomId)
+    .sort((a, b) => String(b.deactivatedAt ?? '').localeCompare(String(a.deactivatedAt ?? '')))
+}
+
+export function formatDeactivatedAt(value) {
+  const date = value ? new Date(value) : null
+  return date && !Number.isNaN(date.getTime()) ? lastAccessFormatter.format(date) : '—'
+}
+
+export function classroomArchiveConfirmation(name) {
+  return {
+    header: `Archivar ${name}`,
+    message:
+      'El salón pasará a la lista de archivados y no podrás crear cuentas en él. No se borra nada y puedes restaurarlo cuando quieras.',
+    acceptLabel: 'Archivar',
+  }
 }

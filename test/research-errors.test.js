@@ -69,11 +69,37 @@ test('requestErrorMessage keeps the backend message and falls back when there is
     requestErrorMessage({ status: 409, message: 'Test is not active' }, fallback),
     'La prueba no está activa.',
   )
-  assert.equal(
-    requestErrorMessage({ status: 500, message: 'Unexpected failure' }, fallback),
-    'Unexpected failure',
-  )
+  assert.equal(requestErrorMessage({ status: 500, message: 'Unexpected failure' }, fallback), fallback)
   assert.equal(requestErrorMessage({ status: 400, message: '' }, fallback), fallback)
   assert.equal(requestErrorMessage(new TypeError('Failed to fetch'), fallback), fallback)
   assert.equal(requestErrorMessage(null, fallback), fallback)
+})
+
+test('requestErrorMessage never shows an untranslated backend message', () => {
+  const fallback = 'No pudimos completar la acción.'
+
+  assert.equal(
+    requestErrorMessage({ status: 403, message: 'Some new English message' }, fallback),
+    'No tienes acceso a esta información.',
+  )
+  assert.equal(
+    requestErrorMessage({ status: 404, message: 'Whatever not found' }, fallback),
+    'No encontramos lo que buscas.',
+  )
+  assert.equal(requestErrorMessage({ status: 409, message: 'Conflict' }, fallback), fallback)
+})
+
+test('translateBackendMessage covers the teacher panel messages', () => {
+  assert.equal(
+    translateBackendMessage('Teacher does not have access to this student'),
+    'Este estudiante no está entre tus estudiantes.',
+  )
+  assert.equal(
+    translateBackendMessage('Teacher does not have access to this classroom'),
+    'No encontramos este salón.',
+  )
+  assert.equal(
+    translateBackendMessage('Period must not exceed 92 days'),
+    'El periodo no puede pasar de 92 días.',
+  )
 })

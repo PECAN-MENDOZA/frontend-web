@@ -4,10 +4,10 @@ import { useRoute, useRouter } from 'vue-router'
 import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
 import ConfirmDialog from 'primevue/confirmdialog'
-import Tag from 'primevue/tag'
 import { useAuthStore } from '@/features/auth/store/auth.store'
 import { useInsightsStore } from '@/features/insights/store/insights.store.js'
 import { APP_NAME } from '@/shared/constants/app'
+import { SENTENCE_TESTS_ENABLED } from '@/shared/constants/features'
 
 const route = useRoute()
 const router = useRouter()
@@ -23,7 +23,9 @@ const navigationItems = [
   { label: 'Salón hoy', icon: 'pi pi-sun', to: '/dashboard' },
   { label: 'Salones', icon: 'pi pi-th-large', to: '/classrooms' },
   { label: 'Estudiantes', icon: 'pi pi-users', to: '/students' },
-  { label: 'Prueba en curso', icon: 'pi pi-clock', to: '/tests/live', live: true },
+  ...(SENTENCE_TESTS_ENABLED
+    ? [{ label: 'Prueba en curso', icon: 'pi pi-clock', to: '/tests/live', live: true }]
+    : []),
 ]
 
 function closeNavigation() {
@@ -42,7 +44,7 @@ function handleUnauthorized() {
 onMounted(() => {
   window.addEventListener('auth:unauthorized', handleUnauthorized)
   // Al entrar directamente a /tests/live la propia vista ya consulta; evitar la doble carga.
-  if (route.name !== 'tests-live') insightsStore.loadLive()
+  if (SENTENCE_TESTS_ENABLED && route.name !== 'tests-live') insightsStore.loadLive()
 })
 onUnmounted(() => window.removeEventListener('auth:unauthorized', handleUnauthorized))
 </script>
@@ -114,8 +116,6 @@ onUnmounted(() => window.removeEventListener('auth:unauthorized', handleUnauthor
         </div>
 
         <div class="topbar__actions">
-          <Tag value="Datos actualizados" severity="success" rounded />
-          <Button icon="pi pi-bell" text rounded aria-label="Notificaciones" />
           <div class="topbar__profile">
             <Avatar :label="authStore.userInitials" shape="circle" />
             <div>
@@ -123,6 +123,15 @@ onUnmounted(() => window.removeEventListener('auth:unauthorized', handleUnauthor
               <span>{{ authStore.user?.roleLabel }}</span>
             </div>
           </div>
+          <Button
+            class="topbar__password"
+            aria-label="Cambiar contraseña"
+            label="Cambiar contraseña"
+            icon="pi pi-lock"
+            severity="secondary"
+            text
+            @click="router.push({ name: 'change-password' })"
+          />
           <Button icon="pi pi-sign-out" text rounded aria-label="Cerrar sesión" @click="signOut" />
         </div>
       </header>

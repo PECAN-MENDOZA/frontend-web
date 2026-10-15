@@ -2,9 +2,12 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   STUDENT_COUNT_MAX,
+  classroomArchiveConfirmation,
   classroomFormErrors,
   credentialsAsText,
+  formatDeactivatedAt,
   formatLastAccess,
+  inactiveInClassroom,
   sortClassrooms,
   studentsFormErrors,
 } from '../src/features/classrooms/utils/classrooms.js'
@@ -37,7 +40,7 @@ test('credentialsAsText lists one line per student without real names', () => {
     ],
     '3.º B',
   )
-  assert.equal(text, 'Salón 3.º B\nusuario: tigre-07 · PIN: 1234\nusuario: luna-12 · PIN: 0042')
+  assert.equal(text, 'Salón 3.º B\nalias: tigre-07 · PIN: 1234\nalias: luna-12 · PIN: 0042')
   assert.equal(text.includes('Ana'), false)
 })
 
@@ -57,4 +60,31 @@ test('formatLastAccess shows a placeholder when the student never signed in', ()
   assert.equal(formatLastAccess(null), 'Sin ingresos')
   assert.equal(formatLastAccess('no-es-fecha'), 'Sin ingresos')
   assert.match(formatLastAccess('2026-09-17T15:04:00Z'), /2026/)
+})
+
+test('inactiveInClassroom keeps only that classroom, most recent deactivation first', () => {
+  const links = [
+    { studentId: 'a', classroomId: 'room-1', deactivatedAt: '2026-10-01T10:00:00Z' },
+    { studentId: 'b', classroomId: 'room-2', deactivatedAt: '2026-10-05T10:00:00Z' },
+    { studentId: 'c', classroomId: 'room-1', deactivatedAt: '2026-10-03T10:00:00Z' },
+  ]
+
+  assert.deepEqual(
+    inactiveInClassroom(links, 'room-1').map((link) => link.studentId),
+    ['c', 'a'],
+  )
+  assert.deepEqual(inactiveInClassroom(null, 'room-1'), [])
+})
+
+test('formatDeactivatedAt shows a dash when the date is missing', () => {
+  assert.equal(formatDeactivatedAt(null), '—')
+  assert.equal(formatDeactivatedAt('no-es-fecha'), '—')
+  assert.match(formatDeactivatedAt('2026-10-15T15:04:00Z'), /2026/)
+})
+
+test('classroomArchiveConfirmation names the classroom', () => {
+  const confirmation = classroomArchiveConfirmation('4.º A')
+
+  assert.equal(confirmation.header, 'Archivar 4.º A')
+  assert.equal(confirmation.acceptLabel, 'Archivar')
 })

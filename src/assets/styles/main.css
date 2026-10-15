@@ -302,32 +302,9 @@ h2 {
 }
 
 .login-card__options {
-  display: flex;
   margin: 1.1rem 0 1.45rem;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
   color: var(--color-ink-soft);
   font-size: 0.75rem;
-}
-
-.login-card__options button {
-  padding: 0;
-  border: 0;
-  color: var(--color-ocean);
-  background: transparent;
-  font-size: inherit;
-  font-weight: 700;
-}
-
-.checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.checkbox-label input {
-  accent-color: var(--color-ocean);
 }
 
 .login-card__hint {
@@ -1257,6 +1234,41 @@ h2 {
 .classroom-name--empty,
 .classroom-notes {
   color: var(--color-ink-soft);
+}
+
+/* Dados de baja del salón: sección plegable debajo de la tabla. */
+.inactive-students {
+  overflow: hidden;
+}
+
+.inactive-students__summary {
+  display: flex;
+  padding: 1rem 1.25rem;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--color-ink);
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+}
+
+.inactive-students__summary::-webkit-details-marker {
+  display: none;
+}
+
+.inactive-students__summary i {
+  color: var(--color-ink-soft);
+  font-size: 0.75rem;
+  transition: transform 160ms ease;
+}
+
+.inactive-students[open] .inactive-students__summary {
+  border-bottom: 1px solid var(--color-line);
+}
+
+.inactive-students[open] .inactive-students__summary i {
+  transform: rotate(90deg);
 }
 
 .classroom-notes {
@@ -2319,8 +2331,8 @@ h2 {
     gap: 0;
   }
 
-  .topbar__actions > .p-tag,
-  .topbar__profile div {
+  .topbar__profile div,
+  .topbar__password .p-button-label {
     display: none;
   }
 

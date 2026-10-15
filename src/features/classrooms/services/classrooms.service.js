@@ -12,3 +12,6 @@ export const moveStudent = (studentId, classroomId) =>
 export const deactivateStudent = (studentId) =>
   api.post(`/teachers/students/${studentId}/deactivate`)
 export const resetStudentPin = (studentId) => api.post(`/teachers/students/${studentId}/reset-pin`)
+export const listInactiveStudents = () => api.get('/teachers/students/inactive')
+export const reactivateStudent = (studentId) =>
+  api.post(`/teachers/students/${studentId}/reactivate`)

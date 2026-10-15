@@ -99,7 +99,7 @@ export const useResearchStore = defineStore('research', () => {
   }
 
   // La respuesta del backend no repite el correo del docente: se toma del que ya está en
-  // memoria para que el aviso de contraseña temporal siga mostrando "Usuario: <email>".
+  // memoria para que el aviso de contraseña temporal siga mostrando "Correo: <email>".
   function resetTeacherPassword(id) {
     return pendingCounter.track(async () => {
       const teacher = teachers.value.find((item) => item.id === id) ?? null

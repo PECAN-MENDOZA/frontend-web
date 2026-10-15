@@ -10,14 +10,17 @@ import {
   outcomeTags,
 } from '../src/features/insights/utils/outcomes.js'
 
-test('OUTCOME_LABELS and OUTCOME_SEVERITIES cover the five outcomes in Spanish', () => {
+test('OUTCOME_LABELS and OUTCOME_SEVERITIES cover the six outcomes in Spanish', () => {
   assert.deepEqual(Object.keys(OUTCOME_LABELS), [
     'EDITED',
     'ACCEPTED',
     'REJECTED',
     'UNDONE',
     'UNANSWERED',
+    'NO_CHANGES',
   ])
+  assert.equal(OUTCOME_LABELS.NO_CHANGES, 'Ya estaba bien')
+  assert.equal(OUTCOME_SEVERITIES.NO_CHANGES, 'secondary')
   assert.equal(OUTCOME_LABELS.EDITED, 'Aceptó y editó')
   assert.equal(OUTCOME_SEVERITIES.UNANSWERED, 'secondary')
 })
@@ -33,6 +36,7 @@ test('outcomeSummary keeps a fixed order and rounds pct to one decimal', () => {
       { key: 'REJECTED', pct: 33.3 },
       { key: 'UNDONE', pct: 0 },
       { key: 'UNANSWERED', pct: 0 },
+      { key: 'NO_CHANGES', pct: 0 },
     ],
   )
 })
@@ -100,4 +104,36 @@ test('correctionsLabel counts corrections in Spanish', () => {
   assert.equal(correctionsLabel(0), 'Sin correcciones')
   assert.equal(correctionsLabel(1), '1 corrección')
   assert.equal(correctionsLabel(7), '7 correcciones')
+})
+
+test('outcomeSummary reads noChanges and puts "Ya estaba bien" last, over the full total', () => {
+  const help = { total: 4, edited: 0, accepted: 1, rejected: 1, undone: 0, unanswered: 0, noChanges: 2 }
+  const summary = outcomeSummary(help)
+
+  assert.deepEqual(summary.at(-1), { key: 'NO_CHANGES', label: 'Ya estaba bien', count: 2, pct: 50 })
+  assert.equal(summary.find((item) => item.key === 'REJECTED').pct, 25)
+})
+
+test('outcomeSummary tolerates responses without noChanges (older backend)', () => {
+  const help = { total: 1, edited: 0, accepted: 1, rejected: 0, undone: 0, unanswered: 0 }
+
+  assert.deepEqual(outcomeSummary(help).at(-1), {
+    key: 'NO_CHANGES',
+    label: 'Ya estaba bien',
+    count: 0,
+    pct: 0,
+  })
+})
+
+test('outcomeTags shows "Ya estaba bien" after every other outcome', () => {
+  const tags = outcomeTags({ accepted: 1, unanswered: 1, noChanges: 3 })
+
+  assert.deepEqual(
+    tags.map((tag) => [tag.key, tag.count, tag.severity]),
+    [
+      ['ACCEPTED', 1, 'info'],
+      ['UNANSWERED', 1, 'secondary'],
+      ['NO_CHANGES', 3, 'secondary'],
+    ],
+  )
 })

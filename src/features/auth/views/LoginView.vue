@@ -46,6 +46,9 @@ const { authStore, credentials, submitSignIn } = useAuth()
           <p class="login-card__subtitle">{{ APP_TAGLINE }}</p>
         </div>
 
+        <Message v-if="authStore.notice" severity="warn" :closable="false">
+          {{ authStore.notice }}
+        </Message>
         <Message v-if="authStore.errorMessage" severity="error" :closable="false">
           {{ authStore.errorMessage }}
         </Message>
@@ -75,13 +78,9 @@ const { authStore, credentials, submitSignIn } = useAuth()
           />
         </div>
 
-        <div class="login-card__options">
-          <label class="checkbox-label">
-            <input type="checkbox" checked />
-            <span>Mantener mi sesión iniciada</span>
-          </label>
-          <button type="button">¿Olvidaste tu contraseña?</button>
-        </div>
+        <p class="login-card__options">
+          ¿Olvidaste tu contraseña? Pide al administrador del panel que la reinicie.
+        </p>
 
         <Button
           type="submit"
