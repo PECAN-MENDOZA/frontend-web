@@ -63,7 +63,7 @@ onUnmounted(() => {
 
     <aside class="sidebar" :class="{ 'sidebar--open': isNavigationOpen }">
       <div class="sidebar__brand">
-        <div class="brand-mark">F</div>
+        <div class="brand-mark">K</div>
         <div>
           <span class="sidebar__eyebrow">Panel de investigación</span>
           <strong>{{ APP_NAME }}</strong>

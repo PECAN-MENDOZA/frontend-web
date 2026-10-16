@@ -14,7 +14,7 @@ const { authStore, credentials, submitSignIn } = useAuth()
   <section class="login-page">
     <div class="login-page__story">
       <div class="login-page__brand">
-        <div class="brand-mark brand-mark--large">F</div>
+        <div class="brand-mark brand-mark--large">K</div>
         <span>{{ APP_NAME }}</span>
       </div>
 
