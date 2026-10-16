@@ -81,14 +81,57 @@ test('signIn sends the email trimmed and lowercased and shows the displayName', 
   assert.equal(authStore.user.email, 'ana.qa@colegio.edu.pe')
 })
 
-test('without displayName the name is derived from the email', async () => {
+test('without displayName the topbar shows the email', async () => {
   setActivePinia(createPinia())
   globalThis.fetch = async () => json({ ...loginResponse, displayName: null })
   const authStore = useAuthStore()
 
   await authStore.signIn({ email: 'ana.qa@colegio.edu.pe', password: 'secreta123' })
 
-  assert.equal(authStore.user.name, 'Ana Qa')
+  assert.equal(authStore.user.name, 'ana.qa@colegio.edu.pe')
+  assert.equal(authStore.userInitials, 'A')
+})
+
+test('a deactivated account with the right password gets the deactivation notice as login error', async () => {
+  setActivePinia(createPinia())
+  globalThis.fetch = async () => json({ message: 'Teacher account is deactivated' }, 401)
+  const authStore = useAuthStore()
+
+  await assert.rejects(
+    authStore.signIn({ email: 'ana.qa@colegio.edu.pe', password: 'secreta123' }),
+  )
+
+  assert.equal(
+    authStore.errorMessage,
+    'Tu cuenta fue dada de baja. Si crees que es un error, habla con el administrador del panel.',
+  )
+})
+
+test('wrong credentials keep the generic login error', async () => {
+  setActivePinia(createPinia())
+  globalThis.fetch = async () => json({ message: 'Invalid staff credentials' }, 401)
+  const authStore = useAuthStore()
+
+  await assert.rejects(authStore.signIn({ email: 'ana.qa@colegio.edu.pe', password: 'mala' }))
+
+  assert.equal(
+    authStore.errorMessage,
+    'No pudimos iniciar sesión. Verifica tus credenciales e inténtalo nuevamente.',
+  )
+})
+
+test('a plain 401 ends the open session with the "session ended" notice', async () => {
+  const authStore = await signedInStore()
+  globalThis.fetch = async () => json({ message: 'Unauthorized' }, 401)
+
+  await assert.rejects(api.get('/teachers/classrooms'))
+
+  assert.equal(authStore.isAuthenticated, false)
+  assert.equal(authStore.notice, 'Tu sesión terminó. Vuelve a ingresar.')
+
+  // Una petición paralela que falla después no borra el aviso.
+  await assert.rejects(api.get('/teachers/students'))
+  assert.equal(authStore.notice, 'Tu sesión terminó. Vuelve a ingresar.')
 })
 
 test('a 403 "Password change required" signs out and leaves the notice for the login', async () => {
@@ -131,6 +174,11 @@ test('changePassword maps the backend errors to Spanish', async () => {
   globalThis.fetch = async () => json({ message: 'New password must be different' }, 400)
   await authStore.changePassword({ currentPassword: 'x', newPassword: 'y' })
   assert.equal(authStore.errorMessage, 'La contraseña nueva debe ser distinta de la actual.')
+
+  // Con contraseña temporal los mensajes nombran el campo como en pantalla.
+  globalThis.fetch = async () => json({ message: 'Invalid staff credentials' }, 401)
+  await authStore.changePassword({ currentPassword: 'x', newPassword: 'y' }, { temporary: true })
+  assert.equal(authStore.errorMessage, 'La contraseña temporal no es correcta.')
 
   let calledPath = ''
   globalThis.fetch = async (url) => {

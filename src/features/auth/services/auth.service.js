@@ -39,7 +39,7 @@ async function getStaffSession(credentials) {
       skipUnauthorizedEvent: true,
     })
   } catch (error) {
-    throw new Error(loginErrorMessage(), { cause: error })
+    throw new Error(loginErrorMessage(error?.status, error?.message), { cause: error })
   }
 }
 

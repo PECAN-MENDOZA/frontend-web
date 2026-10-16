@@ -9,8 +9,8 @@ const BACKEND_MESSAGES = {
   'Test is not editable once activated': 'La prueba ya está activada.',
   'Test is not active': 'La prueba no está activa.',
   'Only an active test can be closed': 'Solo se puede cerrar una prueba activa.',
-  'Test already completed': 'El alumno ya completó esta prueba.',
-  'Another test is in progress': 'El alumno tiene otra prueba en curso.',
+  'Test already completed': 'El estudiante ya completó esta prueba.',
+  'Another test is in progress': 'El estudiante tiene otra prueba en curso.',
   'Sentence not found': 'No encontramos la oración.',
   'Sentence out of order': 'La oración no es la siguiente.',
   'Sentence not started': 'La oración no se ha comenzado.',
@@ -28,7 +28,7 @@ const BACKEND_MESSAGES = {
   'Teacher not found': 'No encontramos al docente.',
   'Email is already in use': 'Ese correo ya está en uso.',
   'Classroom not found': 'No encontramos el salón.',
-  'Student not found': 'No encontramos al alumno.',
+  'Student not found': 'No encontramos al estudiante.',
   // Panel docente.
   'Teacher does not have access to this student': 'Este estudiante no está entre tus estudiantes.',
   'Teacher does not have access to this classroom': 'No encontramos este salón.',
@@ -47,9 +47,41 @@ const BACKEND_MESSAGES = {
 // Mensajes con una parte variable: se traduce el molde y se conserva el detalle del backend.
 const BACKEND_PATTERNS = [
   [/^Sentence out of order: expected (\d+)$/, 'La oración no es la siguiente (se esperaba la $1).'],
-  [/^Student not found: (.+)$/, 'No encontramos al alumno $1.'],
+  [/^Student not found: (.+)$/, 'No encontramos al estudiante $1.'],
   [/^Period must not exceed (\d+) days$/, 'El periodo no puede pasar de $1 días.'],
 ]
+
+// Nombres en español de los campos que el backend devuelve en validationErrors (nombres de Java).
+// Los anidados ("sentences[0].text") se nombran por su campo raíz.
+const FIELD_LABELS = {
+  fullName: 'Nombre',
+  email: 'Correo',
+  institution: 'Institución',
+  name: 'Nombre del salón',
+  studentRealName: 'Nombre',
+  notes: 'Notas',
+  count: 'Cantidad',
+  classroomId: 'Salón',
+  password: 'Contraseña',
+  currentPassword: 'Contraseña actual',
+  newPassword: 'Contraseña nueva',
+  title: 'Título',
+  code: 'Código',
+  description: 'Descripción',
+  sentences: 'Oraciones',
+  studentIds: 'Estudiantes',
+  reason: 'Motivo',
+  from: 'Fecha inicial',
+  to: 'Fecha final',
+}
+
+/** Rótulos en español, sin repetir, de los campos con error; los desconocidos no se muestran. */
+export function fieldLabels(fields) {
+  const labels = (fields ?? [])
+    .map((field) => FIELD_LABELS[String(field).split(/[.[]/)[0]])
+    .filter(Boolean)
+  return [...new Set(labels)]
+}
 
 // Traducción de un mensaje conocido del backend; null si no se conoce.
 function knownBackendMessage(message) {
@@ -76,10 +108,12 @@ export function requestErrorMessage(requestError, fallback) {
 
   const message =
     knownBackendMessage(requestError.message) ?? statusMessage(requestError.status, fallback)
-  const fields = Object.keys(requestError.validationErrors ?? {})
+  const labels = fieldLabels(Object.keys(requestError.validationErrors ?? {}))
 
-  // Los 400 de validación traen el detalle por campo: se nombran los campos, no sus reglas.
-  if (fields.length === 0) return message
+  // Los 400 de validación traen el detalle por campo: se nombran los campos (en español, nunca el
+  // nombre interno del backend), no sus reglas.
+  if (labels.length === 0) return message
 
-  return `${message.replace(/\.$/, '')}; revisa los campos: ${fields.join(', ')}.`
+  const list = labels.length === 1 ? `el campo ${labels[0]}` : `los campos ${labels.join(', ')}`
+  return `${message.replace(/\.$/, '')}; revisa ${list}.`
 }

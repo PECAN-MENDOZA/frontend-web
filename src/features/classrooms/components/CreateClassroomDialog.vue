@@ -77,8 +77,9 @@ function close() {
       ></span>
       <div>
         <p class="overline">{{ isRenaming ? 'Salón existente' : 'Salón' }}</p>
-        <h3>{{ isRenaming ? 'Cambia el nombre del salón.' : 'Crea un salón para tu aula.' }}</h3>
-        <p>Dentro del salón crearás las cuentas de tus estudiantes.</p>
+        <h3>{{ isRenaming ? 'Cambia el nombre del salón.' : 'Crea un salón para tus estudiantes.' }}</h3>
+        <p v-if="isRenaming">Las cuentas de tus estudiantes y sus datos no cambian.</p>
+        <p v-else>Dentro del salón crearás las cuentas de tus estudiantes.</p>
       </div>
     </div>
 

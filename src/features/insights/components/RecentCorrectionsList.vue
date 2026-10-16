@@ -9,6 +9,7 @@ import {
   correctionLine,
 } from '@/features/insights/utils/outcomes.js'
 import { formatClock } from '@/features/insights/utils/period.js'
+import { SENTENCE_TESTS_ENABLED } from '@/shared/constants/features'
 
 // Últimas correcciones del salón (RecentCorrectionItem[]), de la más reciente a la más antigua.
 const props = defineProps({
@@ -30,7 +31,7 @@ const rows = computed(() => {
     line: correctionLine(item),
     outcomeText: item.outcomeLabel || OUTCOME_LABELS[item.outcome] || item.outcome,
     severity: OUTCOME_SEVERITIES[item.outcome] ?? 'secondary',
-    badge: assistanceBadge(item),
+    badge: assistanceBadge(item, SENTENCE_TESTS_ENABLED),
     // La sugerencia solo se repite si el texto final no la reproduce tal cual.
     showsSuggestion: Boolean(item.correctedText) && item.correctedText !== item.finalText,
   }))

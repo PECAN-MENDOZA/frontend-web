@@ -200,7 +200,7 @@ export const useInsightsStore = defineStore('insights', () => {
         student.value = { id: studentId, errors, help, writings, tests }
         studentLoadedFor.value = { studentId, ...requestedPeriod }
       },
-      fallback: 'No pudimos cargar la ficha del alumno. Inténtalo nuevamente.',
+      fallback: 'No pudimos cargar la ficha del estudiante. Inténtalo nuevamente.',
     })
     return outcome.ok
   }
@@ -242,7 +242,8 @@ export const useInsightsStore = defineStore('insights', () => {
 
     try {
       const download = await downloadPeriodReport(studentId, period.value)
-      saveBlob(download, `reporte-${studentId}-${period.value.from}_${period.value.to}.pdf`)
+      // El nombre lo da el backend (con el alias); este es solo el respaldo si la cabecera no llega.
+      saveBlob(download, `reporte-${period.value.from}_${period.value.to}.pdf`)
       return true
     } catch (error) {
       downloadMessage.value = requestErrorMessage(error, GENERIC_ERROR)

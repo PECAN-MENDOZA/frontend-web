@@ -81,7 +81,7 @@ function close() {
       <div>
         <p class="overline">Cuenta de docente</p>
         <h3>Crea la cuenta del docente.</h3>
-        <p>El docente entra con una contraseña temporal y crea sus propios salones y alumnos.</p>
+        <p>El docente entra con una contraseña temporal y crea sus propios salones y estudiantes.</p>
       </div>
     </div>
 

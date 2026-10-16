@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import Column from 'primevue/column'
@@ -21,6 +21,10 @@ const isCreateDialogVisible = ref(false)
 const pendingClassroomId = ref(null)
 
 onMounted(() => classroomsStore.loadClassrooms())
+// El error del diálogo (p. ej. nombre duplicado) no debe quedar como aviso de la página al cancelar.
+watch(isCreateDialogVisible, (isVisible) => {
+  if (!isVisible) classroomsStore.mutationErrorMessage = ''
+})
 
 function openCreateClassroom() {
   classroomsStore.mutationErrorMessage = ''
@@ -66,7 +70,7 @@ function openClassroom(classroomId) {
   <div class="classrooms-page">
     <PageHeader
       eyebrow="Tus salones"
-      title="Salones."
+      title="Salones"
       description="Crea un salón y dentro de él las cuentas de tus estudiantes."
     >
       <template #actions>
@@ -92,7 +96,7 @@ function openClassroom(classroomId) {
     <section class="panel directory-panel">
       <div class="directory-panel__toolbar">
         <div>
-          <p class="overline">Aulas del docente</p>
+          <p class="overline">Directorio de salones</p>
           <h2>Salones activos y archivados</h2>
         </div>
       </div>

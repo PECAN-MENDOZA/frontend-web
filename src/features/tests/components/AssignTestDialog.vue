@@ -23,14 +23,14 @@ const studentIds = ref([])
 const showErrors = ref(false)
 const modeOptions = [
   { label: 'Por salón', value: 'classroom' },
-  { label: 'Por alumnos', value: 'students' },
+  { label: 'Por estudiantes', value: 'students' },
 ]
 const classroomOptions = computed(() =>
   props.classrooms
     .filter((classroom) => !classroom.archived)
     .map((classroom) => ({
       value: classroom.id,
-      label: `${classroom.teacherUsername || 'Docente sin identificar'} · ${classroom.name || 'Salón sin nombre'} · ${classroom.students?.length ?? 0} alumnos`,
+      label: `${classroom.teacherUsername || 'Docente sin identificar'} · ${classroom.name || 'Salón sin nombre'} · ${classroom.students?.length ?? 0} estudiantes`,
     })),
 )
 const studentOptions = computed(() => {
@@ -98,7 +98,7 @@ function close() {
       <div>
         <p class="overline">Nueva asignación</p>
         <h3>Elige quién realizará la prueba.</h3>
-        <p>Asigna un salón completo o selecciona alumnos concretos por su username.</p>
+        <p>Asigna un salón completo o selecciona estudiantes concretos por su username.</p>
       </div>
     </div>
 
@@ -144,13 +144,13 @@ function close() {
       </label>
 
       <label v-else>
-        <span>Alumnos <small>{{ studentIds.length }} seleccionados</small></span>
+        <span>Estudiantes <small>{{ studentIds.length }} seleccionados</small></span>
         <MultiSelect
           v-model="studentIds"
           :options="studentOptions"
           option-label="label"
           option-value="value"
-          placeholder="Selecciona uno o más alumnos"
+          placeholder="Selecciona uno o más estudiantes"
           :loading="isLoading"
           :invalid="showErrors && !studentIds.length"
           filter
@@ -165,7 +165,7 @@ function close() {
           </template>
         </MultiSelect>
         <small v-if="showErrors && !studentIds.length" class="research-form__error">
-          Selecciona al menos un alumno.
+          Selecciona al menos un estudiante.
         </small>
       </label>
 
@@ -174,7 +174,7 @@ function close() {
         severity="warn"
         :closable="false"
       >
-        No hay salones activos disponibles. Pide a un docente que cree un salón con alumnos.
+        No hay salones activos disponibles. Pide a un docente que cree un salón con estudiantes.
       </Message>
     </form>
 

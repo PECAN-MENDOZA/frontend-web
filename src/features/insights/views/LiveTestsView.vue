@@ -112,7 +112,7 @@ onUnmounted(() => {
   <div class="live-tests-page">
     <PageHeader
       eyebrow="Prueba en curso"
-      title="Quién está en una prueba ahora."
+      title="Quién está en una prueba ahora"
       description="Se actualiza cada 5 segundos mientras esta pantalla está abierta."
     >
       <template #actions>

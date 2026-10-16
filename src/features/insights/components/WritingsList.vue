@@ -7,9 +7,11 @@ import {
   assistanceBadge,
 } from '@/features/insights/utils/outcomes.js'
 import { formatClock } from '@/features/insights/utils/period.js'
+import { SENTENCE_TESTS_ENABLED } from '@/shared/constants/features'
 
 // "Lo que escribió": cada escritura del alumno (StudentWritingItem[]) con el texto original,
-// el texto final, el desenlace y, si fue durante una prueba, la marca de con/sin ayuda.
+// el texto final, el desenlace y, si fue durante una prueba (solo con el módulo de pruebas
+// encendido), la marca de con/sin ayuda.
 const props = defineProps({
   items: {
     type: Array,
@@ -25,7 +27,7 @@ const rows = computed(() => {
     clock: formatClock(item.createdAt, now),
     outcomeText: item.outcomeLabel || OUTCOME_LABELS[item.outcome] || item.outcome,
     severity: OUTCOME_SEVERITIES[item.outcome] ?? 'secondary',
-    badge: assistanceBadge(item),
+    badge: assistanceBadge(item, SENTENCE_TESTS_ENABLED),
     // El texto final solo se repite cuando difiere del original.
     changed: (item.finalText ?? '') !== (item.originalText ?? ''),
   }))
@@ -51,7 +53,7 @@ const rows = computed(() => {
         <div class="writing-item__labels">
           <Tag :value="row.outcomeText" :severity="row.severity" rounded />
           <Tag v-if="row.badge" :value="row.badge" severity="secondary" rounded />
-          <span v-if="row.testCode" class="test-code">{{ row.testCode }}</span>
+          <span v-if="SENTENCE_TESTS_ENABLED && row.testCode" class="test-code">{{ row.testCode }}</span>
         </div>
       </div>
     </li>

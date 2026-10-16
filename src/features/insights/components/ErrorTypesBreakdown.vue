@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue'
-import { sortTypes } from '@/features/insights/utils/errors.js'
+import { sortTypes, wordsLabel } from '@/features/insights/utils/errors.js'
 
 // Errores del salón por tipo ({total, types:[{type, label, count, topWords}]}): conteos y las
 // palabras más repetidas de cada tipo, sin comparación con otros periodos.
@@ -12,10 +12,6 @@ const props = defineProps({
 })
 
 const types = computed(() => sortTypes(props.errors?.types).filter((type) => type.count > 0))
-
-function countLabel(count) {
-  return count === 1 ? '1 corrección' : `${count} correcciones`
-}
 </script>
 
 <template>
@@ -26,7 +22,7 @@ function countLabel(count) {
     <li v-for="type in types" :key="type.type" class="error-type">
       <div class="error-type__head">
         <strong>{{ type.label }}</strong>
-        <span>{{ countLabel(type.count) }}</span>
+        <span>{{ wordsLabel(type.count) }}</span>
       </div>
       <ul v-if="type.topWords?.length" class="word-chips">
         <li

@@ -1,15 +1,7 @@
-import { formatRelative } from '../../insights/utils/period.js'
+import { formatDateTimeWithYear, formatRelative } from '../../insights/utils/period.js'
 
 export const CLASSROOM_NAME_MAX_LENGTH = 80
 export const STUDENT_COUNT_MAX = 40
-
-const lastAccessFormatter = new Intl.DateTimeFormat('es-PE', {
-  day: '2-digit',
-  month: 'short',
-  year: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit',
-})
 
 export function classroomFormErrors({ name }) {
   const trimmed = (name ?? '').trim()
@@ -36,6 +28,44 @@ export function credentialsAsText(credentials, classroomName) {
   return [`Salón ${classroomName}`, ...lines].join('\n')
 }
 
+export const CREDENTIALS_INSTRUCTION =
+  'Recorta cada fila y entrega a cada estudiante su alias y su PIN para entrar desde el teclado.'
+
+function escapeHtml(text) {
+  return String(text ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+}
+
+/** Título de la hoja de credenciales: 'Credenciales – Salón 3.º B'. */
+export function credentialsTitle(classroomName) {
+  const name = (classroomName ?? '').trim()
+  return name ? `Credenciales – Salón ${name}` : 'Credenciales'
+}
+
+// Hoja imprimible: título, una instrucción y una tabla legible de alias y PIN (sin nombres reales).
+export function credentialsPrintHtml(credentials, classroomName) {
+  const title = escapeHtml(credentialsTitle(classroomName))
+  const rows = (credentials ?? [])
+    .map((c) => `<tr><td>${escapeHtml(c.username)}</td><td>${escapeHtml(c.pin)}</td></tr>`)
+    .join('')
+
+  return (
+    `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${title}</title>` +
+    '<style>body{font-family:Arial,Helvetica,sans-serif;padding:2rem;color:#1f2a28}' +
+    'h1{font-size:1.5rem;margin:0 0 .4rem}p{margin:0 0 1.2rem;font-size:1rem}' +
+    'table{border-collapse:collapse;width:100%;max-width:32rem;font-size:1.2rem}' +
+    'th,td{border:1px dashed #8a9a96;padding:.7rem 1rem;text-align:left}' +
+    'th{font-size:.85rem;text-transform:uppercase;letter-spacing:.06em;background:#f1f4f0}' +
+    'td{font-family:Consolas,"Courier New",monospace;letter-spacing:.04em}</style></head><body>' +
+    `<h1>${title}</h1><p>${escapeHtml(CREDENTIALS_INSTRUCTION)}</p>` +
+    `<table><thead><tr><th>Alias</th><th>PIN</th></tr></thead><tbody>${rows}</tbody></table>` +
+    '</body></html>'
+  )
+}
+
 export function sortClassrooms(list) {
   return [...list].sort((a, b) => {
     const archivedDiff = Number(Boolean(a.archivedAt)) - Number(Boolean(b.archivedAt))
@@ -57,9 +87,9 @@ export function inactiveInClassroom(links, classroomId) {
     .sort((a, b) => String(b.deactivatedAt ?? '').localeCompare(String(a.deactivatedAt ?? '')))
 }
 
+// Mismo formato que el resto del portal: dd/mm/aaaa HH:mm (24 h) en America/Lima.
 export function formatDeactivatedAt(value) {
-  const date = value ? new Date(value) : null
-  return date && !Number.isNaN(date.getTime()) ? lastAccessFormatter.format(date) : '—'
+  return formatDateTimeWithYear(value)
 }
 
 export function classroomArchiveConfirmation(name) {

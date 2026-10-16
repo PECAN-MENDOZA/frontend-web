@@ -1,6 +1,6 @@
 <script setup>
 import { onMounted, onUnmounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
 import ConfirmDialog from 'primevue/confirmdialog'
@@ -9,6 +9,7 @@ import { useResearchStore } from '@/features/research/store/research.store'
 import { APP_NAME } from '@/shared/constants/app'
 import { SENTENCE_TESTS_ENABLED } from '@/shared/constants/features'
 
+const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const researchStore = useResearchStore()
@@ -35,9 +36,10 @@ function handleSignedOut() {
   researchStore.reset()
 }
 
+// Sesión cerrada por el servidor: al login con el aviso del store y la página actual en ?redirect=.
 function handleUnauthorized() {
   researchStore.reset()
-  router.push({ name: 'login' })
+  router.push({ name: 'login', query: { redirect: route.fullPath } })
 }
 
 onMounted(() => {

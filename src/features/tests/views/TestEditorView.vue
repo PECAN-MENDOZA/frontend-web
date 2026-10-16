@@ -166,7 +166,7 @@ async function activateTest() {
 function confirmClose() {
   confirm.require({
     header: 'Cerrar prueba',
-    message: 'Los alumnos ya no podrán iniciar nuevos intentos. ¿Cerrar la prueba?',
+    message: 'Los estudiantes ya no podrán iniciar nuevos intentos. ¿Cerrar la prueba?',
     icon: 'pi pi-lock',
     acceptLabel: 'Cerrar prueba',
     rejectLabel: 'Cancelar',

@@ -4,6 +4,7 @@ import {
   exampleLabel,
   practiceSheet,
   sortTypes,
+  wordsLabel,
 } from '../src/features/insights/utils/errors.js'
 
 test('exampleLabel pluralizes "veces" and keeps "vez" for a single occurrence', () => {
@@ -56,4 +57,11 @@ test('sortTypes orders by count descending and keeps a stable order for ties', (
   )
   // No muta el arreglo original.
   assert.equal(types[0].type, 'ACENTUACION')
+})
+
+test('wordsLabel counts corrected words, singular and plural', () => {
+  assert.equal(wordsLabel(1), '1 palabra')
+  assert.equal(wordsLabel(4), '4 palabras')
+  assert.equal(wordsLabel(0), '0 palabras')
+  assert.equal(wordsLabel(undefined), '0 palabras')
 })

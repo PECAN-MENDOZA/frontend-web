@@ -147,10 +147,11 @@ function close() {
         <span
           >Cantidad de cuentas <small>Entre 1 y {{ STUDENT_COUNT_MAX }}</small></span
         >
+        <!-- Sin :min=1 ni :max: InputNumber ajustaría en silencio un 0 o un 50 al límite; así
+             llega a la validación y se muestra el error. -->
         <InputNumber
           v-model="form.count"
-          :min="1"
-          :max="STUDENT_COUNT_MAX"
+          :min="0"
           :use-grouping="false"
           show-buttons
           :invalid="showErrors && Boolean(errors.count)"

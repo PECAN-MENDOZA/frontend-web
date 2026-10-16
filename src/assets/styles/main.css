@@ -1213,7 +1213,15 @@ h2 {
 }
 
 .classroom-cell strong {
+  min-width: 0;
   color: var(--color-ink);
+  overflow-wrap: anywhere;
+}
+
+/* Un nombre de salón largo y sin espacios no debe ensanchar la tabla hasta sacar los alias de vista. */
+.classroom-directory-table .classroom-cell {
+  max-width: 16rem;
+  flex-wrap: wrap;
 }
 
 .classrooms-table .p-datatable-tbody > tr.classrooms-table__row--archived .classroom-cell strong {
@@ -1297,7 +1305,9 @@ h2 {
 }
 
 /* Docentes */
+/* Con pocos alias por fila la columna no se estrecha hasta volver cada fila una torre de etiquetas. */
 .classroom-directory-students {
+  min-width: 16rem;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -2325,6 +2335,50 @@ h2 {
 
   .student-today-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Pantallas angostas (teléfono, tablet vertical): la columna de acciones fija se comía la tabla
+   (alias cortados, demás columnas ocultas). Aquí deja de estar fija y la tabla entera se desplaza
+   en horizontal dentro de su panel; las acciones no se parten en varias líneas. */
+@media (max-width: 48rem) {
+  .p-datatable-tbody > tr > td.p-datatable-frozen-column,
+  .p-datatable-thead > tr > th.p-datatable-frozen-column {
+    position: static;
+    box-shadow: none;
+  }
+
+  .row-actions,
+  .teacher-actions {
+    flex-wrap: nowrap;
+  }
+
+  .row-actions .p-button,
+  .teacher-actions .p-button {
+    white-space: nowrap;
+  }
+
+  .classroom-username {
+    white-space: nowrap;
+  }
+
+  /* Directorio del investigador: un salón con 35 alias volvía la fila una torre (y en blanco, porque
+     la columna queda fuera de la vista). Los alias se desplazan dentro de su celda. */
+  .classroom-directory-students {
+    min-width: 22rem;
+    max-height: 7.5rem;
+    overflow-y: auto;
+  }
+
+  .classroom-directory-table .p-datatable-tbody > tr > td {
+    vertical-align: top;
+  }
+
+  /* El aviso de tabla vacía queda a la vista aunque la tabla sea más ancha que la pantalla. */
+  .p-datatable-empty-message .table-empty {
+    position: sticky;
+    left: 0;
+    max-width: calc(100vw - 4rem);
   }
 }
 

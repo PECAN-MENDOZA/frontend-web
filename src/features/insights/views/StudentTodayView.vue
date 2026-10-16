@@ -17,12 +17,17 @@ import {
   useInsightsStore,
 } from '@/features/insights/store/insights.store.js'
 import { periodErrors, periodLabel } from '@/features/insights/utils/period.js'
-import StudentCredentialDialog from '@/features/students/components/StudentCredentialDialog.vue'
+import CredentialsListDialog from '@/features/classrooms/components/CredentialsListDialog.vue'
 import { useStudentsStore } from '@/features/students/store/students.store'
-import { pinResetConfirmation } from '@/features/students/utils/students'
+import {
+  backLabel,
+  canGoBackTo,
+  classroomLabel,
+  pinResetConfirmation,
+} from '@/features/students/utils/students'
 import PageHeader from '@/shared/components/PageHeader.vue'
 
-// Ficha del alumno: qué escribió, en qué se equivocó y cómo respondió a la ayuda en el periodo
+// Ficha del estudiante: qué escribió, en qué se equivocó y cómo respondió a la ayuda en el periodo
 // elegido. Describe; no compara periodos ni califica.
 const route = useRoute()
 const router = useRouter()
@@ -42,7 +47,8 @@ const identity = computed(() => {
   if (!link.value) return ''
   // Sin nombre real el título ya es el alias: no se repite debajo.
   const alias = studentName.value ? link.value.username : null
-  return [alias, link.value.classroomName || 'Sin salón'].filter(Boolean).join(' · ')
+  const classroom = classroomLabel(link.value.classroomName, link.value.classroomArchived)
+  return [alias, classroom].filter(Boolean).join(' · ')
 })
 
 const periodMessage = computed(() => periodErrors(insightsStore.period))
@@ -73,14 +79,19 @@ const isUnknownStudent = computed(
     insightsStore.errorMessage === STUDENT_NOT_FOUND_MESSAGE ||
     (!link.value && !studentsStore.isLoading && studentsStore.students.length > 0),
 )
-const resetCredential = computed(() =>
-  studentsStore.resetPinCredentials
-    ? {
-        ...studentsStore.resetPinCredentials,
-        studentRealName: studentName.value || link.value?.username,
-      }
-    : null,
+// El PIN reiniciado se entrega con la misma hoja que en el salón (Copiar / Imprimir / Listo).
+const resetPinList = computed(() =>
+  studentsStore.resetPinCredentials ? [studentsStore.resetPinCredentials] : [],
 )
+// Página interna de la que se llegó (vue-router la guarda en history.state.back): se vuelve allí;
+// si se entró directo (enlace, recarga sin historial), al directorio.
+const backPath = window.history.state?.back ?? null
+const backButtonLabel = backLabel(backPath)
+
+function goBack() {
+  if (canGoBackTo(backPath)) router.back()
+  else router.push({ name: 'students' })
+}
 
 async function loadStudent() {
   if (periodMessage.value || !studentId.value) return
@@ -124,12 +135,12 @@ watch(studentId, loadStudent)
 <template>
   <div class="student-today-page">
     <Button
-      label="Volver a estudiantes"
+      :label="backButtonLabel"
       icon="pi pi-arrow-left"
       severity="secondary"
       text
       class="student-today-page__back"
-      @click="router.push({ name: 'students' })"
+      @click="goBack"
     />
 
     <Message v-if="isUnknownStudent" severity="info" :closable="false">
@@ -137,7 +148,7 @@ watch(studentId, loadStudent)
     </Message>
 
     <template v-else>
-      <PageHeader eyebrow="Ficha del alumno" :title="title" :description="identity">
+      <PageHeader eyebrow="Ficha del estudiante" :title="title" :description="identity">
         <template #actions>
           <Button
             label="Actualizar"
@@ -181,7 +192,10 @@ watch(studentId, loadStudent)
         {{ insightsStore.downloadMessage }}
       </Message>
       <Message v-if="isStale" severity="info" :closable="false">
-        Mostrando datos de {{ periodText }}; pulsa Actualizar.
+        <template v-if="periodMessage">
+          Mostrando datos de {{ periodText }}. Corrige las fechas para ver otro periodo.
+        </template>
+        <template v-else>Mostrando datos de {{ periodText }}; pulsa Actualizar.</template>
       </Message>
       <Message v-if="studentsStore.resetPinErrorMessage" severity="warn" :closable="false">
         {{ studentsStore.resetPinErrorMessage }}
@@ -256,12 +270,11 @@ watch(studentId, loadStudent)
       </template>
     </template>
 
-    <StudentCredentialDialog
-      :credential="resetCredential"
-      header="Nuevo PIN"
-      intro="Entrega este nuevo PIN al estudiante. El alias se mantiene igual."
-      action-label="Ya entregué el nuevo PIN"
-      @close="studentsStore.clearResetPinCredentials"
+    <CredentialsListDialog
+      :visible="resetPinList.length > 0"
+      :credentials="resetPinList"
+      :classroom-name="link?.classroomName ?? ''"
+      @update:visible="studentsStore.clearResetPinCredentials"
     />
   </div>
 </template>

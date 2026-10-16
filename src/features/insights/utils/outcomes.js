@@ -56,10 +56,13 @@ export function outcomeTags(outcomes) {
   })
 }
 
-/** 'Sin correcciones' | '1 corrección' | '7 correcciones'. */
+/**
+ * 'Sin correcciones pedidas' | '1 corrección pedida' | '7 correcciones pedidas'. Mismo nombre en
+ * todo el portal (y en el PDF: "Correcciones pedidas") para la misma cifra.
+ */
 export function correctionsLabel(count) {
-  if (!count) return 'Sin correcciones'
-  return count === 1 ? '1 corrección' : `${count} correcciones`
+  if (!count) return 'Sin correcciones pedidas'
+  return count === 1 ? '1 corrección pedida' : `${count} correcciones pedidas`
 }
 
 function words(text) {
@@ -88,8 +91,11 @@ export function correctionLine(item) {
   return `${originalWords.slice(0, 6).join(' ')}…`
 }
 
-/** null si no fue durante una prueba; si no, marca si la oración era con o sin ayuda. */
-export function assistanceBadge(item) {
-  if (!item?.inTest) return null
+/**
+ * null si no fue durante una prueba o si las pruebas de oraciones están apagadas (el backend puede
+ * seguir mandando inTest en datos viejos del piloto); si no, marca si la oración era con o sin ayuda.
+ */
+export function assistanceBadge(item, testsEnabled = true) {
+  if (!testsEnabled || !item?.inTest) return null
   return item.assistance === 'ASSISTED' ? 'en prueba · con ayuda' : 'en prueba · sin ayuda'
 }

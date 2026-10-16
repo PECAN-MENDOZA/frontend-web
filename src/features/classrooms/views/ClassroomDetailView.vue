@@ -14,7 +14,6 @@ import CredentialsListDialog from '@/features/classrooms/components/CredentialsL
 import MoveStudentDialog from '@/features/classrooms/components/MoveStudentDialog.vue'
 import { useClassroomsStore } from '@/features/classrooms/store/classrooms.store'
 import { formatDeactivatedAt, formatLastAccess } from '@/features/classrooms/utils/classrooms'
-import StudentCredentialDialog from '@/features/students/components/StudentCredentialDialog.vue'
 import {
   deactivateConfirmation,
   pinResetConfirmation,
@@ -57,7 +56,6 @@ const isMoveDialogVisible = ref(false)
 const movingStudent = ref(null)
 // Qué acción (y de qué fila) está en curso: solo ese botón muestra el spinner.
 const pendingAction = ref(null)
-// Edición en línea del nombre real: una fila a la vez.
 // Edición en línea de una celda: el nombre real o las notas del docente (una a la vez).
 const editing = reactive({ studentId: null, field: 'name', name: '' })
 const editInput = ref(null)
@@ -69,6 +67,17 @@ const isAnyDialogVisible = computed(
     isCredentialsDialogVisible.value ||
     isMoveDialogVisible.value,
 )
+// El error de un diálogo (p. ej. nombre duplicado) es de ese diálogo: al cancelarlo o cerrarlo no
+// debe quedar como aviso de la página.
+watch(isAnyDialogVisible, (isVisible) => {
+  if (!isVisible) classroomsStore.mutationErrorMessage = ''
+})
+// El PIN reiniciado se entrega con la misma hoja que las cuentas nuevas (Copiar / Imprimir / Listo).
+const resetPinList = computed(() =>
+  classroomsStore.resetPinCredentials ? [classroomsStore.resetPinCredentials] : [],
+)
+const isArchived = computed(() => Boolean(classroom.value?.archivedAt))
+const STUDENTS_PER_PAGE = 15
 
 onMounted(() => classroomsStore.loadClassroom(classroomId.value))
 watch(classroomId, (id) => {
@@ -255,13 +264,13 @@ function openStudent(studentId) {
             icon="pi pi-users"
             severity="secondary"
             outlined
-            :disabled="!classroom || Boolean(classroom.archivedAt)"
+            :disabled="!classroom || isArchived"
             @click="openCreateStudents('count')"
           />
           <Button
             label="Nuevo estudiante"
             icon="pi pi-user-plus"
-            :disabled="!classroom || Boolean(classroom.archivedAt)"
+            :disabled="!classroom || isArchived"
             @click="openCreateStudents('named')"
           />
         </template>
@@ -273,7 +282,7 @@ function openStudent(studentId) {
       <Message v-if="classroomsStore.mutationErrorMessage && !isAnyDialogVisible" severity="error">
         {{ classroomsStore.mutationErrorMessage }}
       </Message>
-      <Message v-if="classroom?.archivedAt" severity="warn" :closable="false">
+      <Message v-if="isArchived" severity="warn" :closable="false">
         Este salón está archivado. Restáuralo desde la lista de salones para crear cuentas.
       </Message>
 
@@ -305,13 +314,16 @@ function openStudent(studentId) {
           :value="classroomsStore.students"
           class="classroom-students-table" scrollable
           data-key="studentId"
-          paginator
-          :rows="15"
-          :rows-per-page-options="[15, 40]"
+          :paginator="classroomsStore.students.length > STUDENTS_PER_PAGE"
+          :rows="STUDENTS_PER_PAGE"
+          :rows-per-page-options="[STUDENTS_PER_PAGE, 40]"
           table-style="min-width: 58rem"
         >
           <template #empty>
-            <p class="table-empty">
+            <p v-if="isArchived" class="table-empty">
+              Este salón está archivado y no tiene estudiantes activos.
+            </p>
+            <p v-else class="table-empty">
               Este salón aún no tiene estudiantes. Crea la primera cuenta con «Nuevo estudiante».
             </p>
           </template>
@@ -551,12 +563,11 @@ function openStudent(studentId) {
         @submit="moveStudent"
       />
 
-      <StudentCredentialDialog
-        :credential="classroomsStore.resetPinCredentials"
-        header="Nuevo PIN"
-        intro="Entrega el nuevo PIN al estudiante para que vuelva a ingresar desde el teclado."
-        action-label="Ya entregué el PIN"
-        @close="classroomsStore.clearResetPinCredentials"
+      <CredentialsListDialog
+        :visible="resetPinList.length > 0"
+        :credentials="resetPinList"
+        :classroom-name="classroom?.name ?? ''"
+        @update:visible="classroomsStore.clearResetPinCredentials"
       />
     </template>
   </div>

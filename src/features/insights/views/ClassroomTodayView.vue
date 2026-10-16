@@ -35,13 +35,20 @@ const loadedClassroom = computed(() => {
   return insightsStore.classrooms.find((classroom) => classroom.id === loadedFor.classroomId) ?? null
 })
 
+// Un salón archivado se marca también en el título, igual que en el selector.
+function classroomTitle(classroom, fallback) {
+  if (!classroom) return fallback
+  return classroom.archivedAt ? `${classroom.name} (archivado)` : classroom.name
+}
+
 const title = computed(() => {
   if (insightsStore.classroomLoadedFor) {
-    return (
-      loadedClassroom.value?.name ?? insightsStore.activity?.classroomName ?? 'Salón hoy'
+    return classroomTitle(
+      loadedClassroom.value,
+      insightsStore.activity?.classroomName ?? 'Salón hoy',
     )
   }
-  return selectedClassroom.value?.name ?? 'Salón hoy'
+  return classroomTitle(selectedClassroom.value, 'Salón hoy')
 })
 
 const periodMessage = computed(() => periodErrors(insightsStore.period))
@@ -158,7 +165,10 @@ onMounted(async () => {
     </Message>
 
     <Message v-if="isStale" severity="info" :closable="false">
-      Mostrando datos de {{ staleLabel }}; pulsa Actualizar.
+      <template v-if="periodMessage">
+        Mostrando datos de {{ staleLabel }}. Corrige las fechas para ver otro periodo.
+      </template>
+      <template v-else>Mostrando datos de {{ staleLabel }}; pulsa Actualizar.</template>
     </Message>
 
     <template v-if="isFirstLoad">

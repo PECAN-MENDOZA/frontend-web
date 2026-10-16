@@ -37,8 +37,16 @@ function signOut() {
   router.push({ name: 'login' })
 }
 
+// Sesión cerrada por el servidor: al login con el aviso del store y la página actual en ?redirect=
+// para retomarla al volver a entrar.
 function handleUnauthorized() {
-  router.push({ name: 'login' })
+  router.push({ name: 'login', query: { redirect: route.fullPath } })
+}
+
+// La sección queda marcada también en sus subpáginas (/classrooms/:id, /students/:id), que no son
+// rutas hijas en el router y RouterLink no las marcaría.
+function isSectionActive(item) {
+  return route.path === item.to || route.path.startsWith(`${item.to}/`)
 }
 
 onMounted(() => {
@@ -74,6 +82,8 @@ onUnmounted(() => window.removeEventListener('auth:unauthorized', handleUnauthor
           :key="item.label"
           :to="item.to"
           class="sidebar__link"
+          :class="{ 'router-link-active': isSectionActive(item) }"
+          :aria-current="isSectionActive(item) ? 'page' : undefined"
           @click="closeNavigation"
         >
           <i :class="item.icon"></i>

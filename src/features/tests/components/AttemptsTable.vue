@@ -46,7 +46,7 @@ function statusSeverity(row) {
   >
     <template #empty>
       <p class="table-empty">
-        Todavía no hay alumnos asignados. Usa «Asignar» para elegir un salón o alumnos concretos.
+        Todavía no hay estudiantes asignados. Usa «Asignar» para elegir un salón o estudiantes concretos.
       </p>
     </template>
     <Column header="Username">

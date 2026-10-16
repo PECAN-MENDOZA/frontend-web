@@ -86,6 +86,14 @@ test('assistanceBadge marks in-test corrections with or without help, and null o
   assert.equal(assistanceBadge({}), null)
 })
 
+test('assistanceBadge hides old pilot test marks when sentence tests are off', () => {
+  assert.equal(assistanceBadge({ inTest: true, assistance: 'ASSISTED' }, false), null)
+  assert.equal(
+    assistanceBadge({ inTest: true, assistance: 'ASSISTED' }, true),
+    'en prueba · con ayuda',
+  )
+})
+
 test('outcomeTags lists only the outcomes with a count, in the fixed order, with their severity', () => {
   const tags = outcomeTags({ edited: 0, accepted: 2, rejected: 1, undone: 0, unanswered: 3 })
 
@@ -100,10 +108,10 @@ test('outcomeTags lists only the outcomes with a count, in the fixed order, with
   assert.deepEqual(outcomeTags(null), [])
 })
 
-test('correctionsLabel counts corrections in Spanish', () => {
-  assert.equal(correctionsLabel(0), 'Sin correcciones')
-  assert.equal(correctionsLabel(1), '1 corrección')
-  assert.equal(correctionsLabel(7), '7 correcciones')
+test('correctionsLabel names the count "correcciones pedidas", as the PDF does', () => {
+  assert.equal(correctionsLabel(0), 'Sin correcciones pedidas')
+  assert.equal(correctionsLabel(1), '1 corrección pedida')
+  assert.equal(correctionsLabel(7), '7 correcciones pedidas')
 })
 
 test('outcomeSummary reads noChanges and puts "Ya estaba bien" last, over the full total', () => {

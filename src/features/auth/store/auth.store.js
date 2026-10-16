@@ -11,6 +11,7 @@ import {
   changePasswordErrorMessage,
   DEACTIVATED_NOTICE,
   PASSWORD_RESET_NOTICE,
+  SESSION_EXPIRED_NOTICE,
 } from '@/features/auth/utils/access'
 import { SESSION_END_DEACTIVATED, SESSION_END_PASSWORD_RESET } from '@/shared/utils/http'
 
@@ -28,7 +29,8 @@ export const useAuthStore = defineStore('auth', () => {
       .split(' ')
       .map((name) => name[0])
       .slice(0, 2)
-      .join(''),
+      .join('')
+      .toUpperCase(),
   )
 
   async function signIn(credentials) {
@@ -47,7 +49,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function changePassword(payload) {
+  async function changePassword(payload, { temporary = false } = {}) {
     isLoading.value = true
     errorMessage.value = ''
     try {
@@ -55,7 +57,7 @@ export const useAuthStore = defineStore('auth', () => {
       user.value = markPasswordChanged(user.value)
       return true
     } catch (error) {
-      errorMessage.value = changePasswordErrorMessage(error.status, error.message)
+      errorMessage.value = changePasswordErrorMessage(error.status, error.message, { temporary })
       return false
     } finally {
       isLoading.value = false
@@ -75,12 +77,23 @@ export const useAuthStore = defineStore('auth', () => {
     errorMessage.value = ''
   }
 
-  // Un 401 cierra la sesión sin más; un 403 "Password change required" (contraseña reiniciada con
-  // la sesión abierta) además deja el aviso para el login.
+  // Error de validación local del login (sin llamar al servidor).
+  function setLoginError(message) {
+    errorMessage.value = message
+    notice.value = ''
+  }
+
+  // Toda respuesta que cierra una sesión abierta deja un aviso para el login: contraseña
+  // reiniciada (403), cuenta dada de baja (401 con su mensaje) o sesión terminada (401 sin más).
+  // Solo la primera respuesta cuenta: las peticiones paralelas que fallan después (sesión ya
+  // cerrada) no deben borrar ni pisar el aviso.
   window.addEventListener('auth:unauthorized', (event) => {
+    if (!user.value) return
     signOut()
-    if (event?.detail?.reason === SESSION_END_PASSWORD_RESET) notice.value = PASSWORD_RESET_NOTICE
-    if (event?.detail?.reason === SESSION_END_DEACTIVATED) notice.value = DEACTIVATED_NOTICE
+    const reason = event?.detail?.reason
+    if (reason === SESSION_END_PASSWORD_RESET) notice.value = PASSWORD_RESET_NOTICE
+    else if (reason === SESSION_END_DEACTIVATED) notice.value = DEACTIVATED_NOTICE
+    else notice.value = SESSION_EXPIRED_NOTICE
   })
 
   return {
@@ -94,5 +107,6 @@ export const useAuthStore = defineStore('auth', () => {
     changePassword,
     signOut,
     clearErrors,
+    setLoginError,
   }
 })

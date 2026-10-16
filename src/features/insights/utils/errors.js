@@ -22,6 +22,15 @@ export function practiceSheet(words, studentName) {
   return [title, ...lines].join('\n')
 }
 
+/**
+ * Conteo de un tipo de error: son palabras corregidas, no correcciones pedidas.
+ * '1 palabra' | '4 palabras'.
+ */
+export function wordsLabel(count) {
+  const n = count ?? 0
+  return n === 1 ? '1 palabra' : `${n} palabras`
+}
+
 /** Copia ordenada de types por count descendente; a igual count conserva el orden original. */
 export function sortTypes(types) {
   return (types ?? [])

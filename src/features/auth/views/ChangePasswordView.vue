@@ -10,6 +10,7 @@ import {
   changePasswordFormError,
   homeForRole,
   nextRouteAfterPasswordChange,
+  PASSWORD_RULE_TEXT,
 } from '@/features/auth/utils/access'
 
 const route = useRoute()
@@ -38,14 +39,17 @@ onMounted(() => authStore.clearErrors())
 async function submitChangePassword() {
   // El error del intento anterior (p. ej. "contraseña actual incorrecta") no debe quedar junto al nuevo.
   authStore.clearErrors()
-  validationError.value = changePasswordFormError(form)
+  validationError.value = changePasswordFormError(form, { temporary: isTemporary })
 
   if (validationError.value) return
 
-  const changed = await authStore.changePassword({
-    currentPassword: form.currentPassword,
-    newPassword: form.newPassword,
-  })
+  const changed = await authStore.changePassword(
+    {
+      currentPassword: form.currentPassword,
+      newPassword: form.newPassword,
+    },
+    { temporary: isTemporary },
+  )
 
   if (changed) {
     toast.add({ severity: 'success', summary: 'Contraseña actualizada', life: 4000 })
@@ -71,13 +75,15 @@ function signOut() {
       <div v-if="isTemporary">
         <p class="overline">Antes de continuar</p>
         <h2>Elige tu contraseña</h2>
-        <p class="login-card__subtitle">Tu contraseña temporal solo sirve para entrar una vez.</p>
+        <p class="login-card__subtitle">
+          Para continuar, cambia la contraseña temporal que te dieron. {{ PASSWORD_RULE_TEXT }}
+        </p>
       </div>
       <div v-else>
         <p class="overline">Tu cuenta</p>
         <h2>Cambiar contraseña</h2>
         <p class="login-card__subtitle">
-          Escribe tu contraseña actual y elige una nueva de 8 a 72 caracteres.
+          Escribe tu contraseña actual y elige una nueva. {{ PASSWORD_RULE_TEXT }}
         </p>
       </div>
 
@@ -128,6 +134,7 @@ function signOut() {
       </div>
 
       <Button
+        class="login-card__submit"
         type="submit"
         label="Guardar contraseña"
         icon="pi pi-arrow-right"

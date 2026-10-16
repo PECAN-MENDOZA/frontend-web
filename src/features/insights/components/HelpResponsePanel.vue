@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue'
-import { OUTCOME_SEVERITIES, outcomeSummary } from '@/features/insights/utils/outcomes.js'
+import { OUTCOME_SEVERITIES, correctionsLabel, outcomeSummary } from '@/features/insights/utils/outcomes.js'
 
 // "Cómo responde a la ayuda": proporción de cada desenlace dentro del periodo elegido
 // (StudentHelpResponse). Barras de proporción, sin tendencia ni comparación con otro periodo.
@@ -24,10 +24,10 @@ function pctLabel(pct) {
 </script>
 
 <template>
-  <p v-if="!total" class="table-empty">Ninguna sugerencia del teclado en este periodo.</p>
+  <p v-if="!total" class="table-empty">Ninguna corrección pedida en este periodo.</p>
   <div v-else class="help-summary">
     <p class="help-summary__total">
-      {{ total === 1 ? '1 sugerencia' : `${total} sugerencias` }} en el periodo
+      {{ correctionsLabel(total) }} en el periodo
     </p>
     <ul class="help-bars">
       <li

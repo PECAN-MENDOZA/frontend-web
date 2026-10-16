@@ -50,7 +50,7 @@ function close() {
       </span>
       <div>
         <p class="overline">Decisión registrada</p>
-        <h3>Excluirás el intento de {{ username || 'este alumno' }}.</h3>
+        <h3>Excluirás el intento de {{ username || 'este estudiante' }}.</h3>
         <p>Seguirá visible en la tabla, pero no contará en los resultados de la prueba.</p>
       </div>
     </div>

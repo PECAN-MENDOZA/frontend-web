@@ -137,7 +137,7 @@ function goBack() {
             <Tag :value="statusLabel" :severity="statusSeverity" rounded />
             <Tag v-if="isExcluded" value="Excluido" severity="danger" icon="pi pi-ban" rounded />
           </div>
-          <h1>{{ attempt.studentUsername || 'Alumno sin identificar' }}</h1>
+          <h1>{{ attempt.studentUsername || 'Estudiante sin identificar' }}</h1>
           <p>{{ test?.title || 'Respuestas del intento' }}</p>
         </div>
         <div class="page-header__actions">

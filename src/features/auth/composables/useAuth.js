@@ -1,7 +1,12 @@
 import { reactive } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/features/auth/store/auth.store'
-import { canAccessRoute, homeForRole, requiresPasswordChange } from '@/features/auth/utils/access'
+import {
+  canAccessRoute,
+  homeForRole,
+  loginFormError,
+  requiresPasswordChange,
+} from '@/features/auth/utils/access'
 
 export function useAuth() {
   const route = useRoute()
@@ -13,6 +18,12 @@ export function useAuth() {
   })
 
   async function submitSignIn() {
+    const formError = loginFormError(credentials)
+    if (formError) {
+      authStore.setLoginError(formError)
+      return
+    }
+
     try {
       await authStore.signIn(credentials)
       router.push(resolveDestination(route.query.redirect))

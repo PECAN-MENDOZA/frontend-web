@@ -5,6 +5,8 @@ import {
   classroomArchiveConfirmation,
   classroomFormErrors,
   credentialsAsText,
+  credentialsPrintHtml,
+  credentialsTitle,
   formatDeactivatedAt,
   formatLastAccess,
   inactiveInClassroom,
@@ -81,7 +83,28 @@ test('inactiveInClassroom keeps only that classroom, most recent deactivation fi
 test('formatDeactivatedAt shows a dash when the date is missing', () => {
   assert.equal(formatDeactivatedAt(null), '—')
   assert.equal(formatDeactivatedAt('no-es-fecha'), '—')
-  assert.match(formatDeactivatedAt('2026-10-15T15:04:00Z'), /2026/)
+  // Mismo formato que el resto del portal: dd/mm/aaaa HH:mm en Lima (UTC-5).
+  assert.equal(formatDeactivatedAt('2026-10-15T15:04:00Z'), '15/10/2026 10:04')
+  assert.equal(formatDeactivatedAt('2026-10-16T03:30:00Z'), '15/10/2026 22:30')
+})
+
+test('credentialsPrintHtml prints a heading, an instruction and an escaped alias/PIN table', () => {
+  const html = credentialsPrintHtml(
+    [
+      { username: 'panda-53', pin: '1234', studentRealName: 'Ana Pérez' },
+      { username: '<b>x</b>', pin: '0001' },
+    ],
+    '3.º B',
+  )
+
+  assert.equal(credentialsTitle('3.º B'), 'Credenciales – Salón 3.º B')
+  assert.equal(credentialsTitle(''), 'Credenciales')
+  assert.match(html, /<h1>Credenciales – Salón 3\.º B<\/h1>/)
+  assert.match(html, /<p>Recorta cada fila/)
+  assert.match(html, /<th>Alias<\/th><th>PIN<\/th>/)
+  assert.match(html, /<tr><td>panda-53<\/td><td>1234<\/td><\/tr>/)
+  assert.match(html, /&lt;b&gt;x&lt;\/b&gt;/)
+  assert.doesNotMatch(html, /Ana Pérez/)
 })
 
 test('classroomArchiveConfirmation names the classroom', () => {

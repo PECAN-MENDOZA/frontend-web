@@ -32,8 +32,9 @@ const researchStore = useResearchStore()
 const confirm = useConfirm()
 const isCreateDialogVisible = ref(false)
 const createErrorMessage = ref('')
-// Docente cuya contraseña se está reiniciando: solo ese botón muestra el spinner.
-const pendingTeacherId = ref(null)
+// Acción en curso ({ kind: 'reset' | 'deactivate' | 'reactivate', teacherId }): solo ese botón
+// muestra el spinner.
+const pendingAction = ref(null)
 const resetErrorMessage = ref('')
 const copyStatus = ref('')
 
@@ -97,29 +98,31 @@ function confirmSetActive(teacher, active) {
   })
 }
 
-async function setActive(teacher, active) {
+function isPending(kind, teacherId) {
+  return pendingAction.value?.kind === kind && pendingAction.value?.teacherId === teacherId
+}
+
+async function runPending(kind, teacher, action) {
   resetErrorMessage.value = ''
-  pendingTeacherId.value = teacher.id
+  pendingAction.value = { kind, teacherId: teacher.id }
+
   try {
-    await researchStore.setTeacherActive(teacher.id, active)
+    await action()
   } catch (error) {
     resetErrorMessage.value = error.message
   } finally {
-    pendingTeacherId.value = null
+    pendingAction.value = null
   }
 }
 
-async function resetPassword(teacher) {
-  resetErrorMessage.value = ''
-  pendingTeacherId.value = teacher.id
+function setActive(teacher, active) {
+  return runPending(active ? 'reactivate' : 'deactivate', teacher, () =>
+    researchStore.setTeacherActive(teacher.id, active),
+  )
+}
 
-  try {
-    await researchStore.resetTeacherPassword(teacher.id)
-  } catch (error) {
-    resetErrorMessage.value = error.message
-  } finally {
-    pendingTeacherId.value = null
-  }
+function resetPassword(teacher) {
+  return runPending('reset', teacher, () => researchStore.resetTeacherPassword(teacher.id))
 }
 
 async function copyNotice() {
@@ -142,7 +145,7 @@ function closePasswordDialog() {
     <PageHeader
       eyebrow="Cuentas"
       title="Docentes"
-      description="Crea las cuentas de los docentes. Cada docente crea sus salones y alumnos."
+      description="Crea las cuentas de los docentes. Cada docente crea sus salones y estudiantes."
     >
       <template #actions>
         <Button label="Nuevo docente" icon="pi pi-plus" @click="openCreateTeacher" />
@@ -191,8 +194,8 @@ function closePasswordDialog() {
         </Column>
         <Column field="email" header="Correo" />
         <Column field="institution" header="Institución" />
-        <Column field="classroomCount" header="Salones" />
-        <Column field="studentCount" header="Alumnos" />
+        <Column field="classroomCount" header="Salones activos" />
+        <Column field="studentCount" header="Estudiantes" />
         <Column header="Estado">
           <template #body="{ data }">
             <Tag
@@ -212,8 +215,8 @@ function closePasswordDialog() {
                   severity="secondary"
                   text
                   size="small"
-                  :loading="pendingTeacherId === data.id"
-                  :disabled="researchStore.isMutating && pendingTeacherId !== data.id"
+                  :loading="isPending('reset', data.id)"
+                  :disabled="researchStore.isMutating && !isPending('reset', data.id)"
                   @click="confirmResetPassword(data)"
                 />
                 <Button
@@ -222,7 +225,8 @@ function closePasswordDialog() {
                   severity="danger"
                   text
                   size="small"
-                  :disabled="researchStore.isMutating"
+                  :loading="isPending('deactivate', data.id)"
+                  :disabled="researchStore.isMutating && !isPending('deactivate', data.id)"
                   @click="confirmSetActive(data, false)"
                 />
               </template>
@@ -233,8 +237,8 @@ function closePasswordDialog() {
                 severity="secondary"
                 text
                 size="small"
-                :loading="pendingTeacherId === data.id"
-                :disabled="researchStore.isMutating && pendingTeacherId !== data.id"
+                :loading="isPending('reactivate', data.id)"
+                :disabled="researchStore.isMutating && !isPending('reactivate', data.id)"
                 @click="confirmSetActive(data, true)"
               />
             </div>
@@ -266,6 +270,7 @@ function closePasswordDialog() {
         v-else
         :value="researchStore.classroomDirectory"
         class="classroom-directory-table"
+        scrollable
         table-style="min-width: 48rem"
       >
         <template #empty>
@@ -285,7 +290,7 @@ function closePasswordDialog() {
             </div>
           </template>
         </Column>
-        <Column header="Alumnos">
+        <Column header="Estudiantes">
           <template #body="{ data }">
             {{ data.students.length }}
           </template>
@@ -299,7 +304,7 @@ function closePasswordDialog() {
                 :value="student.username"
                 severity="secondary"
               />
-              <span v-if="!data.students.length">Sin alumnos</span>
+              <span v-if="!data.students.length">Sin estudiantes</span>
             </div>
           </template>
         </Column>

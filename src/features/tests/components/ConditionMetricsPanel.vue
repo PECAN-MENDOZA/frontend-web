@@ -39,7 +39,7 @@ const pairedRows = computed(() => [
         <thead>
           <tr>
             <th scope="col">Condición</th>
-            <th scope="col">Alumnos</th>
+            <th scope="col">Estudiantes</th>
             <th scope="col">Errores / 100 palabras</th>
             <th scope="col">Palabras por minuto</th>
             <th scope="col">Aceptación de sugerencias</th>
@@ -60,7 +60,7 @@ const pairedRows = computed(() => [
     <div class="results-paired">
       <p class="overline">Diferencia con − sin (pareada)</p>
       <p v-if="!showPaired" class="table-empty">
-        La diferencia pareada aparece cuando un mismo alumno completó oraciones de ambas
+        La diferencia pareada aparece cuando un mismo estudiante completó oraciones de ambas
         condiciones.
       </p>
       <dl v-else class="results-paired__list">

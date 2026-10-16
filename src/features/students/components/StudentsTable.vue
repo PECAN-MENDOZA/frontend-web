@@ -4,12 +4,20 @@ import Button from 'primevue/button'
 import Column from 'primevue/column'
 import DataTable from 'primevue/datatable'
 import { formatRelative } from '@/features/insights/utils/period.js'
+import { classroomLabel } from '@/features/students/utils/students'
+
+const ROWS_PER_PAGE = 15
 
 // Directorio simple: quién es, en qué salón está y cuándo usó el teclado por última vez.
 const props = defineProps({
   students: {
     type: Array,
     required: true,
+  },
+  // Texto cuando la búsqueda no encuentra a nadie.
+  emptyMessage: {
+    type: String,
+    default: '',
   },
 })
 
@@ -21,6 +29,7 @@ const rows = computed(() => {
   return props.students.map((student) => ({
     ...student,
     lastAccessLabel: formatRelative(student.lastAccessAt, now),
+    classroomText: classroomLabel(student.classroomName, student.classroomArchived),
   }))
 })
 </script>
@@ -29,11 +38,14 @@ const rows = computed(() => {
   <DataTable
     :value="rows"
     class="student-directory-table" scrollable
-    paginator
-    :rows="15"
-    :rows-per-page-options="[15, 40]"
+    :paginator="rows.length > ROWS_PER_PAGE"
+    :rows="ROWS_PER_PAGE"
+    :rows-per-page-options="[ROWS_PER_PAGE, 40]"
     table-style="min-width: 40rem"
   >
+    <template #empty>
+      <p class="table-empty">{{ emptyMessage || 'Aún no tienes estudiantes vinculados.' }}</p>
+    </template>
     <Column header="Nombre">
       <template #body="{ data }">
         <strong v-if="data.realName">{{ data.realName }}</strong>
@@ -47,8 +59,8 @@ const rows = computed(() => {
     </Column>
     <Column header="Salón">
       <template #body="{ data }">
-        <span :class="{ 'table-muted': !data.classroomName }">
-          {{ data.classroomName || 'Sin salón' }}
+        <span :class="{ 'table-muted': !data.classroomName || data.classroomArchived }">
+          {{ data.classroomText }}
         </span>
       </template>
     </Column>

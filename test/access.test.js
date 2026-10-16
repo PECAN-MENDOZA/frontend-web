@@ -7,6 +7,7 @@ import {
   displayNameFor,
   homeForRole,
   loginErrorMessage,
+  loginFormError,
   nextRouteAfterPasswordChange,
   normalizeEmail,
   requiresPasswordChange,
@@ -126,8 +127,8 @@ test('normalizeEmail trims and lowercases', () => {
 
 test('displayNameFor uses the login displayName and falls back to the email', () => {
   assert.equal(displayNameFor('Ana QA Torres', 'ana.qa@colegio.edu.pe'), 'Ana QA Torres')
-  assert.equal(displayNameFor(null, 'ana.qa@colegio.edu.pe'), 'Ana Qa')
-  assert.equal(displayNameFor('   ', 'investigador@tesis.pe'), 'Investigador')
+  assert.equal(displayNameFor(null, 'ana.qa@colegio.edu.pe'), 'ana.qa@colegio.edu.pe')
+  assert.equal(displayNameFor('   ', 'investigador@tesis.pe'), 'investigador@tesis.pe')
 })
 
 test('the change-password route is open to researchers without forcing them there', () => {
@@ -135,5 +136,45 @@ test('the change-password route is open to researchers without forcing them ther
   assert.equal(
     requiresPasswordChange({ role: 'RESEARCHER', mustChangePassword: false }, 'research-teachers'),
     false,
+  )
+})
+
+test('loginErrorMessage explains a deactivated account and nothing else', () => {
+  assert.equal(
+    loginErrorMessage(401, 'Teacher account is deactivated'),
+    'Tu cuenta fue dada de baja. Si crees que es un error, habla con el administrador del panel.',
+  )
+  assert.equal(
+    loginErrorMessage(401, 'Invalid staff credentials'),
+    'No pudimos iniciar sesión. Verifica tus credenciales e inténtalo nuevamente.',
+  )
+  assert.equal(
+    loginErrorMessage(403, 'Teacher account is deactivated'),
+    'No pudimos iniciar sesión. Verifica tus credenciales e inténtalo nuevamente.',
+  )
+})
+
+test('loginFormError asks for both fields before calling the server', () => {
+  assert.equal(loginFormError({ email: '', password: '' }), 'Escribe tu correo y tu contraseña.')
+  assert.equal(loginFormError({ email: '  ', password: 'x' }), 'Escribe tu correo y tu contraseña.')
+  assert.equal(loginFormError({ email: 'a@b.pe', password: '' }), 'Escribe tu correo y tu contraseña.')
+  assert.equal(loginFormError({ email: 'a@b.pe', password: 'x' }), '')
+})
+
+test('in temporary mode the password messages say "contraseña temporal"', () => {
+  assert.equal(
+    changePasswordFormError(
+      { currentPassword: '', newPassword: 'nueva-123', confirmPassword: 'nueva-123' },
+      { temporary: true },
+    ),
+    'Escribe tu contraseña temporal.',
+  )
+  assert.equal(
+    changePasswordErrorMessage(401, '', { temporary: true }),
+    'La contraseña temporal no es correcta.',
+  )
+  assert.equal(
+    changePasswordErrorMessage(400, 'New password must be different', { temporary: true }),
+    'La contraseña nueva debe ser distinta de la temporal.',
   )
 })

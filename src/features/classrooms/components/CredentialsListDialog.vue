@@ -1,10 +1,10 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onUnmounted, ref } from 'vue'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
 import Message from 'primevue/message'
 import Tag from 'primevue/tag'
-import { credentialsAsText } from '@/features/classrooms/utils/classrooms'
+import { credentialsAsText, credentialsPrintHtml } from '@/features/classrooms/utils/classrooms'
 import { copyText } from '@/features/research/utils/clipboard'
 
 const props = defineProps({
@@ -24,38 +24,46 @@ const props = defineProps({
 
 const emit = defineEmits(['update:visible'])
 const copyStatus = ref('')
+// Ventana emergente bloqueada: el aviso queda dentro del diálogo hasta que se cierre o se reintente.
+const isPrintBlocked = ref(false)
+let statusTimer = null
 const text = computed(() => credentialsAsText(props.credentials, props.classroomName))
 
-async function copyCredentials() {
-  const wasCopied = await copyText(text.value)
-
-  copyStatus.value = wasCopied ? 'Copiado' : 'No se pudo copiar'
-  window.setTimeout(() => {
+function showStatus(message) {
+  copyStatus.value = message
+  window.clearTimeout(statusTimer)
+  statusTimer = window.setTimeout(() => {
     copyStatus.value = ''
   }, 1800)
 }
 
-// Una ventana aparte con solo el texto: se imprime la hoja sin el resto del panel.
-function printCredentials() {
-  const printWindow = window.open('', '_blank')
+async function copyCredentials() {
+  const wasCopied = await copyText(text.value)
 
+  showStatus(wasCopied ? 'Copiado' : 'No se pudo copiar')
+}
+
+// Una ventana aparte con la hoja (título, instrucción y tabla): se imprime sin el resto del panel.
+function printCredentials() {
+  const printWindow = window.open('', '_blank', 'width=720,height=900')
+
+  isPrintBlocked.value = !printWindow
   if (!printWindow) return
 
-  const pre = printWindow.document.createElement('pre')
-
-  pre.textContent = text.value
-  pre.style.font = '14px/1.6 ui-monospace, Consolas, monospace'
-  printWindow.document.title = `Credenciales ${props.classroomName}`
-  printWindow.document.body.appendChild(pre)
+  printWindow.document.write(credentialsPrintHtml(props.credentials, props.classroomName))
   printWindow.document.close()
   printWindow.focus()
   printWindow.print()
 }
 
 function close() {
+  window.clearTimeout(statusTimer)
   copyStatus.value = ''
+  isPrintBlocked.value = false
   emit('update:visible', false)
 }
+
+onUnmounted(() => window.clearTimeout(statusTimer))
 </script>
 
 <template>
@@ -78,6 +86,11 @@ function close() {
 
       <Message severity="warn" :closable="false">
         Los PIN solo se muestran ahora. Guárdalos antes de cerrar esta ventana.
+      </Message>
+
+      <Message v-if="isPrintBlocked" severity="error" :closable="false">
+        El navegador bloqueó la ventana de impresión. Permite las ventanas emergentes de este sitio
+        o usa «Copiar».
       </Message>
 
       <pre class="credentials-sheet">{{ text }}</pre>
